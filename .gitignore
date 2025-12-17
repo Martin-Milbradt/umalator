@@ -1,4 +1,4 @@
-*.json
+configs/
 !config.example.json
 node_modules/
 cli.js

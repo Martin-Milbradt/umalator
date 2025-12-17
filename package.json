@@ -1,0 +1,16 @@
+{
+  "name": "umalator-global-cli",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node cli.js",
+    "web": "node server.cjs"
+  },
+  "dependencies": {
+    "commander": "^11.0.0",
+    "esbuild": "^0.27.2",
+    "express": "^4.18.0",
+    "immutable": "^4.3.0"
+  }
+}

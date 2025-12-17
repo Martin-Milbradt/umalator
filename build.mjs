@@ -1,9 +1,48 @@
 import * as esbuild from "esbuild";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import { existsSync, readFileSync } from "node:fs";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(dirname, "..", "uma-tools");
+const nodeModulesPath = path.join(dirname, "node_modules");
+
+const resolveNodeModules = {
+    name: "resolveNodeModules",
+    setup(build) {
+        build.onResolve({ filter: /^[^./]|^\.[^./]|^\.\.[^/]/ }, (args) => {
+            if (args.path.startsWith(".") || path.isAbsolute(args.path)) {
+                return null;
+            }
+            const packageDir = path.join(nodeModulesPath, args.path);
+            const packageJsonPath = path.join(packageDir, "package.json");
+
+            if (existsSync(packageJsonPath)) {
+                try {
+                    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
+                    const main = packageJson.main || packageJson.module || "index.js";
+                    const mainPath = path.join(packageDir, main);
+                    if (existsSync(mainPath)) {
+                        return { path: mainPath };
+                    }
+                    const indexPath = path.join(packageDir, "index.js");
+                    if (existsSync(indexPath)) {
+                        return { path: indexPath };
+                    }
+                } catch (e) {
+                    // Fall through
+                }
+            }
+
+            const directPath = path.join(nodeModulesPath, args.path + ".js");
+            if (existsSync(directPath)) {
+                return { path: directPath };
+            }
+
+            return null;
+        });
+    },
+};
 
 const redirectData = {
     name: "redirectData",
@@ -31,7 +70,7 @@ const buildOptions = {
     format: "cjs",
     outfile: "cli.js",
     define: { CC_GLOBAL: "false" },
-    plugins: [redirectData],
+    plugins: [resolveNodeModules, redirectData],
 };
 
 const workerBuildOptions = {
@@ -42,7 +81,7 @@ const workerBuildOptions = {
     format: "cjs",
     outfile: "simulation.worker.js",
     define: { CC_GLOBAL: "false" },
-    plugins: [redirectData],
+    plugins: [resolveNodeModules, redirectData],
 };
 
 try {
