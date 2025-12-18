@@ -392,13 +392,17 @@ function renderSkills() {
         const addToUmaButton = document.createElement("button");
         addToUmaButton.className = "add-to-uma-button";
         const isInUmaSkills = umaSkills.includes(skillName);
+        const hasDiscount = skill.discount !== null && skill.discount !== undefined;
         if (isInUmaSkills) {
             addToUmaButton.textContent = "-";
+            addToUmaButton.classList.add("red");
             addToUmaButton.title = "Remove from Uma skills";
-            addToUmaButton.style.backgroundColor = "crimson";
         } else {
             addToUmaButton.textContent = "+";
             addToUmaButton.title = "Add to Uma skills";
+            if (!hasDiscount) {
+                addToUmaButton.classList.add("no-discount");
+            }
         }
         addToUmaButton.dataset.skill = skillName;
         addToUmaButton.addEventListener("click", (e) => {
@@ -916,7 +920,7 @@ function renderUma() {
         { key: "stamina", label: "STA", type: "number", width: 65 },
         { key: "power", label: "POW", type: "number", width: 65 },
         { key: "guts", label: "GUT", type: "number", width: 65 },
-        { key: "wisdom", label: "WIS", type: "number", width: 65 },
+        { key: "wisdom", label: "WIT", type: "number", width: 65 },
         {
             key: "strategy",
             label: "Strategy",
