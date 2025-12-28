@@ -1,0 +1,9 @@
+{
+  "extends": "../uma-tools/tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "moduleResolution": "node",
+    "types": ["node"]
+  },
+  "include": ["**/*.ts"]
+}
