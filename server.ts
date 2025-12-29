@@ -1,7 +1,11 @@
-const express = require("express");
-const { readFileSync, writeFileSync, readdirSync, statSync, watch, existsSync } = require("fs");
-const { resolve, join } = require("path");
-const { spawn } = require("child_process");
+import express from "express";
+import { readFileSync, writeFileSync, readdirSync, watch, existsSync } from "fs";
+import { resolve, join, dirname } from "path";
+import { spawn, ChildProcess } from "child_process";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 const PORT = 3000;
@@ -11,10 +15,15 @@ app.use(express.static(join(__dirname, "public")));
 
 const configDir = join(__dirname, "configs");
 
-const configWatchers = new Map();
-let fileChangeListeners = [];
+const configWatchers = new Map<string, ReturnType<typeof watch>>();
+const fileChangeListeners: express.Response[] = [];
 
-function getConfigFiles() {
+interface ConfigFile {
+    name: string;
+    path: string;
+}
+
+function getConfigFiles(): ConfigFile[] {
     const files = readdirSync(configDir);
     return files.map((file) => ({
         name: file,
@@ -27,7 +36,8 @@ app.get("/api/configs", (req, res) => {
         const configs = getConfigFiles();
         res.json(configs.map((c) => c.name).filter((name) => name !== "config.example.json"));
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const err = error as Error;
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -52,7 +62,8 @@ app.get("/api/coursedata", (req, res) => {
         const courseData = JSON.parse(content);
         res.json(courseData);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const err = error as Error;
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -64,7 +75,8 @@ app.get("/api/config/:filename", (req, res) => {
         const config = JSON.parse(content);
         res.json(config);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const err = error as Error;
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -76,14 +88,15 @@ app.post("/api/config/:filename", (req, res) => {
         notifyFileChange(filename);
         res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const err = error as Error;
+        res.status(500).json({ error: err.message });
     }
 });
 
 app.post("/api/config/:filename/duplicate", (req, res) => {
     try {
         const filename = req.params.filename;
-        const { newName } = req.body;
+        const { newName } = req.body as { newName?: string };
 
         if (!newName || typeof newName !== "string" || !newName.trim()) {
             res.status(400).json({ error: "newName is required and must be a non-empty string" });
@@ -108,11 +121,12 @@ app.post("/api/config/:filename/duplicate", (req, res) => {
         notifyFileChange(newName.trim());
         res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const err = error as Error;
+        res.status(500).json({ error: err.message });
     }
 });
 
-function notifyFileChange(filename) {
+function notifyFileChange(filename: string): void {
     fileChangeListeners.forEach((listener) => {
         try {
             listener.write(`data: ${JSON.stringify({ type: "fileChanged", filename })}\n\n`);
@@ -122,7 +136,7 @@ function notifyFileChange(filename) {
     });
 }
 
-function watchConfigFile(filename) {
+function watchConfigFile(filename: string): void {
     if (configWatchers.has(filename)) {
         return;
     }
@@ -149,7 +163,7 @@ function watchConfigFile(filename) {
 }
 
 app.get("/api/run", (req, res) => {
-    const configFile = req.query.configFile;
+    const configFile = req.query.configFile as string | undefined;
 
     if (!configFile) {
         res.status(400).json({ error: "configFile parameter required" });
@@ -176,6 +190,8 @@ app.get("/api/run", (req, res) => {
         res.flushHeaders();
     }
 
+    let requestClosed = false;
+
     const keepAlive = setInterval(() => {
         if (!requestClosed) {
             try {
@@ -190,9 +206,8 @@ app.get("/api/run", (req, res) => {
         }
     }, 30000);
 
-    let child = null;
+    let child: ChildProcess | null = null;
     let processStarted = false;
-    let requestClosed = false;
 
     try {
         child = spawn("node", [cliPath, configFile], {
@@ -204,8 +219,9 @@ app.get("/api/run", (req, res) => {
         processStarted = true;
         console.log(`Process spawned with PID: ${child.pid}`);
     } catch (error) {
+        const err = error as Error;
         console.error("Error spawning process:", error);
-        res.write(`data: ${JSON.stringify({ type: "error", error: `Failed to spawn process: ${error.message}` })}\n\n`);
+        res.write(`data: ${JSON.stringify({ type: "error", error: `Failed to spawn process: ${err.message}` })}\n\n`);
         res.end();
         return;
     }
@@ -214,7 +230,7 @@ app.get("/api/run", (req, res) => {
     let hasOutput = false;
     let stderrOutput = "";
 
-    const sendData = (data) => {
+    const sendData = (data: Buffer): void => {
         if (requestClosed) {
             console.log("Skipping output write - request already closed");
             return;
@@ -230,23 +246,31 @@ app.get("/api/run", (req, res) => {
         }
     };
 
-    const sendStderr = (data) => {
+    const sendStderr = (data: Buffer): void => {
         const dataStr = data.toString();
         stderrOutput += dataStr;
         console.error(`CLI stderr:`, dataStr);
-        sendData(dataStr);
+        sendData(data);
     };
 
-    child.stdout.on("data", sendData);
-    child.stderr.on("data", sendStderr);
+    if (child.stdout) {
+        child.stdout.on("data", sendData);
+    }
+    if (child.stderr) {
+        child.stderr.on("data", sendStderr);
+    }
 
-    child.stdout.on("error", (error) => {
-        console.error("stdout error:", error);
-    });
+    if (child.stdout) {
+        child.stdout.on("error", (error) => {
+            console.error("stdout error:", error);
+        });
+    }
 
-    child.stderr.on("error", (error) => {
-        console.error("stderr error:", error);
-    });
+    if (child.stderr) {
+        child.stderr.on("error", (error) => {
+            console.error("stderr error:", error);
+        });
+    }
 
     child.on("close", (code, signal) => {
         if (stderrOutput) {
@@ -287,7 +311,7 @@ app.get("/api/run", (req, res) => {
     });
 
     const timeout = setTimeout(() => {
-        if (!child.killed) {
+        if (child && !child.killed) {
             console.log("Process timeout, killing child process");
             child.kill("SIGTERM");
             res.write(
@@ -332,3 +356,4 @@ app.get("/api/run", (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
 });
+

@@ -1,0 +1,287 @@
+{
+  "deterministic": false,
+  "confidenceInterval": 90,
+  "skills": {
+    "Triumphant Pulse": {
+      "discount": 20,
+      "default": 20
+    },
+    "Shadow Break": {
+      "discount": null
+    },
+    "Behold Thine Emperor's Divine Might": {
+      "discount": null
+    },
+    "Nemesis": {
+      "discount": null
+    },
+    "Professor of Curvature": {
+      "discount": 30,
+      "default": 10
+    },
+    "Corner Adept ○": {
+      "discount": 0,
+      "default": 0
+    },
+    "Passing Pro": {
+      "discount": null
+    },
+    "Highlander": {
+      "discount": null
+    },
+    "Uma Stan": {
+      "discount": null
+    },
+    "Ramp Up": {
+      "discount": 0,
+      "default": 0
+    },
+    "Ignited Spirit SPD": {
+      "discount": 30,
+      "default": 30
+    },
+    "Swinging Maestro": {
+      "discount": null
+    },
+    "Rushing Gale!": {
+      "discount": 30,
+      "default": 10
+    },
+    "Straightaway Acceleration": {
+      "discount": 0,
+      "default": 0
+    },
+    "Straightaway Recovery": {
+      "discount": 30
+    },
+    "It's On!": {
+      "discount": 10,
+      "default": 10
+    },
+    "No Stopping Me!": {
+      "discount": 10,
+      "default": 10
+    },
+    "Nimble Navigator": {
+      "discount": 0,
+      "default": 0
+    },
+    "Burning Spirit SPD": {
+      "discount": null
+    },
+    "The Duty of Dignity Calls": {
+      "discount": null
+    },
+    "Lone Wolf": {
+      "discount": null
+    },
+    "Homestretch Haste": {
+      "discount": 10
+    },
+    "Anchors Aweigh!": {
+      "discount": null
+    },
+    "Straightaway Adept": {
+      "discount": 30
+    },
+    "Focus": {
+      "discount": 40
+    },
+    "Flashy☆Landing": {
+      "discount": null
+    },
+    "Corner Recovery ○": {
+      "discount": null
+    },
+    "Standard Distance": {
+      "discount": null
+    },
+    "Standard Distance ◎": {
+      "discount": null
+    },
+    "Standard Distance ○": {
+      "discount": null
+    },
+    "Acceleration": {
+      "discount": null
+    },
+    "Ignited Spirit PWR": {
+      "discount": null
+    },
+    "Medium Corners ◎": {
+      "discount": 20
+    },
+    "Medium Corners ○": {
+      "discount": 20
+    },
+    "Blue Rose Closer": {
+      "discount": null
+    },
+    "Tokyo Racecourse": {
+      "discount": null
+    },
+    "Tokyo Racecourse ◎": {
+      "discount": null
+    },
+    "Tokyo Racecourse ○": {
+      "discount": null
+    },
+    "Wet Conditions ○": {
+      "discount": null
+    },
+    "Wet Conditions ◎": {
+      "discount": null
+    },
+    "Escape Artist": {
+      "discount": null
+    },
+    "Steadfast": {
+      "discount": 40
+    },
+    "Concentration": {
+      "discount": null
+    },
+    "Left-Handed ◎": {
+      "discount": null
+    },
+    "Left-Handed ○": {
+      "discount": null
+    },
+    "All I've Got": {
+      "discount": null
+    },
+    "Productive Plan": {
+      "discount": null
+    },
+    "Resplendent Red Ace": {
+      "discount": null
+    },
+    "Rising Dragon": {
+      "discount": 0,
+      "default": 0
+    },
+    "Outer Swell": {
+      "discount": 20,
+      "default": 0
+    },
+    "Up-Tempo": {
+      "discount": 0,
+      "default": 0
+    },
+    "Killer Tunes": {
+      "discount": 0,
+      "default": 0
+    },
+    "Late Surger Straightaways ◎": {
+      "discount": null
+    },
+    "Late Surger Straightaways ○": {
+      "discount": null
+    },
+    "Late Surger Corners ◎": {
+      "discount": 30
+    },
+    "Late Surger Corners ○": {
+      "discount": 30
+    },
+    "Late Surger Savvy ◎": {
+      "discount": null
+    },
+    "Late Surger Savvy ○": {
+      "discount": null
+    },
+    "Medium Straightaways": {
+      "discount": 35,
+      "default": 0
+    },
+    "Medium Straightaways ◎": {
+      "discount": 35,
+      "default": 0
+    },
+    "Medium Straightaways ○": {
+      "discount": 35,
+      "default": 0
+    },
+    "Rainy Days": {
+      "discount": 0,
+      "default": 0
+    },
+    "Rainy Days ◎": {
+      "discount": 0
+    },
+    "Rainy Days ○": {
+      "discount": 0
+    },
+    "This Dance Is for Vittoria!": {
+      "discount": null
+    },
+    "Slipstream": {
+      "discount": null
+    },
+    "Pace Strategy": {
+      "discount": 0,
+      "default": 0
+    },
+    "Rosy Outlook": {
+      "discount": null
+    },
+    "Schwarzes Schwert": {
+      "discount": null
+    },
+    "Fighter": {
+      "discount": null
+    },
+    "On Your Left!": {
+      "discount": null
+    },
+    "Slick Surge": {
+      "discount": 20
+    },
+    "Soft Step": {
+      "discount": null
+    },
+    "Be Still": {
+      "discount": null
+    },
+    "Certain Victory": {
+      "discount": 10,
+      "default": 10
+    },
+    "1,500,000 CC": {
+      "discount": 20
+    }
+  },
+  "track": {
+    "courseId": "",
+    "distance": 2000,
+    "groundCondition": "Soft",
+    "numUmas": 9,
+    "season": "Fall",
+    "trackName": "Tokyo",
+    "weather": "Rainy",
+    "surface": "Turf"
+  },
+  "uma": {
+    "distanceAptitude": "S",
+    "guts": 405,
+    "power": 898,
+    "mood": null,
+    "skills": [
+      "Rising Dragon",
+      "Steadfast",
+      "Medium Straightaways ◎",
+      "Triumphant Pulse",
+      "Certain Victory",
+      "Medium Corners ◎",
+      "Late Surger Corners ◎",
+      "1,500,000 CC"
+    ],
+    "speed": 1169,
+    "stamina": 795,
+    "strategy": "Late Surger",
+    "styleAptitude": "A",
+    "surfaceAptitude": "A",
+    "unique": "Let's Pump Some Iron!",
+    "wisdom": 868
+  }
+}

@@ -5,7 +5,7 @@ import { existsSync, readFileSync } from "node:fs";
 const root = path.join(import.meta.dirname, "..", "uma-tools");
 const nodeModulesPath = path.join(import.meta.dirname, "node_modules");
 
-const resolveNodeModules = {
+const resolveNodeModules: esbuild.Plugin = {
     name: "resolveNodeModules",
     setup(build) {
         build.onResolve({ filter: /^[^./]|^\.[^./]|^\.\.[^/]/ }, (args) => {
@@ -42,7 +42,7 @@ const resolveNodeModules = {
     },
 };
 
-const redirectData = {
+const redirectData: esbuild.Plugin = {
     name: "redirectData",
     setup(build) {
         build.onResolve({ filter: /skill_data\.json$/ }, (args) => ({
@@ -102,7 +102,7 @@ const nodeBuiltins = [
     "zlib",
 ];
 
-const markNodeBuiltinsExternal = {
+const markNodeBuiltinsExternal: esbuild.Plugin = {
     name: "markNodeBuiltinsExternal",
     setup(build) {
         build.onResolve({ filter: /.*/ }, (args) => {
@@ -122,7 +122,7 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 `;
 
-const buildOptions = {
+const buildOptions: esbuild.BuildOptions = {
     entryPoints: ["cli.ts"],
     bundle: true,
     platform: "node",
@@ -138,7 +138,7 @@ const buildOptions = {
     plugins: [markNodeBuiltinsExternal, resolveNodeModules, redirectData],
 };
 
-const workerBuildOptions = {
+const workerBuildOptions: esbuild.BuildOptions = {
     entryPoints: ["simulation.worker.ts"],
     bundle: true,
     platform: "node",
@@ -160,3 +160,4 @@ try {
     console.error("Build failed:", error);
     process.exit(1);
 }
+

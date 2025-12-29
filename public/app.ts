@@ -1,7 +1,52 @@
-let currentConfig = null;
-let currentConfigFile = null;
-let saveTimeout = null;
-const tracknames = {
+interface Skill {
+    discount: number | null;
+    default?: number | null;
+}
+
+interface Track {
+    trackName?: string;
+    surface?: string;
+    distance?: number | string | null;
+    groundCondition?: string;
+    weather?: string;
+    season?: string;
+    numUmas?: number | null;
+    courseId?: string;
+}
+
+interface Uma {
+    speed?: number | null;
+    stamina?: number | null;
+    power?: number | null;
+    guts?: number | null;
+    wisdom?: number | null;
+    strategy?: string;
+    distanceAptitude?: string;
+    surfaceAptitude?: string;
+    styleAptitude?: string;
+    mood?: number | null;
+    unique?: string;
+    skills?: string[];
+}
+
+interface Config {
+    skills: Record<string, Skill>;
+    track?: Track;
+    uma?: Uma;
+}
+
+type SkillNames = Record<string, string[]>;
+type SkillMeta = Record<string, { groupId?: string }>;
+type CourseData = Record<
+    string,
+    {
+        surface?: number;
+        distance?: number;
+        raceTrackId?: number | string;
+    }
+>;
+
+const tracknames: Record<string, [string, string]> = {
     10001: ["", "Sapporo"],
     10002: ["", "Hakodate"],
     10003: ["", "Niigata"],
@@ -14,17 +59,21 @@ const tracknames = {
     10010: ["", "Kokura"],
     10101: ["", "Ooi"],
 };
-let skillnames = null;
-let skillNameToId = null;
-let skillmeta = null;
-let courseData = null;
+
+let currentConfig: Config | null = null;
+let currentConfigFile: string | null = null;
+let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+let skillnames: SkillNames | null = null;
+let skillNameToId: Record<string, string> | null = null;
+let skillmeta: SkillMeta | null = null;
+let courseData: CourseData | null = null;
 
 (async function loadSkillnamesOnInit() {
     const response = await fetch("/api/skillnames");
     if (!response.ok) {
         throw new Error(`Failed to load skillnames: ${response.status} ${response.statusText}`);
     }
-    skillnames = await response.json();
+    skillnames = (await response.json()) as SkillNames;
     if (!skillnames || typeof skillnames !== "object") {
         throw new Error("Invalid skillnames data received");
     }
@@ -36,24 +85,23 @@ let courseData = null;
     if (!response.ok) {
         throw new Error(`Failed to load skillmeta: ${response.status} ${response.statusText}`);
     }
-    skillmeta = await response.json();
+    skillmeta = (await response.json()) as SkillMeta;
     if (!skillmeta || typeof skillmeta !== "object") {
         throw new Error("Invalid skillmeta data received");
     }
 })();
 
-async function waitForCourseData() {
+async function waitForCourseData(): Promise<void> {
     if (courseData) {
         return;
     }
-    await new Promise((resolve) => {
+    await new Promise<void>((resolve) => {
         const checkCourseData = setInterval(() => {
             if (courseData) {
                 clearInterval(checkCourseData);
                 resolve();
             }
         }, 50);
-        // Timeout after 5 seconds
         setTimeout(() => {
             clearInterval(checkCourseData);
             resolve();
@@ -66,27 +114,26 @@ async function waitForCourseData() {
     if (!response.ok) {
         throw new Error(`Failed to load course data: ${response.status} ${response.statusText}`);
     }
-    courseData = await response.json();
+    courseData = (await response.json()) as CourseData;
     if (!courseData || typeof courseData !== "object") {
         throw new Error("Invalid course data received");
     }
-    // Re-render track when course data is loaded in case it was rendered before data was available
     if (currentConfig) {
         renderTrack();
     }
 })();
 
-function normalizeSkillName(name) {
+function normalizeSkillName(name: string): string {
     return name.toLowerCase().trim().replace(/[◎○×]/g, "").replace(/\s+/g, " ").trim();
 }
 
-function getBaseSkillName(skillName) {
+function getBaseSkillName(skillName: string): string {
     return skillName.replace(/[◎○]$/, "").trim();
 }
 
-function getVariantsForBaseName(baseName) {
+function getVariantsForBaseName(baseName: string): string[] {
     if (!skillnames) return [];
-    const variants = [];
+    const variants: string[] = [];
 
     for (const [id, names] of Object.entries(skillnames)) {
         if (Array.isArray(names) && names[0]) {
@@ -100,7 +147,7 @@ function getVariantsForBaseName(baseName) {
     return variants;
 }
 
-function getOtherVariant(skillName) {
+function getOtherVariant(skillName: string): string | string[] | null {
     if (!skillnames) return null;
     const baseName = getBaseSkillName(skillName);
     const hasCircle = skillName.endsWith(" ○");
@@ -125,7 +172,8 @@ function getOtherVariant(skillName) {
     return null;
 }
 
-function findSkillId(skillName) {
+function findSkillId(skillName: string): string | null {
+    if (!skillNameToId || !skillnames) return null;
     if (skillNameToId[skillName]) {
         return skillNameToId[skillName];
     }
@@ -151,17 +199,18 @@ function findSkillId(skillName) {
     return null;
 }
 
-function getSkillGroupId(skillName) {
+function getSkillGroupId(skillName: string): string | null {
     if (!skillmeta) return null;
     const skillId = findSkillId(skillName);
     if (!skillId) return null;
     return skillmeta[skillId]?.groupId || null;
 }
 
-async function loadConfigFiles() {
+async function loadConfigFiles(): Promise<void> {
     const response = await fetch("/api/configs");
-    const files = await response.json();
-    const select = document.getElementById("config-select");
+    const files = (await response.json()) as string[];
+    const select = document.getElementById("config-select") as HTMLSelectElement;
+    if (!select) return;
     select.innerHTML = "";
     files.forEach((file) => {
         const option = document.createElement("option");
@@ -169,26 +218,29 @@ async function loadConfigFiles() {
         option.textContent = file;
         select.appendChild(option);
     });
-    // Wait for course data to be loaded before loading config
     await waitForCourseData();
     if (files.length > 0) {
         await loadConfig(files[0]);
     }
 }
 
-async function loadConfig(filename) {
+async function loadConfig(filename: string): Promise<void> {
     const response = await fetch(`/api/config/${filename}`);
-    const config = await response.json();
+    const config = (await response.json()) as Config;
     currentConfig = config;
     currentConfigFile = filename;
-    document.getElementById("config-select").value = filename;
+    const select = document.getElementById("config-select") as HTMLSelectElement;
+    if (select) {
+        select.value = filename;
+    }
 
     renderSkills();
     renderTrack();
     renderUma();
 }
 
-function deleteSkill(skillName) {
+function deleteSkill(skillName: string): void {
+    if (!currentConfig) return;
     const baseName = getBaseSkillName(skillName);
     const skillsToDelete = [baseName, baseName + " ○", baseName + " ◎"];
     skillsToDelete.forEach((skillToDelete) => {
@@ -196,15 +248,19 @@ function deleteSkill(skillName) {
     });
 }
 
-function renderSkills() {
+function renderSkills(): void {
+    const squareClasses =
+        "py-0.5 px-1 w-6 h-6 rounded text-[13px] cursor-pointer transition-colors";
+    if (!currentConfig) return;
     const container = document.getElementById("skills-container");
+    if (!container) return;
     container.innerHTML = "";
     const skills = currentConfig.skills;
     const umaSkills = currentConfig.uma?.skills || [];
 
     const skillNames = Object.keys(skills);
-    const skillsToRender = new Set();
-    const skillsToHide = new Set();
+    const skillsToRender = new Set<string>();
+    const skillsToHide = new Set<string>();
 
     skillNames.forEach((skillName) => {
         const baseName = getBaseSkillName(skillName);
@@ -274,18 +330,19 @@ function renderSkills() {
         }
 
         const div = document.createElement("div");
-        div.className = "skill-item";
+        div.className = "flex items-center gap-2 hover:bg-zinc-800 px-1 py-0.5 rounded";
         div.dataset.skill = skillName;
 
         const currentDiscount = skill.discount;
-        const discountOptions = [null, 0, 10, 20, 30, 35, 40];
+        const discountOptions: (number | null)[] = [null, 0, 10, 20, 30, 35, 40];
         const discountButtonGroup = document.createElement("div");
-        discountButtonGroup.className = "discount-button-group";
+        discountButtonGroup.className = "flex gap-1 items-center";
         discountButtonGroup.dataset.skill = skillName;
 
         discountOptions.forEach((value) => {
             const button = document.createElement("button");
-            button.className = "discount-button";
+            button.className =
+                `${squareClasses} bg-zinc-700 text-zinc-200 border border-zinc-600 hover:bg-zinc-600 hover:border-zinc-500`;
             button.dataset.skill = skillName;
             button.dataset.discount = value === null ? "-" : value.toString();
             button.textContent = value === null ? "-" : value.toString();
@@ -293,13 +350,15 @@ function renderSkills() {
                 currentDiscount === value ||
                 (value === null && (currentDiscount === null || currentDiscount === undefined))
             ) {
-                button.classList.add("active");
+                button.className =
+                    `${squareClasses} bg-sky-600 text-white border border-sky-600 hover:bg-sky-700 hover:border-sky-700`;
             }
             discountButtonGroup.appendChild(button);
         });
 
         const lockButton = document.createElement("button");
-        lockButton.className = "lock-button";
+        lockButton.className =
+            `${squareClasses} bg-transparent text-zinc-500 border-none hover:text-zinc-200 hover:bg-zinc-700`;
         lockButton.dataset.skill = skillName;
         const skillDefault = skill.default;
         const isDefaultActive = skillDefault !== undefined && skillDefault !== null && currentDiscount === skillDefault;
@@ -311,7 +370,9 @@ function renderSkills() {
         lockButton.title = isLocked ? "Remove default" : "Set current discount as default";
         lockButton.addEventListener("click", (e) => {
             e.stopPropagation();
-            const skillName = e.target.dataset.skill;
+            const target = e.target as HTMLElement;
+            const skillName = target.dataset.skill;
+            if (!skillName || !currentConfig) return;
             const currentDiscount = currentConfig.skills[skillName]?.discount;
             const skillDefault = currentConfig.skills[skillName]?.default;
             const isCurrentlyDefault =
@@ -390,24 +451,28 @@ function renderSkills() {
         discountButtonGroup.appendChild(lockButton);
 
         const addToUmaButton = document.createElement("button");
-        addToUmaButton.className = "add-to-uma-button";
         const isInUmaSkills = umaSkills.includes(skillName);
         const hasDiscount = skill.discount !== null && skill.discount !== undefined;
         if (isInUmaSkills) {
+            addToUmaButton.className = `${squareClasses} bg-red-600 text-white border-none hover:bg-red-700`;
             addToUmaButton.textContent = "-";
-            addToUmaButton.classList.add("red");
             addToUmaButton.title = "Remove from Uma skills";
         } else {
+            if (hasDiscount) {
+                addToUmaButton.className = `${squareClasses} bg-sky-600 text-white border-none hover:bg-sky-700`;
+            } else {
+                addToUmaButton.className =
+                    `${squareClasses} opacity-40 bg-zinc-700 text-zinc-400 border border-zinc-600 hover:bg-zinc-600 hover:border-zinc-500`;
+            }
             addToUmaButton.textContent = "+";
             addToUmaButton.title = "Add to Uma skills";
-            if (!hasDiscount) {
-                addToUmaButton.classList.add("no-discount");
-            }
         }
         addToUmaButton.dataset.skill = skillName;
         addToUmaButton.addEventListener("click", (e) => {
             e.stopPropagation();
-            const skillName = e.target.dataset.skill;
+            const target = e.target as HTMLElement;
+            const skillName = target.dataset.skill;
+            if (!skillName || !currentConfig) return;
             if (!currentConfig.uma) {
                 currentConfig.uma = {};
             }
@@ -422,7 +487,6 @@ function renderSkills() {
                     currentConfig.uma.skills.splice(skillIndex, 1);
                 }
             } else {
-                // Use groupId to find and replace skills in the same group
                 const newSkillGroupId = getSkillGroupId(skillName);
                 let replaced = false;
 
@@ -448,20 +512,23 @@ function renderSkills() {
         });
 
         const skillNameSpan = document.createElement("span");
-        skillNameSpan.className = "skill-name-text";
+        skillNameSpan.className = "flex-1 cursor-pointer hover:text-teal-400";
         skillNameSpan.textContent = skillName;
-        skillNameSpan.style.cursor = "pointer";
         skillNameSpan.title = "Click to edit skill name";
         skillNameSpan.dataset.skill = skillName;
         skillNameSpan.addEventListener("click", (e) => {
             e.stopPropagation();
-            const skillName = e.target.dataset.skill;
+            const target = e.target as HTMLElement;
+            const skillName = target.dataset.skill;
+            if (!skillName || !currentConfig) return;
             const originalName = skillName;
             const skillNameInput = document.createElement("input");
             skillNameInput.type = "text";
-            skillNameInput.className = "skill-name-input";
+            skillNameInput.className =
+                "py-0.5 px-1 border-sky-500 min-w-[100px] m-0 bg-zinc-700 text-zinc-200 border rounded text-[13px] focus:outline-none focus:border-sky-400 flex-1";
             skillNameInput.value = originalName;
-            skillNameInput.style.width = e.target.offsetWidth + "px";
+            const spanTarget = e.target as HTMLElement;
+            skillNameInput.style.width = spanTarget.offsetWidth + "px";
             skillNameInput.style.minWidth = "100px";
 
             const restoreSpan = () => {
@@ -497,12 +564,16 @@ function renderSkills() {
                 }
             });
 
-            e.target.parentNode.replaceChild(skillNameInput, e.target);
+            const parent = spanTarget.parentNode;
+            if (parent) {
+                parent.replaceChild(skillNameInput, spanTarget);
+            }
             skillNameInput.focus();
             skillNameInput.select();
         });
 
         const label = document.createElement("label");
+        label.className = "flex-1 m-0 flex items-center gap-2";
         label.appendChild(skillNameSpan);
 
         div.appendChild(addToUmaButton);
@@ -512,13 +583,15 @@ function renderSkills() {
         container.appendChild(div);
     });
 
-    container.querySelectorAll(".discount-button").forEach((button) => {
+    container.querySelectorAll("[data-discount]").forEach((button) => {
         button.addEventListener("click", (e) => {
-            const skillName = e.target.dataset.skill;
-            const discountValue = e.target.dataset.discount;
+            const target = e.target as HTMLElement;
+            const skillName = target.dataset.skill;
+            const discountValue = target.dataset.discount;
+            if (!skillName || !discountValue || !currentConfig) return;
             const discount = discountValue === "-" ? null : parseInt(discountValue);
             if (!currentConfig.skills[skillName]) {
-                currentConfig.skills[skillName] = {};
+                currentConfig.skills[skillName] = { discount: null };
             }
 
             const currentDiscount = currentConfig.skills[skillName].discount;
@@ -635,9 +708,10 @@ function renderSkills() {
     });
 }
 
-function calculateDropdownWidth(options) {
+function calculateDropdownWidth(options: string[]): number {
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
+    if (!context) return 120;
     context.font = "13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
     let maxWidth = 0;
     options.forEach((opt) => {
@@ -652,17 +726,17 @@ function calculateDropdownWidth(options) {
 const DISTANCE_CATEGORIES = ["<Sprint>", "<Mile>", "<Medium>", "<Long>"];
 const RANDOM_LOCATION = "<Random>";
 
-function isRandomLocation(trackName) {
-    return trackName && trackName.toLowerCase().trim() === "<random>";
+function isRandomLocation(trackName: string | undefined | null): boolean {
+    return trackName !== undefined && trackName !== null && trackName.toLowerCase().trim() === "<random>";
 }
 
-function isDistanceCategory(distance) {
+function isDistanceCategory(distance: string | number | null | undefined): boolean {
     if (!distance) return false;
     const normalized = distance.toString().toLowerCase().trim();
     return ["<sprint>", "<mile>", "<medium>", "<long>"].includes(normalized);
 }
 
-function getAvailableDistances(trackName, surface) {
+function getAvailableDistances(trackName: string | undefined, surface: string | undefined): string[] {
     if (!courseData || !surface) {
         return DISTANCE_CATEGORIES;
     }
@@ -674,15 +748,16 @@ function getAvailableDistances(trackName, surface) {
 
     const isRandom = isRandomLocation(trackName);
 
-    // For <Random> location, find all distances available for the surface
     if (isRandom) {
-        const distances = new Set();
+        const distances = new Set<number>();
         for (const [courseId, rawCourse] of Object.entries(courseData)) {
             if (!rawCourse || typeof rawCourse !== "object") {
                 continue;
             }
             if (rawCourse.surface === surfaceValue) {
-                distances.add(rawCourse.distance);
+                if (rawCourse.distance !== undefined) {
+                    distances.add(rawCourse.distance);
+                }
             }
         }
         const distanceList = Array.from(distances)
@@ -691,7 +766,6 @@ function getAvailableDistances(trackName, surface) {
         return [...DISTANCE_CATEGORIES, ...distanceList];
     }
 
-    // For specific location, find distances for that track
     if (!trackName) {
         return DISTANCE_CATEGORIES;
     }
@@ -702,7 +776,7 @@ function getAvailableDistances(trackName, surface) {
         return DISTANCE_CATEGORIES;
     }
 
-    const distances = new Set();
+    const distances = new Set<number>();
     for (const [courseId, rawCourse] of Object.entries(courseData)) {
         if (!rawCourse || typeof rawCourse !== "object") {
             continue;
@@ -712,7 +786,9 @@ function getAvailableDistances(trackName, surface) {
             continue;
         }
         if (raceTrackId.toString() === trackId && rawCourse.surface === surfaceValue) {
-            distances.add(rawCourse.distance);
+            if (rawCourse.distance !== undefined) {
+                distances.add(rawCourse.distance);
+            }
         }
     }
 
@@ -722,22 +798,33 @@ function getAvailableDistances(trackName, surface) {
     return [...DISTANCE_CATEGORIES, ...distanceList];
 }
 
-function renderTrack() {
+function renderTrack(): void {
+    if (!currentConfig) return;
     const container = document.getElementById("track-container");
+    if (!container) return;
     container.innerHTML = "";
     const track = currentConfig.track || {};
 
     const trackLocations = Object.values(tracknames)
         .map((arr) => arr[1])
         .filter(Boolean)
-        .sort();
+        .sort() as string[];
     const locationOptions = [RANDOM_LOCATION, ...trackLocations];
     const locationWidth = locationOptions.length > 0 ? calculateDropdownWidth(locationOptions) : 120;
 
     const distanceOptions = getAvailableDistances(track.trackName, track.surface);
     const distanceWidth = distanceOptions.length > 0 ? calculateDropdownWidth(distanceOptions) : 60;
 
-    const fields = [
+    interface Field {
+        key: keyof Track;
+        label: string;
+        type: "select" | "number" | "text";
+        options?: string[];
+        width: number;
+        dynamic?: boolean;
+    }
+
+    const fields: Field[] = [
         {
             key: "trackName",
             label: "Location",
@@ -786,30 +873,30 @@ function renderTrack() {
     ];
 
     const trackLine = document.createElement("div");
-    trackLine.className = "track-line";
+    trackLine.className = "flex flex-wrap items-center gap-1";
 
     fields.forEach((field, index) => {
         const wrapper = document.createElement("span");
-        wrapper.className = "track-field-wrapper";
+        wrapper.className = "inline-flex items-center gap-1";
 
         const label = document.createElement("span");
-        label.className = "track-label";
+        label.className = "text-zinc-300 text-[13px] whitespace-nowrap";
         label.textContent = `${field.label}: `;
         wrapper.appendChild(label);
 
-        let input;
+        let input: HTMLInputElement | HTMLSelectElement;
         if (field.type === "select") {
             input = document.createElement("select");
-            input.className = "track-input";
+            input.className =
+                "py-1 px-1.5 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] focus:outline-none focus:border-sky-500";
             if (field.width) {
                 input.style.width = `${field.width}px`;
             }
-            field.options.forEach((opt) => {
+            field.options?.forEach((opt) => {
                 const option = document.createElement("option");
                 option.value = opt;
                 option.textContent = opt;
                 const trackValue = track[field.key];
-                // Handle both string and number comparisons, case-insensitive for special values
                 const trackValueStr = trackValue?.toString()?.toLowerCase();
                 const optLower = opt.toLowerCase();
                 if (trackValue === opt || trackValueStr === opt || trackValueStr === optLower) {
@@ -820,9 +907,10 @@ function renderTrack() {
         } else {
             input = document.createElement("input");
             input.type = field.type;
-            input.className = "track-input";
+            input.className =
+                "py-1 px-1.5 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] focus:outline-none focus:border-sky-500";
             const fieldValue = track[field.key];
-            input.value = fieldValue === null || fieldValue === undefined ? "" : fieldValue;
+            input.value = fieldValue === null || fieldValue === undefined ? "" : String(fieldValue);
             if (field.width) {
                 input.style.width = `${field.width}px`;
             }
@@ -830,27 +918,28 @@ function renderTrack() {
 
         input.dataset.key = field.key;
         input.addEventListener("change", async (e) => {
-            let value;
+            const target = e.target as HTMLInputElement | HTMLSelectElement;
+            let value: string | number | null;
             if (field.type === "number") {
-                const parsed = parseInt(e.target.value);
-                value = e.target.value === "" || isNaN(parsed) ? null : parsed;
+                const parsed = parseInt(target.value);
+                value = target.value === "" || isNaN(parsed) ? null : parsed;
             } else {
-                value = e.target.value;
+                value = target.value;
             }
+            if (!currentConfig) return;
             if (!currentConfig.track) {
                 currentConfig.track = {};
             }
-            currentConfig.track[field.key] = value;
+            (currentConfig.track as Record<string, unknown>)[field.key] = value;
 
-            if ((field.key === "trackName" || field.key === "surface") && field.key !== "distance") {
-                // Wait for course data to be loaded if it's not available yet
+            if (field.key === "trackName" || field.key === "surface") {
                 await waitForCourseData();
 
-                const newTrackName = field.key === "trackName" ? value : currentConfig.track.trackName;
-                const newSurface = field.key === "surface" ? value : currentConfig.track.surface;
+                const newTrackName = field.key === "trackName" ? (value as string) : currentConfig.track.trackName;
+                const newSurface = field.key === "surface" ? (value as string) : currentConfig.track.surface;
                 const newDistanceOptions = getAvailableDistances(newTrackName, newSurface);
 
-                const distanceSelect = container.querySelector('select[data-key="distance"]');
+                const distanceSelect = container.querySelector('select[data-key="distance"]') as HTMLSelectElement;
                 if (distanceSelect) {
                     const currentDistance = currentConfig.track.distance;
                     const currentDistanceStr = currentDistance?.toString();
@@ -865,13 +954,11 @@ function renderTrack() {
                         distanceSelect.appendChild(option);
                     });
 
-                    // Check if current distance is still in options (case-insensitive for categories)
                     const isCurrentDistanceValid = newDistanceOptions.some(
                         (opt) => opt === currentDistanceStr || opt.toLowerCase() === currentDistanceStr?.toLowerCase()
                     );
                     if (!isCurrentDistanceValid && newDistanceOptions.length > 0) {
                         distanceSelect.value = newDistanceOptions[0];
-                        // Keep distance categories as strings, parse numbers
                         if (isDistanceCategory(newDistanceOptions[0])) {
                             currentConfig.track.distance = newDistanceOptions[0];
                         } else {
@@ -882,11 +969,10 @@ function renderTrack() {
                     }
                 }
             } else if (field.key === "distance") {
-                // Keep distance categories as strings, parse numbers
-                if (isDistanceCategory(value)) {
-                    currentConfig.track.distance = value;
+                if (isDistanceCategory(value as string)) {
+                    currentConfig.track.distance = value as string;
                 } else {
-                    currentConfig.track.distance = parseInt(value);
+                    currentConfig.track.distance = parseInt(value as string);
                 }
             }
 
@@ -896,7 +982,7 @@ function renderTrack() {
 
         if (index < fields.length - 1) {
             const separator = document.createElement("span");
-            separator.className = "track-separator";
+            separator.className = "text-zinc-500 mx-0.5";
             separator.textContent = ", ";
             wrapper.appendChild(separator);
         }
@@ -907,15 +993,25 @@ function renderTrack() {
     container.appendChild(trackLine);
 }
 
-function renderUma() {
+function renderUma(): void {
+    if (!currentConfig) return;
     const container = document.getElementById("uma-container");
+    if (!container) return;
     container.innerHTML = "";
     const uma = currentConfig.uma || {};
 
     const strategyOptions = ["Runaway", "Front Runner", "Pace Chaser", "Late Surger", "End Closer"];
     const aptitudeOptions = ["S", "A", "B", "C", "D", "E", "F", "G"];
 
-    const fields = [
+    interface UmaField {
+        key: keyof Uma;
+        label: string;
+        type: "select" | "number" | "text";
+        options?: string[];
+        width: number;
+    }
+
+    const fields: UmaField[] = [
         { key: "speed", label: "SPD", type: "number", width: 65 },
         { key: "stamina", label: "STA", type: "number", width: 65 },
         { key: "power", label: "PWR", type: "number", width: 65 },
@@ -953,23 +1049,24 @@ function renderUma() {
         { key: "unique", label: "Unique", type: "text", width: 280 },
     ];
 
-    const createUmaField = (field, isLast) => {
+    const createUmaField = (field: UmaField, isLast: boolean): HTMLElement => {
         const wrapper = document.createElement("span");
-        wrapper.className = "uma-field-wrapper";
+        wrapper.className = "inline-flex items-center gap-1";
 
         const label = document.createElement("span");
-        label.className = "uma-label";
+        label.className = "text-zinc-300 text-[13px] whitespace-nowrap";
         label.textContent = `${field.label}: `;
         wrapper.appendChild(label);
 
-        let input;
+        let input: HTMLInputElement | HTMLSelectElement;
         if (field.type === "select") {
             input = document.createElement("select");
-            input.className = "uma-input";
+            input.className =
+                "py-1 px-1.5 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] focus:outline-none focus:border-sky-500";
             if (field.width) {
                 input.style.width = `${field.width}px`;
             }
-            field.options.forEach((opt) => {
+            field.options?.forEach((opt) => {
                 const option = document.createElement("option");
                 option.value = opt;
                 option.textContent = opt;
@@ -981,9 +1078,10 @@ function renderUma() {
         } else {
             input = document.createElement("input");
             input.type = field.type;
-            input.className = "uma-input";
+            input.className =
+                "py-1 px-1.5 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] focus:outline-none focus:border-sky-500";
             const fieldValue = uma[field.key];
-            input.value = fieldValue === null || fieldValue === undefined ? "" : fieldValue;
+            input.value = fieldValue === null || fieldValue === undefined ? "" : String(fieldValue);
             if (field.width) {
                 input.style.width = `${field.width}px`;
             }
@@ -991,24 +1089,26 @@ function renderUma() {
 
         input.dataset.key = field.key;
         input.addEventListener("change", (e) => {
-            let value;
+            const target = e.target as HTMLInputElement | HTMLSelectElement;
+            let value: string | number | null;
             if (field.type === "number") {
-                const parsed = parseInt(e.target.value);
-                value = e.target.value === "" || isNaN(parsed) ? null : parsed;
+                const parsed = parseInt(target.value);
+                value = target.value === "" || isNaN(parsed) ? null : parsed;
             } else {
-                value = e.target.value;
+                value = target.value;
             }
+            if (!currentConfig) return;
             if (!currentConfig.uma) {
                 currentConfig.uma = {};
             }
-            currentConfig.uma[field.key] = value;
+            (currentConfig.uma as Record<string, unknown>)[field.key] = value;
             autoSave();
         });
         wrapper.appendChild(input);
 
         if (!isLast) {
             const separator = document.createElement("span");
-            separator.className = "uma-separator";
+            separator.className = "text-zinc-500 mx-0.5";
             separator.textContent = ", ";
             wrapper.appendChild(separator);
         }
@@ -1017,40 +1117,39 @@ function renderUma() {
     };
 
     const line1 = document.createElement("div");
-    line1.className = "uma-line";
+    line1.className = "flex flex-wrap items-center gap-1 mb-2";
     fields.slice(0, 6).forEach((field, index) => {
         line1.appendChild(createUmaField(field, index === 5));
     });
     container.appendChild(line1);
 
     const line2 = document.createElement("div");
-    line2.className = "uma-line";
+    line2.className = "flex flex-wrap items-center gap-1 mb-2";
     fields.slice(6).forEach((field, index) => {
         line2.appendChild(createUmaField(field, index === fields.slice(6).length - 1));
     });
     container.appendChild(line2);
 
     const skillsDiv = document.createElement("div");
-    skillsDiv.className = "uma-line";
+    skillsDiv.className = "flex flex-wrap items-center gap-1";
     const skillsWrapper = document.createElement("span");
-    skillsWrapper.className = "uma-field-wrapper";
-    skillsWrapper.style.flex = "1";
-    skillsWrapper.style.minWidth = "0";
+    skillsWrapper.className = "inline-flex items-center gap-1 flex-1 min-w-0";
     const skillsLabel = document.createElement("span");
-    skillsLabel.className = "uma-label";
+    skillsLabel.className = "text-zinc-300 text-[13px] whitespace-nowrap mb-2";
     skillsLabel.textContent = "Skills: ";
     skillsWrapper.appendChild(skillsLabel);
     const skillsInput = document.createElement("input");
     skillsInput.type = "text";
-    skillsInput.className = "uma-input";
-    skillsInput.style.flex = "1";
-    skillsInput.style.minWidth = "0";
+    skillsInput.className =
+        "py-1 px-1.5 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] focus:outline-none focus:border-sky-500 flex-1 min-w-0 mb-2";
     skillsInput.value = (uma.skills || []).join(", ");
     skillsInput.addEventListener("change", (e) => {
+        const target = e.target as HTMLInputElement;
+        if (!currentConfig) return;
         if (!currentConfig.uma) {
             currentConfig.uma = {};
         }
-        currentConfig.uma.skills = e.target.value
+        currentConfig.uma.skills = target.value
             .split(",")
             .map((s) => s.trim())
             .filter((s) => s.length > 0);
@@ -1061,8 +1160,8 @@ function renderUma() {
     container.appendChild(skillsDiv);
 }
 
-async function saveConfig() {
-    if (!currentConfigFile) return;
+async function saveConfig(): Promise<void> {
+    if (!currentConfigFile || !currentConfig) return;
 
     try {
         await fetch(`/api/config/${currentConfigFile}`, {
@@ -1077,7 +1176,7 @@ async function saveConfig() {
     }
 }
 
-function autoSave() {
+function autoSave(): void {
     if (saveTimeout) {
         clearTimeout(saveTimeout);
     }
@@ -1086,9 +1185,11 @@ function autoSave() {
     }, 500);
 }
 
-async function runCalculations() {
-    const button = document.getElementById("run-button");
-    const output = document.getElementById("terminal-output");
+async function runCalculations(): Promise<void> {
+    if (!currentConfigFile) return;
+    const button = document.getElementById("run-button") as HTMLButtonElement;
+    const output = document.getElementById("terminal-output") as HTMLPreElement;
+    if (!button || !output) return;
     button.disabled = true;
     output.textContent = "Running calculations...\n";
 
@@ -1114,13 +1215,14 @@ async function runCalculations() {
         const decoder = new TextDecoder();
 
         while (true) {
-            let result;
+            let result: ReadableStreamReadResult<Uint8Array>;
             try {
                 result = await reader.read();
             } catch (readError) {
+                const err = readError as Error;
                 console.error("Error reading stream:", readError);
                 button.disabled = false;
-                output.textContent += `\n\nError reading stream: ${readError.message}`;
+                output.textContent += `\n\nError reading stream: ${err.message}`;
                 break;
             }
 
@@ -1133,15 +1235,22 @@ async function runCalculations() {
             for (const line of lines) {
                 if (line.startsWith("data: ")) {
                     try {
-                        const data = JSON.parse(line.slice(6));
+                        const data = JSON.parse(line.slice(6)) as {
+                            type: string;
+                            data?: string;
+                            code?: number | null;
+                            signal?: string;
+                            output?: string;
+                            error?: string;
+                        };
                         if (data.type === "started") {
                             continue;
                         } else if (data.type === "output") {
-                            output.textContent += data.data;
+                            output.textContent += data.data || "";
                             output.scrollTop = output.scrollHeight;
                         } else if (data.type === "done") {
                             button.disabled = false;
-                            if (data.code !== null && data.code !== 0) {
+                            if (data.code !== null && data.code !== undefined && data.code !== 0) {
                                 output.textContent += `\n\nProcess exited with code ${data.code}`;
                             } else if (data.code === null) {
                                 if (data.signal) {
@@ -1152,7 +1261,7 @@ async function runCalculations() {
                             }
                         } else if (data.type === "error") {
                             button.disabled = false;
-                            output.textContent += `\n\nError: ${data.error}`;
+                            output.textContent += `\n\nError: ${data.error || "Unknown error"}`;
                         }
                     } catch (parseError) {
                         console.error("Error parsing SSE data:", parseError, line);
@@ -1161,12 +1270,14 @@ async function runCalculations() {
             }
         }
     } catch (error) {
+        const err = error as Error;
         button.disabled = false;
-        output.textContent += `\n\nError: ${error.message}`;
+        output.textContent += `\n\nError: ${err.message}`;
     }
 }
 
-function resetUmaSkills() {
+function resetUmaSkills(): void {
+    if (!currentConfig) return;
     if (!currentConfig.uma) {
         currentConfig.uma = {};
     }
@@ -1174,11 +1285,11 @@ function resetUmaSkills() {
 
     if (currentConfig.skills) {
         Object.keys(currentConfig.skills).forEach((skillName) => {
-            const skill = currentConfig.skills[skillName];
+            const skill = currentConfig!.skills[skillName];
             if (skill.default !== undefined && skill.default !== null) {
-                currentConfig.skills[skillName].discount = skill.default;
+                currentConfig!.skills[skillName].discount = skill.default;
             } else {
-                currentConfig.skills[skillName].discount = null;
+                currentConfig!.skills[skillName].discount = null;
             }
         });
     }
@@ -1188,86 +1299,104 @@ function resetUmaSkills() {
     autoSave();
 }
 
-document.getElementById("config-select").addEventListener("change", (e) => {
-    loadConfig(e.target.value);
-});
+const configSelect = document.getElementById("config-select") as HTMLSelectElement;
+if (configSelect) {
+    configSelect.addEventListener("change", (e) => {
+        const target = e.target as HTMLSelectElement;
+        loadConfig(target.value);
+    });
+}
 
-document.getElementById("duplicate-config-button").addEventListener("click", async () => {
-    if (!currentConfigFile) {
-        alert("No config file selected");
-        return;
-    }
-
-    const newName = prompt("Enter name for duplicated config file:");
-    if (!newName || !newName.trim()) {
-        return;
-    }
-
-    let trimmedName = newName.trim();
-    if (!trimmedName.toLowerCase().endsWith(".json")) {
-        trimmedName += ".json";
-    }
-
-    try {
-        const response = await fetch(`/api/config/${encodeURIComponent(currentConfigFile)}/duplicate`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ newName: trimmedName }),
-        });
-
-        if (!response.ok) {
-            let errorMessage = "Failed to duplicate config file";
-            try {
-                const error = await response.json();
-                errorMessage = error.error || errorMessage;
-            } catch (parseError) {
-                const text = await response.text();
-                errorMessage = text || errorMessage;
-            }
-            alert(`Error: ${errorMessage}`);
+const duplicateButton = document.getElementById("duplicate-config-button");
+if (duplicateButton) {
+    duplicateButton.addEventListener("click", async () => {
+        if (!currentConfigFile) {
+            alert("No config file selected");
             return;
         }
 
-        await loadConfigFiles();
-        await loadConfig(trimmedName);
-    } catch (error) {
-        alert(`Error: ${error.message}`);
-    }
-});
-
-document.getElementById("run-button").addEventListener("click", runCalculations);
-
-document.getElementById("reset-button").addEventListener("click", resetUmaSkills);
-
-document.getElementById("add-skill-button").addEventListener("click", () => {
-    if (!currentConfig.skills) {
-        currentConfig.skills = {};
-    }
-    const newSkillName = "New Skill";
-    let counter = 1;
-    let finalName = newSkillName;
-    while (currentConfig.skills[finalName]) {
-        finalName = `${newSkillName} ${counter}`;
-        counter++;
-    }
-    currentConfig.skills[finalName] = {
-        discount: 0,
-    };
-    renderSkills();
-
-    setTimeout(() => {
-        const skillItem = document.querySelector(`[data-skill="${finalName}"]`);
-        if (skillItem) {
-            const editButton = skillItem.querySelector(".edit-skill-button");
-            if (editButton) {
-                editButton.click();
-            }
+        const newName = prompt("Enter name for duplicated config file:");
+        if (!newName || !newName.trim()) {
+            return;
         }
-    }, 100);
 
-    autoSave();
-});
+        let trimmedName = newName.trim();
+        if (!trimmedName.toLowerCase().endsWith(".json")) {
+            trimmedName += ".json";
+        }
+
+        try {
+            const response = await fetch(`/api/config/${encodeURIComponent(currentConfigFile)}/duplicate`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ newName: trimmedName }),
+            });
+
+            if (!response.ok) {
+                let errorMessage = "Failed to duplicate config file";
+                try {
+                    const error = (await response.json()) as { error?: string };
+                    errorMessage = error.error || errorMessage;
+                } catch (parseError) {
+                    const text = await response.text();
+                    errorMessage = text || errorMessage;
+                }
+                alert(`Error: ${errorMessage}`);
+                return;
+            }
+
+            await loadConfigFiles();
+            await loadConfig(trimmedName);
+        } catch (error) {
+            const err = error as Error;
+            alert(`Error: ${err.message}`);
+        }
+    });
+}
+
+const runButton = document.getElementById("run-button");
+if (runButton) {
+    runButton.addEventListener("click", runCalculations);
+}
+
+const resetButton = document.getElementById("reset-button");
+if (resetButton) {
+    resetButton.addEventListener("click", resetUmaSkills);
+}
+
+const addSkillButton = document.getElementById("add-skill-button");
+if (addSkillButton) {
+    addSkillButton.addEventListener("click", () => {
+        if (!currentConfig) return;
+        if (!currentConfig.skills) {
+            currentConfig.skills = {};
+        }
+        const newSkillName = "New Skill";
+        let counter = 1;
+        let finalName = newSkillName;
+        while (currentConfig.skills[finalName]) {
+            finalName = `${newSkillName} ${counter}`;
+            counter++;
+        }
+        currentConfig.skills[finalName] = {
+            discount: 0,
+        };
+        renderSkills();
+
+        setTimeout(() => {
+            const skillItem = document.querySelector(`[data-skill="${finalName}"]`);
+            if (skillItem) {
+                const editButton = skillItem.querySelector(".edit-skill-button");
+                if (editButton) {
+                    (editButton as HTMLElement).click();
+                }
+            }
+        }, 100);
+
+        autoSave();
+    });
+}
 
 loadConfigFiles();

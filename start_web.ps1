@@ -20,10 +20,10 @@ if (-not (Test-Path $umaToolsPath)) {
         exit 1
     }
     Pop-Location
-    
+
     # Initial setup steps
     Write-Host "Initial setup, successive starts will be faster."
-    
+
     # Install dependencies
     Write-Host "Installing dependencies..."
     npm install
@@ -34,7 +34,7 @@ if (-not (Test-Path $umaToolsPath)) {
 
     # Rebuild the project
     Write-Host "Rebuilding project..."
-    node build.mjs
+    tsx build.ts
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Build failed!"
         exit 1
@@ -71,7 +71,7 @@ if (Test-Path $umaToolsPath) {
 }
 
 # Start the server in a new window
-$startCommand = "Set-Location '$PSScriptRoot'; node server.cjs"
+$startCommand = "Set-Location '$PSScriptRoot'; tsx server.ts"
 Start-Process powershell -ArgumentList "-NoExit", "-Command", $startCommand
 
 # Open the browser

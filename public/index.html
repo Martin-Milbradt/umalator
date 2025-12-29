@@ -6,51 +6,61 @@
         <title>Umalator Global CLI - Web Interface</title>
         <link rel="stylesheet" href="style.css" />
     </head>
-    <body>
-        <div class="container">
-            <div class="left-panel">
-                <h3>
-                    <button id="add-skill-button" class="add-skill-header-button" title="Add new skill">+</button>
+    <body class="m-0 p-0 box-border font-sans bg-zinc-900 text-zinc-200 h-screen overflow-hidden">
+        <div class="flex h-screen">
+            <div class="p-2.5 overflow-y-auto bg-zinc-800 border-r border-zinc-700 w-[800px]">
+                <h3 class="mt-0 mb-2.5 text-teal-400 text-base flex items-center gap-2">
+                    <button
+                        id="add-skill-button"
+                        class="bg-sky-600 text-white border-none rounded w-6 h-6 text-lg leading-none cursor-pointer flex items-center justify-center p-0 transition-colors hover:bg-sky-700 active:bg-sky-800"
+                        title="Add new skill"
+                    >
+                        +
+                    </button>
                     Skills
                 </h3>
                 <div id="skills-container"></div>
             </div>
 
-            <div class="right-panel">
-                <div class="section">
-                    <label for="config-select">Config File:</label>
-                    <div style="display: flex; align-items: center; gap: 8px">
-                        <select id="config-select" style="flex: 1"></select>
-                        <button
-                            id="duplicate-config-button"
-                            class="add-skill-header-button"
-                            title="Duplicate config file"
-                        >
-                            +
-                        </button>
-                    </div>
+            <div class="w-full p-2.5 flex flex-col bg-zinc-900 overflow-y-auto">
+                <div class="flex items-center gap-2.5 mb-2.5">
+                    <select
+                        id="config-select"
+                        class="flex-1 p-2 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-sm focus:outline-none focus:border-sky-500"
+                    ></select>
+                    <button
+                        id="duplicate-config-button"
+                        class="bg-sky-600 text-white border-none rounded h-9 w-9 text-lg leading-none cursor-pointer flex items-center justify-center p-0 transition-colors hover:bg-sky-700 active:bg-sky-800"
+                        title="Duplicate config file"
+                    >
+                        +
+                    </button>
+                    <button
+                        id="run-button"
+                        class="h-9 px-4 text-white border-none rounded-md text-base font-semibold cursor-pointer transition-colors bg-sky-600 hover:bg-sky-700 active:bg-sky-800 disabled:bg-zinc-600 disabled:cursor-not-allowed flex items-center"
+                    >
+                        Run Calculations
+                    </button>
+                    <button
+                        id="reset-button"
+                        class="h-9 px-4 text-white border-none rounded-md text-base font-semibold cursor-pointer transition-colors bg-red-600 hover:bg-red-700 active:bg-red-800 flex items-center"
+                    >
+                        Reset
+                    </button>
                 </div>
 
-                <div class="button-group">
-                    <button id="run-button" class="run-button">Run Calculations</button>
-                    <button id="reset-button" class="reset-button red">Reset</button>
-                </div>
+                <pre
+                    id="terminal-output"
+                    class="flex-1 bg-slate-950 text-slate-300 p-2.5 rounded-md font-mono text-[13px] leading-normal overflow-y-auto whitespace-pre-wrap wrap-break-word border border-slate-700 mb-2.5"
+                ></pre>
 
-                <h3>Terminal Output</h3>
-                <pre id="terminal-output"></pre>
-
-                <div class="section">
-                    <h3>Uma</h3>
+                <div class="p-2.5 bg-zinc-800 rounded-md border border-zinc-700">
                     <div id="uma-container"></div>
-                </div>
-
-                <div class="section">
-                    <h3>Track</h3>
                     <div id="track-container"></div>
                 </div>
             </div>
         </div>
 
-        <script src="app.js"></script>
+        <script type="module" src="app.js"></script>
     </body>
 </html>

@@ -1,0 +1,261 @@
+{
+  "deterministic": false,
+  "confidenceInterval": 90,
+  "skills": {
+    "Triumphant Pulse": {
+      "discount": null
+    },
+    "Shadow Break": {
+      "discount": null
+    },
+    "Behold Thine Emperor's Divine Might": {
+      "discount": null
+    },
+    "Nemesis": {
+      "discount": null
+    },
+    "Professor of Curvature": {
+      "discount": 10,
+      "default": 10
+    },
+    "Corner Adept ○": {
+      "discount": 0,
+      "default": 0
+    },
+    "Passing Pro": {
+      "discount": null
+    },
+    "Highlander": {
+      "discount": null
+    },
+    "Uma Stan": {
+      "discount": null
+    },
+    "Ramp Up": {
+      "discount": null
+    },
+    "Ignited Spirit SPD": {
+      "discount": null
+    },
+    "Swinging Maestro": {
+      "discount": 10,
+      "default": 10
+    },
+    "Rushing Gale!": {
+      "discount": 10,
+      "default": 10
+    },
+    "Straightaway Acceleration": {
+      "discount": 0,
+      "default": 0
+    },
+    "Straightaway Recovery": {
+      "discount": null
+    },
+    "It's On!": {
+      "discount": 10,
+      "default": 10
+    },
+    "No Stopping Me!": {
+      "discount": 10,
+      "default": 10
+    },
+    "Nimble Navigator": {
+      "discount": 0,
+      "default": 0
+    },
+    "Burning Spirit SPD": {
+      "discount": null
+    },
+    "The Duty of Dignity Calls": {
+      "discount": null
+    },
+    "Lone Wolf": {
+      "discount": null
+    },
+    "Homestretch Haste": {
+      "discount": null
+    },
+    "Anchors Aweigh!": {
+      "discount": 20,
+      "default": 20
+    },
+    "Straightaway Adept": {
+      "discount": null
+    },
+    "Focus": {
+      "discount": 0,
+      "default": 0
+    },
+    "Flashy☆Landing": {
+      "discount": null
+    },
+    "Corner Recovery ○": {
+      "discount": 0,
+      "default": 0
+    },
+    "SPARKLY☆STARDOM": {
+      "discount": null
+    },
+    "Victoria por plancha ☆": {
+      "discount": null
+    },
+    "Standard Distance": {
+      "discount": null
+    },
+    "Standard Distance ◎": {
+      "discount": null
+    },
+    "Standard Distance ○": {
+      "discount": null
+    },
+    "Corner Connoisseur": {
+      "discount": null
+    },
+    "Corner Acceleration ○": {
+      "discount": null
+    },
+    "Acceleration": {
+      "discount": null
+    },
+    "Ignited Spirit PWR": {
+      "discount": null
+    },
+    "Front Runner Corners ◎": {
+      "discount": null
+    },
+    "Front Runner Corners ○": {
+      "discount": null
+    },
+    "Front Runner Straightaways ◎": {
+      "discount": null
+    },
+    "Front Runner Straightaways ○": {
+      "discount": null
+    },
+    "Front Runner Savvy ◎": {
+      "discount": 0
+    },
+    "Front Runner Savvy ○": {
+      "discount": 0,
+      "default": 0
+    },
+    "Medium Corners ◎": {
+      "discount": null
+    },
+    "Medium Corners ○": {
+      "discount": null
+    },
+    "Blue Rose Closer": {
+      "discount": null
+    },
+    "Tokyo Racecourse": {
+      "discount": null
+    },
+    "Tokyo Racecourse ◎": {
+      "discount": null
+    },
+    "Tokyo Racecourse ○": {
+      "discount": null
+    },
+    "Wet Conditions ○": {
+      "discount": null
+    },
+    "Wet Conditions ◎": {
+      "discount": null
+    },
+    "Lay Low": {
+      "discount": null
+    },
+    "Taking the Lead": {
+      "discount": 10,
+      "default": 10
+    },
+    "Early Lead": {
+      "discount": 10,
+      "default": 10
+    },
+    "Escape Artist": {
+      "discount": null
+    },
+    "Fast-Paced": {
+      "discount": 0,
+      "default": 0
+    },
+    "Final Push": {
+      "discount": 0,
+      "default": 0
+    },
+    "Steadfast": {
+      "discount": null
+    },
+    "Leader's Pride": {
+      "discount": null
+    },
+    "Groundwork": {
+      "discount": 10,
+      "default": 10
+    },
+    "Concentration": {
+      "discount": 0,
+      "default": 0
+    },
+    "Angling and Scheming": {
+      "discount": 10,
+      "default": 10
+    },
+    "Left-Handed ◎": {
+      "discount": 0,
+      "default": 0
+    },
+    "Left-Handed ○": {
+      "discount": 0,
+      "default": 0
+    },
+    "All I've Got": {
+      "discount": null
+    },
+    "Runaway": {
+      "discount": null
+    },
+    "Productive Plan": {
+      "discount": null
+    },
+    "Mile Straightaways": {
+      "discount": null
+    },
+    "Mile Straightaways ◎": {
+      "discount": null
+    },
+    "Mile Straightaways ○": {
+      "discount": null
+    },
+    "Resplendent Red Ace": {
+      "discount": null
+    }
+  },
+  "track": {
+    "courseId": "",
+    "distance": 2000,
+    "groundCondition": "Soft",
+    "numUmas": 9,
+    "season": "Fall",
+    "trackName": "Tokyo",
+    "weather": "Rainy",
+    "surface": "Turf"
+  },
+  "uma": {
+    "distanceAptitude": "S",
+    "guts": 433,
+    "power": 804,
+    "mood": null,
+    "skills": [],
+    "speed": 1186,
+    "stamina": 776,
+    "strategy": "Front Runner",
+    "styleAptitude": "A",
+    "surfaceAptitude": "A",
+    "unique": "The View from the Lead Is Mine!",
+    "wisdom": 598
+  }
+}
