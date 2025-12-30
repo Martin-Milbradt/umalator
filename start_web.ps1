@@ -34,7 +34,7 @@ if (-not (Test-Path $umaToolsPath)) {
 
     # Rebuild the project
     Write-Host "Rebuilding project..."
-    tsx build.ts
+    npx tsx build.ts
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Build failed!"
         exit 1
@@ -70,9 +70,19 @@ if (Test-Path $umaToolsPath) {
     Pop-Location
 }
 
+# Build frontend before starting the server
+Write-Host "Building frontend..."
+npm run build:frontend
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Frontend build failed!"
+    exit 1
+}
+
 # Start the server in a new window
-$startCommand = "Set-Location '$PSScriptRoot'; tsx server.ts"
+$startCommand = "Set-Location '$PSScriptRoot'; npx tsx server.ts"
 Start-Process powershell -ArgumentList "-NoExit", "-Command", $startCommand
+
+Start-Sleep 1
 
 # Open the browser
 Start-Process "http://localhost:3000"

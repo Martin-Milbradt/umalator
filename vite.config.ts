@@ -1,8 +1,11 @@
 import { defineConfig } from "vite";
 import { resolve } from "path";
+import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-    root: "public",
+    root: resolve(__dirname, "public"),
+    publicDir: false,
+    plugins: [tailwindcss()],
     resolve: {
         alias: {
             "/app.js": resolve(__dirname, "public/app.ts"),
@@ -18,10 +21,11 @@ export default defineConfig({
         },
     },
     build: {
-        outDir: ".",
-        emptyOutDir: false,
+        outDir: resolve(__dirname, "dist"),
+        emptyOutDir: true,
         minify: false,
         rollupOptions: {
+            input: resolve(__dirname, "public/index.html"),
             output: {
                 entryFileNames: "app.js",
                 chunkFileNames: "[name].js",

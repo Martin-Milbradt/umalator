@@ -11,7 +11,7 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json());
-app.use(express.static(join(__dirname, "public")));
+app.use(express.static(join(__dirname, "dist")));
 
 const configDir = join(__dirname, "configs");
 

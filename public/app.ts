@@ -1,3 +1,5 @@
+import "./input.css";
+
 interface Skill {
     discount: number | null;
     default?: number | null;
@@ -249,8 +251,7 @@ function deleteSkill(skillName: string): void {
 }
 
 function renderSkills(): void {
-    const squareClasses =
-        "py-0.5 px-1 w-6 h-6 rounded text-[13px] cursor-pointer transition-colors";
+    const squareClasses = "py-0.5 px-1 w-6 h-6 rounded text-[13px] cursor-pointer transition-colors";
     if (!currentConfig) return;
     const container = document.getElementById("skills-container");
     if (!container) return;
@@ -341,8 +342,7 @@ function renderSkills(): void {
 
         discountOptions.forEach((value) => {
             const button = document.createElement("button");
-            button.className =
-                `${squareClasses} bg-zinc-700 text-zinc-200 border border-zinc-600 hover:bg-zinc-600 hover:border-zinc-500`;
+            button.className = `${squareClasses} bg-zinc-700 text-zinc-200 border border-zinc-600 hover:bg-zinc-600 hover:border-zinc-500`;
             button.dataset.skill = skillName;
             button.dataset.discount = value === null ? "-" : value.toString();
             button.textContent = value === null ? "-" : value.toString();
@@ -350,15 +350,13 @@ function renderSkills(): void {
                 currentDiscount === value ||
                 (value === null && (currentDiscount === null || currentDiscount === undefined))
             ) {
-                button.className =
-                    `${squareClasses} bg-sky-600 text-white border border-sky-600 hover:bg-sky-700 hover:border-sky-700`;
+                button.className = `${squareClasses} bg-sky-600 text-white border border-sky-600 hover:bg-sky-700 hover:border-sky-700`;
             }
             discountButtonGroup.appendChild(button);
         });
 
         const lockButton = document.createElement("button");
-        lockButton.className =
-            `${squareClasses} bg-transparent text-zinc-500 border-none hover:text-zinc-200 hover:bg-zinc-700`;
+        lockButton.className = `${squareClasses} bg-transparent text-zinc-500 border-none hover:text-zinc-200 hover:bg-zinc-700`;
         lockButton.dataset.skill = skillName;
         const skillDefault = skill.default;
         const isDefaultActive = skillDefault !== undefined && skillDefault !== null && currentDiscount === skillDefault;
@@ -461,8 +459,7 @@ function renderSkills(): void {
             if (hasDiscount) {
                 addToUmaButton.className = `${squareClasses} bg-sky-600 text-white border-none hover:bg-sky-700`;
             } else {
-                addToUmaButton.className =
-                    `${squareClasses} opacity-40 bg-zinc-700 text-zinc-400 border border-zinc-600 hover:bg-zinc-600 hover:border-zinc-500`;
+                addToUmaButton.className = `${squareClasses} opacity-40 bg-zinc-700 text-zinc-400 border border-zinc-600 hover:bg-zinc-600 hover:border-zinc-500`;
             }
             addToUmaButton.textContent = "+";
             addToUmaButton.title = "Add to Uma skills";
@@ -849,7 +846,7 @@ function renderTrack(): void {
         },
         {
             key: "groundCondition",
-            label: "Ground Condition",
+            label: "Condition",
             type: "select",
             options: ["Firm", "Good", "Soft", "Heavy"],
             width: calculateDropdownWidth(["Firm", "Good", "Soft", "Heavy"]),
@@ -980,13 +977,6 @@ function renderTrack(): void {
         });
         wrapper.appendChild(input);
 
-        if (index < fields.length - 1) {
-            const separator = document.createElement("span");
-            separator.className = "text-zinc-500 mx-0.5";
-            separator.textContent = ", ";
-            wrapper.appendChild(separator);
-        }
-
         trackLine.appendChild(wrapper);
     });
 
@@ -1106,29 +1096,15 @@ function renderUma(): void {
         });
         wrapper.appendChild(input);
 
-        if (!isLast) {
-            const separator = document.createElement("span");
-            separator.className = "text-zinc-500 mx-0.5";
-            separator.textContent = ", ";
-            wrapper.appendChild(separator);
-        }
-
         return wrapper;
     };
 
-    const line1 = document.createElement("div");
-    line1.className = "flex flex-wrap items-center gap-1 mb-2";
-    fields.slice(0, 6).forEach((field, index) => {
-        line1.appendChild(createUmaField(field, index === 5));
+    const line = document.createElement("div");
+    line.className = "flex flex-wrap items-center gap-1 mb-2";
+    fields.forEach((field, index) => {
+        line.appendChild(createUmaField(field, index === fields.length - 1));
     });
-    container.appendChild(line1);
-
-    const line2 = document.createElement("div");
-    line2.className = "flex flex-wrap items-center gap-1 mb-2";
-    fields.slice(6).forEach((field, index) => {
-        line2.appendChild(createUmaField(field, index === fields.slice(6).length - 1));
-    });
-    container.appendChild(line2);
+    container.appendChild(line);
 
     const skillsDiv = document.createElement("div");
     skillsDiv.className = "flex flex-wrap items-center gap-1";

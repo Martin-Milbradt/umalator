@@ -4,12 +4,10 @@
   "type": "module",
   "scripts": {
     "build": "tsx build.ts",
-    "build:css": "node node_modules/@tailwindcss/cli/dist/index.mjs -i ./public/input.css -o ./public/style.css --minify",
     "build:frontend": "vite build",
     "start": "node cli.js",
-    "web": "npm run build:css && npm run build:frontend && tsx server.ts",
-    "web:watch": "node node_modules/@tailwindcss/cli/dist/index.mjs -i ./public/input.css -o ./public/style.css --watch",
-    "dev": "concurrently \"npm run web:watch\" \"tsx server.ts\" \"vite\""
+    "web": "npm run build:frontend && tsx server.ts",
+    "dev": "concurrently \"tsx server.ts\" \"vite\""
   },
   "dependencies": {
     "commander": "^11.0.0",
@@ -19,6 +17,7 @@
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.1.18",
+    "@tailwindcss/vite": "^4.1.18",
     "@types/node": "^25.0.3",
     "concurrently": "^9.2.1",
     "tailwindcss": "^4.1.18",

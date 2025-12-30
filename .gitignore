@@ -1,3 +1,7 @@
 node_modules/
 cli.js
 simulation.worker.js
+public/app.js
+public/index.css
+public/style.css
+dist/

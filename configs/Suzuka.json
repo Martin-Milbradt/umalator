@@ -3,7 +3,7 @@
   "confidenceInterval": 90,
   "skills": {
     "Triumphant Pulse": {
-      "discount": null
+      "discount": 10
     },
     "Shadow Break": {
       "discount": null
@@ -15,7 +15,7 @@
       "discount": null
     },
     "Professor of Curvature": {
-      "discount": 10,
+      "discount": 30,
       "default": 10
     },
     "Corner Adept ○": {
@@ -32,17 +32,18 @@
       "discount": null
     },
     "Ramp Up": {
-      "discount": null
+      "discount": 0,
+      "default": 0
     },
     "Ignited Spirit SPD": {
-      "discount": null
-    },
-    "Swinging Maestro": {
       "discount": 10,
       "default": 10
     },
+    "Swinging Maestro": {
+      "discount": null
+    },
     "Rushing Gale!": {
-      "discount": 10,
+      "discount": 30,
       "default": 10
     },
     "Straightaway Acceleration": {
@@ -77,8 +78,7 @@
       "discount": null
     },
     "Anchors Aweigh!": {
-      "discount": 20,
-      "default": 20
+      "discount": null
     },
     "Straightaway Adept": {
       "discount": null
@@ -91,8 +91,7 @@
       "discount": null
     },
     "Corner Recovery ○": {
-      "discount": 0,
-      "default": 0
+      "discount": 30
     },
     "SPARKLY☆STARDOM": {
       "discount": null
@@ -109,12 +108,6 @@
     "Standard Distance ○": {
       "discount": null
     },
-    "Corner Connoisseur": {
-      "discount": null
-    },
-    "Corner Acceleration ○": {
-      "discount": null
-    },
     "Acceleration": {
       "discount": null
     },
@@ -122,10 +115,10 @@
       "discount": null
     },
     "Front Runner Corners ◎": {
-      "discount": null
+      "discount": 20
     },
     "Front Runner Corners ○": {
-      "discount": null
+      "discount": 20
     },
     "Front Runner Straightaways ◎": {
       "discount": null
@@ -172,7 +165,7 @@
       "default": 10
     },
     "Early Lead": {
-      "discount": 10,
+      "discount": 20,
       "default": 10
     },
     "Escape Artist": {
@@ -213,49 +206,76 @@
       "default": 0
     },
     "All I've Got": {
-      "discount": null
+      "discount": 20
     },
     "Runaway": {
-      "discount": null
+      "discount": 10,
+      "default": 10
     },
     "Productive Plan": {
       "discount": null
     },
-    "Mile Straightaways": {
-      "discount": null
-    },
-    "Mile Straightaways ◎": {
-      "discount": null
-    },
-    "Mile Straightaways ○": {
-      "discount": null
-    },
     "Resplendent Red Ace": {
       "discount": null
+    },
+    "Killer Tunes": {
+      "discount": 20,
+      "default": 20
+    },
+    "Up-Tempo": {
+      "discount": 0,
+      "default": 0
+    },
+    "Medium Straightaways": {
+      "discount": null
+    },
+    "Medium Straightaways ◎": {
+      "discount": null
+    },
+    "Medium Straightaways ○": {
+      "discount": null
+    },
+    "Second Wind": {
+      "discount": 40
+    },
+    "Rosy Outlook": {
+      "discount": 0,
+      "default": 0
+    },
+    "Soft Step": {
+      "discount": 20
     }
   },
   "track": {
     "courseId": "",
-    "distance": 2000,
+    "distance": "<Medium>",
     "groundCondition": "Soft",
-    "numUmas": 9,
+    "numUmas": 12,
     "season": "Fall",
-    "trackName": "Tokyo",
+    "trackName": "<Random>",
     "weather": "Rainy",
     "surface": "Turf"
   },
   "uma": {
     "distanceAptitude": "S",
-    "guts": 433,
-    "power": 804,
+    "guts": 366,
+    "power": 1023,
     "mood": null,
-    "skills": [],
-    "speed": 1186,
-    "stamina": 776,
+    "skills": [
+      "Angling and Scheming",
+      "No Stopping Me!",
+      "Corner Recovery ○",
+      "Taking the Lead",
+      "Soft Step",
+      "Rosy Outlook",
+      "Concentration"
+    ],
+    "speed": 1134,
+    "stamina": 830,
     "strategy": "Front Runner",
     "styleAptitude": "A",
     "surfaceAptitude": "A",
     "unique": "The View from the Lead Is Mine!",
-    "wisdom": 598
+    "wisdom": 614
   }
 }
