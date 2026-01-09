@@ -277,9 +277,7 @@
     "guts": 399,
     "power": 984,
     "mood": null,
-    "skills": [
-      "Swinging Maestro"
-    ],
+    "skills": ["Swinging Maestro"],
     "speed": 1200,
     "stamina": 900,
     "strategy": "Late Surger",

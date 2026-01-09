@@ -2,6 +2,7 @@
   "extends": "../uma-tools/tsconfig.json",
   "compilerOptions": {
     "noEmit": true,
+    "module": "ESNext",
     "moduleResolution": "node",
     "types": ["node"]
   },

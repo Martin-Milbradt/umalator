@@ -49,8 +49,12 @@ function runSkillSimulation(task: SimulationTask) {
 
     // When using multiple courses, run simulations cycling through courses for fair comparison
     // This ensures all skills run on the same track sequence (simulation i uses course i % numCourses)
-    const usePerSimulationMode = task.useRandomMood || numCourses > 1 ||
-        task.useRandomSeason || task.useRandomWeather || task.useRandomCondition;
+    const usePerSimulationMode =
+        task.useRandomMood ||
+        numCourses > 1 ||
+        task.useRandomSeason ||
+        task.useRandomWeather ||
+        task.useRandomCondition;
 
     if (usePerSimulationMode) {
         const moods: Mood[] = [-2, -1, 0, 1, 2];
@@ -63,7 +67,9 @@ function runSkillSimulation(task: SimulationTask) {
             const mood = task.useRandomMood ? moods[i % moods.length] : (task.baseUma.mood as Mood);
             const season = task.useRandomSeason ? seasons[i % seasons.length] : task.racedef.season;
             const weather = task.useRandomWeather ? weathers[i % weathers.length] : task.racedef.weather;
-            const condition = task.useRandomCondition ? conditions[i % conditions.length] : task.racedef.groundCondition;
+            const condition = task.useRandomCondition
+                ? conditions[i % conditions.length]
+                : task.racedef.groundCondition;
 
             const racedefForSim = {
                 ...task.racedef,

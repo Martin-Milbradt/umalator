@@ -3,8 +3,7 @@
   "confidenceInterval": 90,
   "skills": {
     "Triumphant Pulse": {
-      "discount": 10,
-      "default": 10
+      "discount": null
     },
     "Shadow Break": {
       "discount": null
@@ -13,14 +12,12 @@
       "discount": null
     },
     "Let's Pump Some Iron!": {
-      "discount": null
+      "discount": 20,
+      "default": 20
     },
     "Standing By": {
       "discount": 0,
       "default": 0
-    },
-    "Nemesis": {
-      "discount": null
     },
     "Professor of Curvature": {
       "discount": 10,
@@ -40,16 +37,10 @@
       "discount": null
     },
     "Pressure": {
-      "discount": 10,
-      "default": 10
-    },
-    "Go-Home Specialist": {
-      "discount": 0,
-      "default": 0
+      "discount": null
     },
     "After-School Stroll": {
-      "discount": 0,
-      "default": 0
+      "discount": null
     },
     "Levelheaded": {
       "discount": null
@@ -65,8 +56,7 @@
       "discount": null
     },
     "Uma Stan": {
-      "discount": 0,
-      "default": 0
+      "discount": null
     },
     "Non-Standard Distance": {
       "discount": null
@@ -178,17 +168,19 @@
       "discount": null
     },
     "End Closer Straightaways": {
-      "discount": null
+      "discount": 0,
+      "default": 0
     },
     "End Closer Straightaways ◎": {
-      "discount": null
+      "discount": 0,
+      "default": 0
     },
     "End Closer Straightaways ○": {
-      "discount": null
+      "discount": 0,
+      "default": 0
     },
     "The Duty of Dignity Calls": {
-      "discount": 10,
-      "default": 10
+      "discount": null
     },
     "Competitive Spirit": {
       "discount": null
@@ -200,13 +192,23 @@
       "discount": null
     },
     "Straightaway Spurt": {
-      "discount": null
+      "discount": 0,
+      "default": 0
     },
     "This Dance Is for Vittoria!": {
       "discount": null
     },
+    "Sleeping Lion": {
+      "discount": 0,
+      "default": 0
+    },
+    "Encroaching Shadow": {
+      "discount": 0,
+      "default": 0
+    },
     "Lone Wolf": {
-      "discount": null
+      "discount": 0,
+      "default": 0
     },
     "Homestretch Haste": {
       "discount": null
@@ -226,17 +228,12 @@
     "Early Start": {
       "discount": null
     },
-    "Flashy☆Landing": {
+    "Masterful Gambit": {
       "discount": null
     },
-    "Sunny Days": {
-      "discount": null
-    },
-    "Sunny Days ◎": {
-      "discount": null
-    },
-    "Sunny Days ○": {
-      "discount": null
+    "Moving Past, and Beyond": {
+      "discount": 20,
+      "default": 20
     }
   },
   "track": {
@@ -251,16 +248,16 @@
   },
   "uma": {
     "distanceAptitude": "S",
-    "guts": 560,
-    "power": 760,
+    "guts": 488,
+    "power": 840,
     "mood": null,
     "skills": [],
-    "speed": 1000,
-    "stamina": 1160,
+    "speed": 1151,
+    "stamina": 1100,
     "strategy": "End Closer",
     "styleAptitude": "A",
     "surfaceAptitude": "A",
-    "unique": "Anchors Aweigh!",
-    "wisdom": 460
+    "unique": "Nemesis",
+    "wisdom": 553
   }
 }

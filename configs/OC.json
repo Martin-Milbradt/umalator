@@ -10,7 +10,7 @@
       "default": 10
     },
     "Corner Adept ○": {
-      "discount": 0,
+      "discount": 10,
       "default": 0
     },
     "Intense Gaze": {
@@ -40,7 +40,7 @@
       "discount": null
     },
     "Rushing Gale!": {
-      "discount": 10,
+      "discount": 30,
       "default": 10
     },
     "Straightaway Acceleration": {
@@ -68,9 +68,6 @@
     "Lay Low": {
       "discount": null
     },
-    "The Duty of Dignity Calls": {
-      "discount": null
-    },
     "Competitive Spirit": {
       "discount": null
     },
@@ -80,18 +77,14 @@
     "Competitive Spirit ○": {
       "discount": null
     },
-    "This Dance Is for Vittoria!": {
-      "discount": null
-    },
     "Lone Wolf": {
       "discount": null
     },
     "Homestretch Haste": {
-      "discount": 10,
-      "default": 10
+      "discount": null
     },
     "Straightaway Adept": {
-      "discount": null
+      "discount": 35
     },
     "Focus": {
       "discount": null
@@ -111,9 +104,6 @@
     "Wet Conditions ○": {
       "discount": null
     },
-    "Early Lead": {
-      "discount": null
-    },
     "Fast-Paced": {
       "discount": null
     },
@@ -127,17 +117,9 @@
       "discount": null
     },
     "Medium Straightaways ◎": {
-      "discount": 0,
-      "default": 0
-    },
-    "Medium Straightaways ○": {
-      "discount": 0,
-      "default": 0
-    },
-    "Medium Corners ◎": {
       "discount": null
     },
-    "Medium Corners ○": {
+    "Medium Straightaways ○": {
       "discount": null
     },
     "Groundwork": {
@@ -149,13 +131,8 @@
     "Right-Handed ○": {
       "discount": null
     },
-    "Triumphant Pulse": {
-      "discount": 20,
-      "default": 20
-    },
     "Prepared to Pass": {
-      "discount": 0,
-      "default": 0
+      "discount": null
     },
     "Productive Plan": {
       "discount": null
@@ -184,24 +161,14 @@
     "Head-On": {
       "discount": null
     },
-    "Schwarzes Schwert": {
-      "discount": 20,
-      "default": 20
-    },
-    "Let's Pump Some Iron!": {
-      "discount": 20,
-      "default": 20
-    },
     "Stamina to Spare": {
       "discount": null
     },
     "Preferred Position": {
-      "discount": 0,
-      "default": 0
+      "discount": null
     },
     "Soft Step": {
-      "discount": 0,
-      "default": 0
+      "discount": null
     },
     "Shrewd Step": {
       "discount": null
@@ -211,30 +178,93 @@
     },
     "Tail Held High": {
       "discount": null
+    },
+    "Triple 7s": {
+      "discount": null
+    },
+    "Hydrate": {
+      "discount": null,
+      "default": 0
+    },
+    "Gourmand": {
+      "discount": null,
+      "default": 0
+    },
+    "Cut and Drive!": {
+      "discount": 10,
+      "default": 20
+    },
+    "SPARKLY☆STARDOM": {
+      "discount": 40
+    },
+    "Victoria por plancha ☆": {
+      "discount": 10
+    },
+    "Red Shift/LP1211-M": {
+      "discount": 20,
+      "default": 10
+    },
+    "Sunny Days": {
+      "discount": 10
+    },
+    "Sunny Days ◎": {
+      "discount": 10
+    },
+    "Sunny Days ○": {
+      "discount": 10
+    },
+    "Corner Acceleration ○": {
+      "discount": 0,
+      "default": 0
+    },
+    "Corner Connoisseur": {
+      "discount": 0,
+      "default": 0
+    },
+    "Mile Corners ◎": {
+      "discount": 20
+    },
+    "Mile Corners ○": {
+      "discount": 20
+    },
+    "Acceleration": {
+      "discount": 0,
+      "default": 0
+    },
+    "A Small Breather": {
+      "discount": 20
     }
   },
   "track": {
     "courseId": "",
-    "distance": 2000,
-    "groundCondition": "Soft",
-    "numUmas": 9,
-    "season": "Fall",
-    "trackName": "Tokyo",
-    "weather": "Rainy",
-    "surface": "Turf"
+    "distance": "<Mile>",
+    "groundCondition": "<Random>",
+    "numUmas": 12,
+    "season": "<Random>",
+    "trackName": "<Random>",
+    "weather": "<Random>",
+    "surface": "Dirt"
   },
   "uma": {
-    "distanceAptitude": "S",
-    "guts": 413,
-    "power": 1024,
+    "distanceAptitude": "A",
+    "guts": 455,
+    "power": 925,
     "mood": null,
-    "skills": [],
+    "skills": [
+      "No Stopping Me!",
+      "Sunny Days ○",
+      "Mile Corners ○",
+      "Ignited Spirit SPD",
+      "Straightaway Adept",
+      "Professor of Curvature",
+      "Acceleration"
+    ],
     "speed": 1200,
-    "stamina": 617,
-    "strategy": "Pace Chaser",
+    "stamina": 565,
+    "strategy": "Late Surger",
     "styleAptitude": "A",
     "surfaceAptitude": "A",
-    "unique": "U=ma2",
-    "wisdom": 828
+    "unique": "Triumphant Pulse",
+    "wisdom": 876
   }
 }
