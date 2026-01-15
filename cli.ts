@@ -102,9 +102,7 @@ function findSkillVariantsByName(
     if (exactMatchId) {
         const baseCost = skillMeta[exactMatchId]?.baseCost ?? 200;
         // If exact match has cost 0, look for ○ and ◎ variants instead
-        if (baseCost === 0) {
-            // Continue to look for variants below
-        } else {
+        if (baseCost > 0) {
             variants.push({ skillId: exactMatchId, skillName: trimmedBaseName });
             return variants;
         }
