@@ -1,24 +1,24 @@
 {
-  "permissions": {
-    "allow": [
-      "Bash(npm run build:*)",
-      "Bash(npm run:*)",
-      "Bash(npm run build:frontend:*)",
-      "mcp__ide__getDiagnostics",
-      "Bash(git checkout:*)",
-      "Bash(gh issue create:*)",
-      "Bash(npm install:*)",
-      "Bash(npm test:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(gh pr create:*)",
-      "Bash(grep:*)",
-      "Bash(findstr:*)",
-      "Bash(npm start:*)",
-      "Bash(powershell -Command \"Get-Content:*)",
-      "Bash(python3:*)",
-      "Bash(node -e:*)",
-      "Bash(node cli.js:*)"
-    ]
-  }
+    "permissions": {
+        "allow": [
+            "Bash(npm run build:*)",
+            "Bash(npm run:*)",
+            "Bash(npm run build:frontend:*)",
+            "mcp__ide__getDiagnostics",
+            "Bash(git checkout:*)",
+            "Bash(gh issue create:*)",
+            "Bash(npm install:*)",
+            "Bash(npm test:*)",
+            "Bash(git add:*)",
+            "Bash(git commit:*)",
+            "Bash(gh pr create:*)",
+            "Bash(grep:*)",
+            "Bash(findstr:*)",
+            "Bash(npm start:*)",
+            "Bash(powershell -Command \"Get-Content:*)",
+            "Bash(python3:*)",
+            "Bash(node -e:*)",
+            "Bash(node cli.js:*)"
+        ]
+    }
 }

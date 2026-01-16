@@ -1,450 +1,513 @@
-import express from "express";
-import {
-    readFileSync,
-    writeFileSync,
-    readdirSync,
-    watch,
-    existsSync,
-} from "fs";
-import { resolve, join, dirname } from "path";
-import { spawn, ChildProcess } from "child_process";
-import { fileURLToPath } from "url";
+import express from 'express'
+import { readFileSync, writeFileSync, readdirSync, watch, existsSync } from 'fs'
+import { resolve, join, dirname } from 'path'
+import { spawn, ChildProcess } from 'child_process'
+import { fileURLToPath } from 'url'
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
-const app = express();
-const PORT = 3000;
+const app = express()
+const PORT = 3000
 
-app.use(express.json());
-app.use(express.static(join(__dirname, "dist")));
+app.use(express.json())
+app.use(express.static(join(__dirname, 'dist')))
 
-const configDir = join(__dirname, "configs");
+const configDir = join(__dirname, 'configs')
 
-const configWatchers = new Map<string, ReturnType<typeof watch>>();
-const fileChangeListeners: Set<express.Response> = new Set();
-const MAX_CONFIG_WATCHERS = 20;
+const configWatchers = new Map<string, ReturnType<typeof watch>>()
+const fileChangeListeners: Set<express.Response> = new Set()
+const MAX_CONFIG_WATCHERS = 20
 
 // Cached data for static JSON files (loaded once at startup)
-const umaToolsDir = resolve(__dirname, "..", "uma-tools", "umalator-global");
-let cachedSkillnames: Record<string, unknown> | null = null;
-let cachedSkillmeta: Record<string, unknown> | null = null;
-let cachedCourseData: Record<string, unknown> | null = null;
+const umaToolsDir = resolve(__dirname, '..', 'uma-tools', 'umalator-global')
+let cachedSkillnames: Record<string, string[]> | null = null
+let cachedSkillmeta: Record<string, unknown> | null = null
+let cachedCourseData: Record<string, unknown> | null = null
+
+// Case-insensitive skill name lookup map (built once after skillnames loads)
+let skillNameLookup: Map<string, string> | null = null
+
+function buildSkillNameLookup(): void {
+    if (!cachedSkillnames) return
+    skillNameLookup = new Map()
+    for (const [id, names] of Object.entries(cachedSkillnames)) {
+        if (Array.isArray(names) && names[0]) {
+            const canonicalName = names[0]
+            skillNameLookup.set(canonicalName.toLowerCase(), canonicalName)
+        }
+    }
+}
+
+function getCanonicalSkillName(inputName: string): string {
+    if (!skillNameLookup) return inputName
+    const canonical = skillNameLookup.get(inputName.toLowerCase())
+    return canonical || inputName
+}
 
 function loadStaticData(): void {
     try {
         cachedSkillnames = JSON.parse(
-            readFileSync(join(umaToolsDir, "skillnames.json"), "utf-8"),
-        );
+            readFileSync(join(umaToolsDir, 'skillnames.json'), 'utf-8'),
+        )
         cachedSkillmeta = JSON.parse(
-            readFileSync(join(umaToolsDir, "skill_meta.json"), "utf-8"),
-        );
+            readFileSync(join(umaToolsDir, 'skill_meta.json'), 'utf-8'),
+        )
         cachedCourseData = JSON.parse(
-            readFileSync(join(umaToolsDir, "course_data.json"), "utf-8"),
-        );
+            readFileSync(join(umaToolsDir, 'course_data.json'), 'utf-8'),
+        )
+        buildSkillNameLookup()
     } catch (error) {
-        const err = error as Error;
+        const err = error as Error
         throw new Error(
             `Failed to load static data from ${umaToolsDir}: ${err.message}`,
-        );
+        )
     }
 }
-loadStaticData();
+loadStaticData()
 
 interface ConfigFile {
-    name: string;
-    path: string;
+    name: string
+    path: string
 }
 
 function getConfigFiles(): ConfigFile[] {
-    const files = readdirSync(configDir);
+    const files = readdirSync(configDir)
     return files.map((file) => ({
         name: file,
         path: join(configDir, file),
-    }));
+    }))
 }
 
-app.get("/api/configs", (_req, res) => {
+app.get('/api/configs', (_req, res) => {
     try {
-        const configs = getConfigFiles();
+        const configs = getConfigFiles()
         res.json(
             configs
                 .map((c) => c.name)
-                .filter((name) => name !== "config.example.json"),
-        );
+                .filter((name) => name !== 'config.example.json'),
+        )
     } catch (error) {
-        const err = error as Error;
-        res.status(500).json({ error: err.message });
+        const err = error as Error
+        res.status(500).json({ error: err.message })
     }
-});
+})
 
-app.get("/api/skillnames", (_req, res) => {
+app.get('/api/skillnames', (_req, res) => {
     if (!cachedSkillnames) {
-        res.status(500).json({ error: "Skillnames data not loaded" });
-        return;
+        res.status(500).json({ error: 'Skillnames data not loaded' })
+        return
     }
-    res.json(cachedSkillnames);
-});
+    res.json(cachedSkillnames)
+})
 
-app.get("/api/skillmeta", (_req, res) => {
+app.get('/api/skillmeta', (_req, res) => {
     if (!cachedSkillmeta) {
-        res.status(500).json({ error: "Skillmeta data not loaded" });
-        return;
+        res.status(500).json({ error: 'Skillmeta data not loaded' })
+        return
     }
-    res.json(cachedSkillmeta);
-});
+    res.json(cachedSkillmeta)
+})
 
-app.get("/api/coursedata", (_req, res) => {
+app.get('/api/coursedata', (_req, res) => {
     if (!cachedCourseData) {
-        res.status(500).json({ error: "Course data not loaded" });
-        return;
+        res.status(500).json({ error: 'Course data not loaded' })
+        return
     }
-    res.json(cachedCourseData);
-});
+    res.json(cachedCourseData)
+})
 
-app.get("/api/config/:filename", (req, res) => {
+app.get('/api/config/:filename', (req, res) => {
     try {
-        const filename = req.params.filename;
-        const filePath = join(configDir, filename);
-        const content = readFileSync(filePath, "utf-8");
-        const config = JSON.parse(content);
-        res.json(config);
+        const filename = req.params.filename
+        const filePath = join(configDir, filename)
+        const content = readFileSync(filePath, 'utf-8')
+        const config = JSON.parse(content)
+        res.json(config)
     } catch (error) {
-        const err = error as Error;
-        res.status(500).json({ error: err.message });
+        const err = error as Error
+        res.status(500).json({ error: err.message })
     }
-});
+})
 
-app.post("/api/config/:filename", (req, res) => {
+interface ConfigSkill {
+    discount?: number | null
+    default?: number | null
+}
+
+interface ConfigBody {
+    skills?: Record<string, ConfigSkill>
+    uma?: {
+        skills?: string[]
+        unique?: string
+        [key: string]: unknown
+    }
+    [key: string]: unknown
+}
+
+function normalizeConfigSkillNames(config: ConfigBody): ConfigBody {
+    if (!skillNameLookup) return config
+
+    // Normalize skills object keys
+    if (config.skills && typeof config.skills === 'object') {
+        const normalizedSkills: Record<string, ConfigSkill> = {}
+        for (const [skillName, skillData] of Object.entries(config.skills)) {
+            const canonicalName = getCanonicalSkillName(skillName)
+            normalizedSkills[canonicalName] = skillData
+        }
+        config.skills = normalizedSkills
+    }
+
+    // Normalize uma.skills array
+    if (config.uma?.skills && Array.isArray(config.uma.skills)) {
+        config.uma.skills = config.uma.skills.map((skillName) =>
+            getCanonicalSkillName(skillName),
+        )
+    }
+
+    // Normalize uma.unique
+    if (config.uma?.unique && typeof config.uma.unique === 'string') {
+        config.uma.unique = getCanonicalSkillName(config.uma.unique)
+    }
+
+    return config
+}
+
+app.post('/api/config/:filename', (req, res) => {
     try {
-        const filename = req.params.filename;
-        const filePath = join(configDir, filename);
-        writeFileSync(filePath, JSON.stringify(req.body, null, 2), "utf-8");
-        notifyFileChange(filename);
-        res.json({ success: true });
+        const filename = req.params.filename
+        const filePath = join(configDir, filename)
+        const normalizedConfig = normalizeConfigSkillNames(
+            req.body as ConfigBody,
+        )
+        writeFileSync(
+            filePath,
+            JSON.stringify(normalizedConfig, null, 4),
+            'utf-8',
+        )
+        notifyFileChange(filename)
+        res.json({ success: true })
     } catch (error) {
-        const err = error as Error;
-        res.status(500).json({ error: err.message });
+        const err = error as Error
+        res.status(500).json({ error: err.message })
     }
-});
+})
 
-app.post("/api/config/:filename/duplicate", (req, res) => {
+app.post('/api/config/:filename/duplicate', (req, res) => {
     try {
-        const filename = req.params.filename;
-        const { newName } = req.body as { newName?: string };
+        const filename = req.params.filename
+        const { newName } = req.body as { newName?: string }
 
-        if (!newName || typeof newName !== "string" || !newName.trim()) {
+        if (!newName || typeof newName !== 'string' || !newName.trim()) {
             res.status(400).json({
-                error: "newName is required and must be a non-empty string",
-            });
-            return;
+                error: 'newName is required and must be a non-empty string',
+            })
+            return
         }
 
-        const sourcePath = join(configDir, filename);
-        const targetPath = join(configDir, newName.trim());
+        const sourcePath = join(configDir, filename)
+        const targetPath = join(configDir, newName.trim())
 
         if (!existsSync(sourcePath)) {
             res.status(404).json({
                 error: `Source config file "${filename}" not found`,
-            });
-            return;
+            })
+            return
         }
 
         if (existsSync(targetPath)) {
             res.status(409).json({
                 error: `Config file "${newName.trim()}" already exists`,
-            });
-            return;
+            })
+            return
         }
 
-        const content = readFileSync(sourcePath, "utf-8");
-        writeFileSync(targetPath, content, "utf-8");
-        notifyFileChange(newName.trim());
-        res.json({ success: true });
+        const content = readFileSync(sourcePath, 'utf-8')
+        writeFileSync(targetPath, content, 'utf-8')
+        notifyFileChange(newName.trim())
+        res.json({ success: true })
     } catch (error) {
-        const err = error as Error;
-        res.status(500).json({ error: err.message });
+        const err = error as Error
+        res.status(500).json({ error: err.message })
     }
-});
+})
 
 function notifyFileChange(filename: string): void {
     for (const listener of fileChangeListeners) {
         try {
             listener.write(
-                `data: ${JSON.stringify({ type: "fileChanged", filename })}\n\n`,
-            );
+                `data: ${JSON.stringify({ type: 'fileChanged', filename })}\n\n`,
+            )
         } catch (error) {
-            console.error("Error notifying file change:", error);
+            console.error('Error notifying file change:', error)
             // Remove failed listener
-            fileChangeListeners.delete(listener);
+            fileChangeListeners.delete(listener)
         }
     }
 }
 
 function cleanupOldestWatcher(): void {
     if (configWatchers.size >= MAX_CONFIG_WATCHERS) {
-        const [oldestKey, oldestWatcher] = configWatchers
-            .entries()
-            .next().value;
+        const [oldestKey, oldestWatcher] = configWatchers.entries().next().value
         try {
-            oldestWatcher.close();
+            oldestWatcher.close()
         } catch (e) {
             // Ignore close errors
         }
-        configWatchers.delete(oldestKey);
+        configWatchers.delete(oldestKey)
     }
 }
 
 function watchConfigFile(filename: string): void {
     if (configWatchers.has(filename)) {
-        return;
+        return
     }
 
     // Limit number of watchers to prevent file descriptor exhaustion
-    cleanupOldestWatcher();
+    cleanupOldestWatcher()
 
     try {
-        const filePath = join(configDir, filename);
+        const filePath = join(configDir, filename)
         const watcher = watch(filePath, (eventType, _changedFilename) => {
-            if (eventType === "change") {
+            if (eventType === 'change') {
                 setTimeout(() => {
-                    notifyFileChange(filename);
-                }, 100);
+                    notifyFileChange(filename)
+                }, 100)
             }
-        });
+        })
 
-        watcher.on("error", (error) => {
-            console.error(`Error watching file ${filename}:`, error);
+        watcher.on('error', (error) => {
+            console.error(`Error watching file ${filename}:`, error)
             try {
-                watcher.close();
+                watcher.close()
             } catch (e) {
                 // Ignore close errors
             }
-            configWatchers.delete(filename);
-        });
+            configWatchers.delete(filename)
+        })
 
-        configWatchers.set(filename, watcher);
+        configWatchers.set(filename, watcher)
     } catch (error) {
-        console.error(`Error setting up watcher for ${filename}:`, error);
+        console.error(`Error setting up watcher for ${filename}:`, error)
     }
 }
 
 // Cleanup watchers on process exit
-process.on("exit", () => {
+process.on('exit', () => {
     for (const watcher of configWatchers.values()) {
         try {
-            watcher.close();
+            watcher.close()
         } catch (e) {
             // Ignore close errors
         }
     }
-    configWatchers.clear();
-});
+    configWatchers.clear()
+})
 
-app.get("/api/run", (req, res) => {
-    const configFile = req.query.configFile as string | undefined;
+app.get('/api/run', (req, res) => {
+    const configFile = req.query.configFile as string | undefined
 
     if (!configFile) {
-        res.status(400).json({ error: "configFile parameter required" });
-        return;
+        res.status(400).json({ error: 'configFile parameter required' })
+        return
     }
 
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    res.setHeader("X-Accel-Buffering", "no");
+    res.setHeader('Content-Type', 'text/event-stream')
+    res.setHeader('Cache-Control', 'no-cache')
+    res.setHeader('Connection', 'keep-alive')
+    res.setHeader('X-Accel-Buffering', 'no')
 
-    const cliPath = resolve(__dirname, "cli.js");
+    const cliPath = resolve(__dirname, 'cli.js')
 
     if (!existsSync(cliPath)) {
         res.write(
-            `data: ${JSON.stringify({ type: "error", error: "CLI not built. Please run 'npm run build' first." })}\n\n`,
-        );
-        res.end();
-        return;
+            `data: ${JSON.stringify({ type: 'error', error: "CLI not built. Please run 'npm run build' first." })}\n\n`,
+        )
+        res.end()
+        return
     }
 
-    res.write(`data: ${JSON.stringify({ type: "started" })}\n\n`);
+    res.write(`data: ${JSON.stringify({ type: 'started' })}\n\n`)
     if (res.flushHeaders) {
-        res.flushHeaders();
+        res.flushHeaders()
     }
 
-    let requestClosed = false;
+    let requestClosed = false
 
     const keepAlive = setInterval(() => {
         if (!requestClosed) {
             try {
-                res.write(`: keepalive\n\n`);
+                res.write(`: keepalive\n\n`)
             } catch (error) {
-                console.error("Error sending keepalive:", error);
-                requestClosed = true;
-                clearInterval(keepAlive);
+                console.error('Error sending keepalive:', error)
+                requestClosed = true
+                clearInterval(keepAlive)
             }
         } else {
-            clearInterval(keepAlive);
+            clearInterval(keepAlive)
         }
-    }, 30000);
+    }, 30000)
 
-    let child: ChildProcess | null = null;
-    let processStarted = false;
+    let child: ChildProcess | null = null
+    let processStarted = false
 
     try {
-        child = spawn("node", [cliPath, configFile], {
+        child = spawn('node', [cliPath, configFile], {
             cwd: __dirname,
-            stdio: ["ignore", "pipe", "pipe"],
+            stdio: ['ignore', 'pipe', 'pipe'],
             shell: false,
             env: {
                 ...process.env,
-                NODE_ENV: process.env.NODE_ENV || "production",
+                NODE_ENV: process.env.NODE_ENV || 'production',
             },
-        });
-        processStarted = true;
-        console.log(`Process spawned with PID: ${child.pid}`);
+        })
+        processStarted = true
+        console.log(`Process spawned with PID: ${child.pid}`)
     } catch (error) {
-        const err = error as Error;
-        console.error("Error spawning process:", error);
+        const err = error as Error
+        console.error('Error spawning process:', error)
         res.write(
-            `data: ${JSON.stringify({ type: "error", error: `Failed to spawn process: ${err.message}` })}\n\n`,
-        );
-        res.end();
-        return;
+            `data: ${JSON.stringify({ type: 'error', error: `Failed to spawn process: ${err.message}` })}\n\n`,
+        )
+        res.end()
+        return
     }
 
-    let output = "";
-    let hasOutput = false;
-    let stderrOutput = "";
+    let output = ''
+    let hasOutput = false
+    let stderrOutput = ''
 
     const sendData = (data: Buffer): void => {
         if (requestClosed) {
-            console.log("Skipping output write - request already closed");
-            return;
+            console.log('Skipping output write - request already closed')
+            return
         }
-        const dataStr = data.toString();
-        output += dataStr;
-        hasOutput = true;
+        const dataStr = data.toString()
+        output += dataStr
+        hasOutput = true
         try {
             res.write(
-                `data: ${JSON.stringify({ type: "output", data: dataStr })}\n\n`,
-            );
+                `data: ${JSON.stringify({ type: 'output', data: dataStr })}\n\n`,
+            )
         } catch (error) {
-            console.error("Error writing to response:", error);
-            requestClosed = true;
+            console.error('Error writing to response:', error)
+            requestClosed = true
         }
-    };
+    }
 
     const sendStderr = (data: Buffer): void => {
-        const dataStr = data.toString();
-        stderrOutput += dataStr;
-        console.error(`CLI stderr:`, dataStr);
-        sendData(data);
-    };
-
-    if (child.stdout) {
-        child.stdout.on("data", sendData);
-    }
-    if (child.stderr) {
-        child.stderr.on("data", sendStderr);
+        const dataStr = data.toString()
+        stderrOutput += dataStr
+        console.error(`CLI stderr:`, dataStr)
+        sendData(data)
     }
 
     if (child.stdout) {
-        child.stdout.on("error", (error) => {
-            console.error("stdout error:", error);
-        });
+        child.stdout.on('data', sendData)
+    }
+    if (child.stderr) {
+        child.stderr.on('data', sendStderr)
+    }
+
+    if (child.stdout) {
+        child.stdout.on('error', (error) => {
+            console.error('stdout error:', error)
+        })
     }
 
     if (child.stderr) {
-        child.stderr.on("error", (error) => {
-            console.error("stderr error:", error);
-        });
+        child.stderr.on('error', (error) => {
+            console.error('stderr error:', error)
+        })
     }
 
-    child.on("close", (code, signal) => {
-        clearTimeout(timeout);
-        clearInterval(keepAlive);
+    child.on('close', (code, signal) => {
+        clearTimeout(timeout)
+        clearInterval(keepAlive)
 
         if (stderrOutput) {
-            console.error("Stderr content:", stderrOutput);
+            console.error('Stderr content:', stderrOutput)
         }
 
         if (requestClosed) {
-            console.log("Response already closed, skipping final write");
-            return;
+            console.log('Response already closed, skipping final write')
+            return
         }
 
         try {
             if (!hasOutput && !output && !stderrOutput) {
                 res.write(
                     `data: ${JSON.stringify({
-                        type: "error",
+                        type: 'error',
                         error: `Process exited without producing output. Exit code: ${code}, Signal: ${signal}. Make sure cli.js is built and dependencies are available.`,
                     })}\n\n`,
-                );
+                )
             } else if (code !== null) {
                 res.write(
-                    `data: ${JSON.stringify({ type: "done", code, output })}\n\n`,
-                );
+                    `data: ${JSON.stringify({ type: 'done', code, output })}\n\n`,
+                )
             } else if (signal) {
                 res.write(
-                    `data: ${JSON.stringify({ type: "done", code: null, signal, output })}\n\n`,
-                );
+                    `data: ${JSON.stringify({ type: 'done', code: null, signal, output })}\n\n`,
+                )
             } else {
                 res.write(
-                    `data: ${JSON.stringify({ type: "done", code: null, output })}\n\n`,
-                );
+                    `data: ${JSON.stringify({ type: 'done', code: null, output })}\n\n`,
+                )
             }
-            res.end();
+            res.end()
         } catch (error) {
-            console.error("Error writing final response:", error);
+            console.error('Error writing final response:', error)
         }
-    });
+    })
 
-    child.on("error", (error) => {
-        const errorMsg = `Failed to start process: ${error.message}`;
-        console.error("CLI spawn error:", error);
+    child.on('error', (error) => {
+        const errorMsg = `Failed to start process: ${error.message}`
+        console.error('CLI spawn error:', error)
         res.write(
-            `data: ${JSON.stringify({ type: "error", error: errorMsg })}\n\n`,
-        );
-        res.end();
-    });
+            `data: ${JSON.stringify({ type: 'error', error: errorMsg })}\n\n`,
+        )
+        res.end()
+    })
 
     const timeout = setTimeout(
         () => {
             if (child && !child.killed) {
-                console.log("Process timeout, killing child process");
-                child.kill("SIGTERM");
+                console.log('Process timeout, killing child process')
+                child.kill('SIGTERM')
                 res.write(
                     `data: ${JSON.stringify({
-                        type: "error",
-                        error: "Process timed out after 5 minutes",
+                        type: 'error',
+                        error: 'Process timed out after 5 minutes',
                     })}\n\n`,
-                );
-                res.end();
+                )
+                res.end()
             }
         },
         5 * 60 * 1000,
-    );
+    )
 
-    req.on("close", () => {
-        requestClosed = true;
-        clearInterval(keepAlive);
-        clearTimeout(timeout);
+    req.on('close', () => {
+        requestClosed = true
+        clearInterval(keepAlive)
+        clearTimeout(timeout)
         if (child && !child.killed && processStarted) {
-            child.kill("SIGTERM");
+            child.kill('SIGTERM')
         }
-    });
+    })
 
-    req.on("aborted", () => {
-        console.log("Request aborted by client");
-        requestClosed = true;
-        clearInterval(keepAlive);
-        clearTimeout(timeout);
+    req.on('aborted', () => {
+        console.log('Request aborted by client')
+        requestClosed = true
+        clearInterval(keepAlive)
+        clearTimeout(timeout)
         if (child && !child.killed && processStarted) {
-            console.log("Killing child process due to request abort");
-            child.kill("SIGTERM");
+            console.log('Killing child process due to request abort')
+            child.kill('SIGTERM')
         }
-    });
-});
+    })
+})
 
 app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
-});
+    console.log(`Server running at http://localhost:${PORT}`)
+})
