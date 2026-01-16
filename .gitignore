@@ -5,3 +5,4 @@ public/app.js
 public/index.css
 public/style.css
 dist/
+settings.local.json
