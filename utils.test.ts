@@ -7,7 +7,7 @@ import {
     DistanceType,
     Surface,
     Orientation,
-    ThresholdStat,
+    type ThresholdStat,
 } from '../uma-tools/uma-skill-tools/CourseData'
 import {
     parseGroundCondition,
@@ -33,7 +33,7 @@ import {
     calculateStatsFromRawResults,
     calculateSkillCost,
     formatTable,
-    SkillResult,
+    type SkillResult,
 } from './utils'
 
 describe('parseGroundCondition', () => {

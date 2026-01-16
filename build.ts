@@ -30,12 +30,12 @@ const resolveNodeModules: esbuild.Plugin = {
                     if (existsSync(indexPath)) {
                         return { path: indexPath }
                     }
-                } catch (e) {
+                } catch {
                     // Fall through
                 }
             }
 
-            const directPath = path.join(nodeModulesPath, args.path + '.js')
+            const directPath = path.join(nodeModulesPath, `${args.path}.js`)
             if (existsSync(directPath)) {
                 return { path: directPath }
             }
@@ -48,16 +48,16 @@ const resolveNodeModules: esbuild.Plugin = {
 const redirectData: esbuild.Plugin = {
     name: 'redirectData',
     setup(build) {
-        build.onResolve({ filter: /skill_data\.json$/ }, (args) => ({
+        build.onResolve({ filter: /skill_data\.json$/ }, () => ({
             path: path.join(root, 'umalator-global', 'skill_data.json'),
         }))
-        build.onResolve({ filter: /skill_meta\.json$/ }, (args) => ({
+        build.onResolve({ filter: /skill_meta\.json$/ }, () => ({
             path: path.join(root, 'umalator-global', 'skill_meta.json'),
         }))
-        build.onResolve({ filter: /course_data\.json$/ }, (args) => ({
+        build.onResolve({ filter: /course_data\.json$/ }, () => ({
             path: path.join(root, 'umalator-global', 'course_data.json'),
         }))
-        build.onResolve({ filter: /skillnames\.json$/ }, (args) => ({
+        build.onResolve({ filter: /skillnames\.json$/ }, () => ({
             path: path.join(root, 'umalator-global', 'skillnames.json'),
         }))
     },

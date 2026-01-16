@@ -1,6 +1,6 @@
-import { parentPort, workerData } from 'worker_threads'
-import { CourseData } from '../uma-tools/uma-skill-tools/CourseData'
-import {
+import { parentPort, workerData } from 'node:worker_threads'
+import type { CourseData } from '../uma-tools/uma-skill-tools/CourseData'
+import type {
     Mood,
     RaceParameters,
 } from '../uma-tools/uma-skill-tools/RaceParameters'
@@ -13,7 +13,9 @@ interface SimulationTask {
     skillName: string
     courses: CourseData[]
     racedef: RaceParameters
+    // biome-ignore lint/suspicious/noExplicitAny: Worker data is serialized from main thread
     baseUma: any
+    // biome-ignore lint/suspicious/noExplicitAny: Worker data is serialized from main thread
     simOptions: any
     numSimulations: number
     useRandomMood?: boolean
@@ -27,6 +29,7 @@ interface SimulationTask {
     returnRawResults?: boolean
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: Worker data is serialized from main thread
 function convertSkillsToArray(skills: any): string[] {
     if (Array.isArray(skills)) {
         return skills

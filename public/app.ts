@@ -76,7 +76,7 @@ let variantCache: Map<string, string[]> | null = null
 function buildVariantCache(): void {
     if (!skillnames) return
     variantCache = new Map()
-    for (const [id, names] of Object.entries(skillnames)) {
+    for (const [, names] of Object.entries(skillnames)) {
         if (!Array.isArray(names) || !names[0]) continue
         const name = names[0]
         // Match names ending with " ○" or " ◎"
@@ -86,7 +86,7 @@ function buildVariantCache(): void {
             if (!variantCache.has(baseName)) {
                 variantCache.set(baseName, [])
             }
-            variantCache.get(baseName)!.push(name)
+            variantCache.get(baseName)?.push(name)
         }
     }
 }
@@ -173,7 +173,7 @@ function normalizeSkillName(name: string): string {
 function getCanonicalSkillName(inputName: string): string {
     if (!skillnames) return inputName
     const normalizedInput = inputName.toLowerCase().trim()
-    for (const [id, names] of Object.entries(skillnames)) {
+    for (const [, names] of Object.entries(skillnames)) {
         if (Array.isArray(names) && names[0]) {
             if (names[0].toLowerCase() === normalizedInput) {
                 return names[0]
@@ -206,7 +206,7 @@ function getOtherVariant(skillName: string): string | string[] | null {
         return null
     }
 
-    const otherVariantName = hasCircle ? baseName + ' ◎' : baseName + ' ○'
+    const otherVariantName = hasCircle ? `${baseName} ◎` : `${baseName} ○`
     const variants = variantCache.get(baseName) || []
 
     // Check if the other variant exists in the cache
@@ -287,7 +287,7 @@ async function loadConfig(filename: string): Promise<void> {
 function deleteSkill(skillName: string): void {
     if (!currentConfig) return
     const baseName = getBaseSkillName(skillName)
-    const skillsToDelete = [baseName, baseName + ' ○', baseName + ' ◎']
+    const skillsToDelete = [baseName, `${baseName} ○`, `${baseName} ◎`]
     skillsToDelete.forEach((skillToDelete) => {
         delete currentConfig.skills[skillToDelete]
     })
@@ -375,7 +375,7 @@ function renderSkills(): void {
     const skillIdCache = new Map<string, number>()
     for (const name of skillsToRender) {
         const idStr = findSkillId(name)
-        skillIdCache.set(name, idStr ? parseInt(idStr) : 0)
+        skillIdCache.set(name, idStr ? parseInt(idStr, 10) : 0)
     }
     const sortedSkillNames = Array.from(skillsToRender).sort((a, b) => {
         return (skillIdCache.get(a) || 0) - (skillIdCache.get(b) || 0)
@@ -607,7 +607,7 @@ function renderSkills(): void {
                 'py-0.5 px-1 border-sky-500 min-w-[100px] m-0 bg-zinc-700 text-zinc-200 border rounded text-[13px] focus:outline-none focus:border-sky-400 flex-1'
             skillNameInput.value = originalName
             const spanTarget = e.target as HTMLElement
-            skillNameInput.style.width = spanTarget.offsetWidth + 'px'
+            skillNameInput.style.width = `${spanTarget.offsetWidth}px`
             skillNameInput.style.minWidth = '100px'
 
             const restoreSpan = () => {
@@ -723,7 +723,7 @@ function getAvailableDistances(
 
     if (isRandom) {
         const distances = new Set<number>()
-        for (const [courseId, rawCourse] of Object.entries(courseData)) {
+        for (const [, rawCourse] of Object.entries(courseData)) {
             if (!rawCourse || typeof rawCourse !== 'object') {
                 continue
             }
@@ -752,7 +752,7 @@ function getAvailableDistances(
     }
 
     const distances = new Set<number>()
-    for (const [courseId, rawCourse] of Object.entries(courseData)) {
+    for (const [, rawCourse] of Object.entries(courseData)) {
         if (!rawCourse || typeof rawCourse !== 'object') {
             continue
         }
@@ -888,7 +888,7 @@ function renderTrack(): void {
     const trackLine = document.createElement('div')
     trackLine.className = 'flex flex-wrap items-center gap-1'
 
-    fields.forEach((field, index) => {
+    fields.forEach((field) => {
         const wrapper = document.createElement('span')
         wrapper.className = 'inline-flex items-center gap-1'
 
@@ -941,8 +941,9 @@ function renderTrack(): void {
             const target = e.target as HTMLInputElement | HTMLSelectElement
             let value: string | number | null
             if (field.type === 'number') {
-                const parsed = parseInt(target.value)
-                value = target.value === '' || isNaN(parsed) ? null : parsed
+                const parsed = parseInt(target.value, 10)
+                value =
+                    target.value === '' || Number.isNaN(parsed) ? null : parsed
             } else {
                 value = target.value
             }
@@ -1005,6 +1006,7 @@ function renderTrack(): void {
                         } else {
                             currentConfig.track.distance = parseInt(
                                 newDistanceOptions[0],
+                                10,
                             )
                         }
                     } else if (newDistanceOptions.length === 0) {
@@ -1015,7 +1017,7 @@ function renderTrack(): void {
                 if (isDistanceCategory(value as string)) {
                     currentConfig.track.distance = value as string
                 } else {
-                    currentConfig.track.distance = parseInt(value as string)
+                    currentConfig.track.distance = parseInt(value as string, 10)
                 }
             }
 
@@ -1091,7 +1093,7 @@ function renderUma(): void {
         { key: 'unique', label: 'Unique', type: 'text', width: 280 },
     ]
 
-    const createUmaField = (field: UmaField, isLast: boolean): HTMLElement => {
+    const createUmaField = (field: UmaField): HTMLElement => {
         const wrapper = document.createElement('span')
         wrapper.className = 'inline-flex items-center gap-1'
 
@@ -1137,8 +1139,9 @@ function renderUma(): void {
             const target = e.target as HTMLInputElement | HTMLSelectElement
             let value: string | number | null
             if (field.type === 'number') {
-                const parsed = parseInt(target.value)
-                value = target.value === '' || isNaN(parsed) ? null : parsed
+                const parsed = parseInt(target.value, 10)
+                value =
+                    target.value === '' || Number.isNaN(parsed) ? null : parsed
             } else {
                 value = target.value
             }
@@ -1156,8 +1159,8 @@ function renderUma(): void {
 
     const line = document.createElement('div')
     line.className = 'flex flex-wrap items-center gap-1 mb-2'
-    fields.forEach((field, index) => {
-        line.appendChild(createUmaField(field, index === fields.length - 1))
+    fields.forEach((field) => {
+        line.appendChild(createUmaField(field))
     })
     container.appendChild(line)
 
@@ -1279,7 +1282,6 @@ async function runCalculations(): Promise<void> {
                             error?: string
                         }
                         if (data.type === 'started') {
-                            continue
                         } else if (data.type === 'output') {
                             output.textContent += data.data || ''
                             output.scrollTop = output.scrollHeight
@@ -1330,12 +1332,13 @@ function resetUmaSkills(): void {
     currentConfig.uma.skills = []
 
     if (currentConfig.skills) {
-        Object.keys(currentConfig.skills).forEach((skillName) => {
-            const skill = currentConfig!.skills[skillName]
+        const skills = currentConfig.skills
+        Object.keys(skills).forEach((skillName) => {
+            const skill = skills[skillName]
             if (skill.default !== undefined && skill.default !== null) {
-                currentConfig!.skills[skillName].discount = skill.default
+                skills[skillName].discount = skill.default
             } else {
-                currentConfig!.skills[skillName].discount = null
+                skills[skillName].discount = null
             }
         })
     }
@@ -1390,7 +1393,7 @@ if (duplicateButton) {
                 try {
                     const error = (await response.json()) as { error?: string }
                     errorMessage = error.error || errorMessage
-                } catch (parseError) {
+                } catch {
                     const text = await response.text()
                     errorMessage = text || errorMessage
                 }
@@ -1465,7 +1468,7 @@ function setupSkillsContainerDelegation(): void {
         const skillName = target.dataset.skill
         const discountValue = target.dataset.discount
         if (!skillName || !discountValue || !currentConfig) return
-        const discount = discountValue === '-' ? null : parseInt(discountValue)
+        const discount = discountValue === '-' ? null : parseInt(discountValue, 10)
         if (!currentConfig.skills[skillName]) {
             currentConfig.skills[skillName] = { discount: null }
         }

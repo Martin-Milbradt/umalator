@@ -1,8 +1,14 @@
 import express from 'express'
-import { readFileSync, writeFileSync, readdirSync, watch, existsSync } from 'fs'
-import { resolve, join, dirname } from 'path'
-import { spawn, ChildProcess } from 'child_process'
-import { fileURLToPath } from 'url'
+import {
+    readFileSync,
+    writeFileSync,
+    readdirSync,
+    type watch,
+    existsSync,
+} from 'node:fs'
+import { resolve, join, dirname } from 'node:path'
+import { spawn, type ChildProcess } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -17,7 +23,6 @@ const configDir = join(__dirname, 'configs')
 
 const configWatchers = new Map<string, ReturnType<typeof watch>>()
 const fileChangeListeners: Set<express.Response> = new Set()
-const MAX_CONFIG_WATCHERS = 20
 
 // Cached data for static JSON files (loaded once at startup)
 const umaToolsDir = resolve(__dirname, '..', 'uma-tools', 'umalator-global')
@@ -31,7 +36,7 @@ let skillNameLookup: Map<string, string> | null = null
 function buildSkillNameLookup(): void {
     if (!cachedSkillnames) return
     skillNameLookup = new Map()
-    for (const [id, names] of Object.entries(cachedSkillnames)) {
+    for (const [, names] of Object.entries(cachedSkillnames)) {
         if (Array.isArray(names) && names[0]) {
             const canonicalName = names[0]
             skillNameLookup.set(canonicalName.toLowerCase(), canonicalName)
@@ -246,58 +251,12 @@ function notifyFileChange(filename: string): void {
     }
 }
 
-function cleanupOldestWatcher(): void {
-    if (configWatchers.size >= MAX_CONFIG_WATCHERS) {
-        const [oldestKey, oldestWatcher] = configWatchers.entries().next().value
-        try {
-            oldestWatcher.close()
-        } catch (e) {
-            // Ignore close errors
-        }
-        configWatchers.delete(oldestKey)
-    }
-}
-
-function watchConfigFile(filename: string): void {
-    if (configWatchers.has(filename)) {
-        return
-    }
-
-    // Limit number of watchers to prevent file descriptor exhaustion
-    cleanupOldestWatcher()
-
-    try {
-        const filePath = join(configDir, filename)
-        const watcher = watch(filePath, (eventType, _changedFilename) => {
-            if (eventType === 'change') {
-                setTimeout(() => {
-                    notifyFileChange(filename)
-                }, 100)
-            }
-        })
-
-        watcher.on('error', (error) => {
-            console.error(`Error watching file ${filename}:`, error)
-            try {
-                watcher.close()
-            } catch (e) {
-                // Ignore close errors
-            }
-            configWatchers.delete(filename)
-        })
-
-        configWatchers.set(filename, watcher)
-    } catch (error) {
-        console.error(`Error setting up watcher for ${filename}:`, error)
-    }
-}
-
 // Cleanup watchers on process exit
 process.on('exit', () => {
     for (const watcher of configWatchers.values()) {
         try {
             watcher.close()
-        } catch (e) {
+        } catch {
             // Ignore close errors
         }
     }

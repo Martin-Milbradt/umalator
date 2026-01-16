@@ -2,7 +2,7 @@ import {
     GroundCondition,
     Season,
 } from '../uma-tools/uma-skill-tools/RaceParameters'
-import {
+import type {
     DistanceType,
     Surface,
     Orientation,
@@ -305,8 +305,8 @@ export function findSkillVariantsByName(
         const name = names[0]
         const normalizedName = name.toLowerCase()
         if (
-            normalizedName === normalizedBaseName + ' ○' ||
-            normalizedName === normalizedBaseName + ' ◎'
+            normalizedName === `${normalizedBaseName} ○` ||
+            normalizedName === `${normalizedBaseName} ◎`
         ) {
             const baseCost = skillMeta[id]?.baseCost ?? 200
             if (baseCost > 0) {
@@ -499,7 +499,9 @@ export function findMatchingCoursesWithFilters(
     const surfaceValue = parseSurface(surface)
     const distanceCategory = parseDistanceCategory(distance)
     const exactDistance =
-        typeof distance === 'number' ? distance : parseInt(distance as string)
+        typeof distance === 'number'
+            ? distance
+            : parseInt(distance as string, 10)
     const randomLocation = isRandomLocation(trackName)
     const normalizedTrackName = trackName?.toLowerCase().trim()
 
@@ -524,7 +526,7 @@ export function findMatchingCoursesWithFilters(
             if (rawCourse.distanceType !== distanceCategory) {
                 continue
             }
-        } else if (!isNaN(exactDistance)) {
+        } else if (!Number.isNaN(exactDistance)) {
             if (rawCourse.distance !== exactDistance) {
                 continue
             }

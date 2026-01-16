@@ -1,14 +1,13 @@
 import { Command } from 'commander'
-import { readFileSync } from 'fs'
-import { resolve } from 'path'
-import { Worker } from 'worker_threads'
-import { cpus } from 'os'
-import { CourseData as UpstreamCourseData } from '../uma-tools/uma-skill-tools/CourseData'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { Worker } from 'node:worker_threads'
+import { cpus } from 'node:os'
 import {
-    RaceParameters,
+    type RaceParameters,
     GroundCondition,
     Grade,
-    Mood,
+    type Mood,
     Time,
     Season,
 } from '../uma-tools/uma-skill-tools/RaceParameters'
@@ -16,6 +15,7 @@ import {
     HorseState as HorseStateBase,
     SkillSet,
 } from '../uma-tools/components/HorseDefTypes'
+import { ThresholdStat } from '../uma-tools/uma-skill-tools/CourseData'
 import {
     parseGroundCondition,
     parseWeather,
@@ -25,7 +25,6 @@ import {
     formatDistanceType,
     formatSurface,
     formatTurn,
-    parseSurface,
     parseDistanceCategory,
     isRandomLocation,
     isRandomValue,
@@ -35,13 +34,12 @@ import {
     findSkillIdByNameWithPreference,
     findSkillVariantsByName,
     processCourseData,
-    calculateStatsFromRawResults,
     calculateSkillCost,
     findMatchingCoursesWithFilters,
     formatTrackDetails,
     formatTable,
-    SkillResult,
-    CourseData,
+    type SkillResult,
+    type CourseData,
 } from './utils'
 
 // HorseState extends immutable.js Record which TypeScript can't infer properly
@@ -92,9 +90,9 @@ interface Config {
     confidenceInterval?: number
 }
 
-function loadJson(filePath: string): any {
+function loadJson<T>(filePath: string): T {
     const resolvedPath = resolve(process.cwd(), filePath)
-    return JSON.parse(readFileSync(resolvedPath, 'utf-8'))
+    return JSON.parse(readFileSync(resolvedPath, 'utf-8')) as T
 }
 
 async function main() {
@@ -106,13 +104,44 @@ async function main() {
         .parse(process.argv)
 
     const args = program.args
-    const configPath = 'configs/' + (args[0] || 'default.json')
+    const configPath = `configs/${args[0] || 'default.json'}`
 
-    const config: Config = loadJson(configPath)
-    const skillMeta = loadJson('../uma-tools/umalator-global/skill_meta.json')
-    const courseData = loadJson('../uma-tools/umalator-global/course_data.json')
-    const skillNames = loadJson('../uma-tools/umalator-global/skillnames.json')
-    const trackNames = loadJson('../uma-tools/umalator-global/tracknames.json')
+    const config = loadJson<Config>(configPath)
+    const skillMeta = loadJson<
+        Record<string, { baseCost: number; groupId?: number; order?: number }>
+    >('../uma-tools/umalator-global/skill_meta.json')
+    const courseData = loadJson<
+        Record<
+            string,
+            {
+                raceTrackId: number
+                surface: number
+                distanceType: number
+                distance: number
+                turn: number
+                courseSetStatus: readonly ThresholdStat[]
+                corners: Array<{ start: number; length: number }>
+                straights: readonly {
+                    start: number
+                    end: number
+                    frontType: number
+                }[]
+                slopes: readonly {
+                    start: number
+                    length: number
+                    slope: number
+                }[]
+                laneMax: number
+                [key: string]: unknown
+            }
+        >
+    >('../uma-tools/umalator-global/course_data.json')
+    const skillNames = loadJson<Record<string, string[]>>(
+        '../uma-tools/umalator-global/skillnames.json',
+    )
+    const trackNames = loadJson<Record<string, string[]>>(
+        '../uma-tools/umalator-global/tracknames.json',
+    )
 
     if (!config.track) {
         console.error('Error: config must specify track')
@@ -338,15 +367,15 @@ async function main() {
     const deterministic = config.deterministic ?? false
     const simOptions = {
         seed: deterministic ? 0 : Math.floor(Math.random() * 1000000000),
-        useEnhancedSpurt: deterministic ? false : true,
-        accuracyMode: deterministic ? false : true,
+        useEnhancedSpurt: !deterministic,
+        accuracyMode: !deterministic,
         pacemakerCount: 1,
-        allowRushedUma1: deterministic ? false : true,
-        allowRushedUma2: deterministic ? false : true,
-        allowDownhillUma1: deterministic ? false : true,
-        allowDownhillUma2: deterministic ? false : true,
-        allowSectionModifierUma1: deterministic ? false : true,
-        allowSectionModifierUma2: deterministic ? false : true,
+        allowRushedUma1: !deterministic,
+        allowRushedUma2: !deterministic,
+        allowDownhillUma1: !deterministic,
+        allowDownhillUma2: !deterministic,
+        allowSectionModifierUma1: !deterministic,
+        allowSectionModifierUma2: !deterministic,
         skillCheckChanceUma1: false, // Set to false to reduce dependency of other skills
         skillCheckChanceUma2: false, // Set to false to reduce dependency of other skills
     }
@@ -551,7 +580,7 @@ async function main() {
                 'message',
                 (message: {
                     success: boolean
-                    result?: any
+                    result?: { skillName: string; rawResults?: number[] }
                     error?: string
                 }) => {
                     if (message.success && message.result) {

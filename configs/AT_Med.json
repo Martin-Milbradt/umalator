@@ -209,7 +209,7 @@
     "Tail Held High": {
       "discount": null
     },
-    "Shifting GEars": {
+    "Shifting Gears": {
       "discount": 0
     }
   },
@@ -234,7 +234,7 @@
     "strategy": "Pace Chaser",
     "styleAptitude": "A",
     "surfaceAptitude": "A",
-    "unique": "U=Ma2",
+    "unique": "U=ma2",
     "wisdom": 828
   }
 }
