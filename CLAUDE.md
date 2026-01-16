@@ -70,6 +70,6 @@ npx vitest run fixes.test.ts
 - **Auto-save**: Web UI automatically persists config changes to disk (500ms debounce)
 - **SSE Streaming**: Web UI receives simulation output via Server-Sent Events at `/api/run`
 
-## Scope Guidance
+## Implementation Guidance
 
-Focus on files within this directory. Don't change any files in the `uma-tools` parent directory.
+When fixing an issue or writing a new feature that doesn't have any tests yet, implement at least one.
