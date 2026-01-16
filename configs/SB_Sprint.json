@@ -3,8 +3,8 @@
   "confidenceInterval": 90,
   "skills": {
     "Triumphant Pulse": {
-      "discount": 10,
-      "default": 10
+      "discount": 20,
+      "default": 20
     },
     "Shadow Break": {
       "discount": null
@@ -19,18 +19,12 @@
       "discount": null
     },
     "Professor of Curvature": {
-      "discount": 10,
+      "discount": null,
       "default": 10
     },
     "Corner Adept ○": {
       "discount": 0,
       "default": 0
-    },
-    "Passing Pro": {
-      "discount": null
-    },
-    "Highlander": {
-      "discount": null
     },
     "Uma Stan": {
       "discount": null
@@ -39,39 +33,38 @@
       "discount": null
     },
     "Ramp Up": {
-      "discount": null
-    },
-    "Right-Handed": {
-      "discount": null
-    },
-    "Ignited Spirit SPD": {
-      "discount": null
-    },
-    "Swinging Maestro": {
-      "discount": 10,
-      "default": 10
-    },
-    "Rushing Gale!": {
-      "discount": 10,
-      "default": 10
-    },
-    "Straightaway Acceleration": {
       "discount": 0,
       "default": 0
     },
-    "Straightaway Recovery": {
+    "Right-Handed": {
+      "discount": 30
+    },
+    "Ignited Spirit SPD": {
+      "discount": 30,
+      "default": 30
+    },
+    "Swinging Maestro": {
       "discount": null
+    },
+    "Rushing Gale!": {
+      "discount": null
+    },
+    "Straightaway Acceleration": {
+      "discount": null
+    },
+    "Straightaway Recovery": {
+      "discount": 30
     },
     "It's On!": {
       "discount": 10,
       "default": 10
     },
     "No Stopping Me!": {
-      "discount": 10,
+      "discount": null,
       "default": 10
     },
     "Nimble Navigator": {
-      "discount": 0,
+      "discount": null,
       "default": 0
     },
     "Burning Spirit SPD": {
@@ -84,15 +77,12 @@
       "discount": null
     },
     "Right-Handed ◎": {
-      "discount": null
+      "discount": 30
     },
     "Right-Handed ○": {
-      "discount": null
+      "discount": 30
     },
     "The Duty of Dignity Calls": {
-      "discount": null
-    },
-    "Lone Wolf": {
       "discount": null
     },
     "Homestretch Haste": {
@@ -105,7 +95,7 @@
       "discount": null
     },
     "Straightaway Adept": {
-      "discount": null
+      "discount": 10
     },
     "Focus": {
       "discount": null
@@ -117,8 +107,7 @@
       "discount": null
     },
     "Corner Recovery ○": {
-      "discount": 0,
-      "default": 0
+      "discount": 30
     },
     "SPARKLY☆STARDOM": {
       "discount": null
@@ -141,9 +130,6 @@
     "Corner Acceleration ○": {
       "discount": null
     },
-    "Acceleration": {
-      "discount": null
-    },
     "Playtime's Over!": {
       "discount": null
     },
@@ -156,32 +142,18 @@
     "Front Runner Corners ○": {
       "discount": null
     },
-    "Front Runner Straightaways ◎": {
-      "discount": null
-    },
-    "Front Runner Straightaways ○": {
-      "discount": null
-    },
     "Front Runner Savvy ◎": {
-      "discount": 0
+      "discount": 20
     },
     "Front Runner Savvy ○": {
-      "discount": 0,
+      "discount": 20,
       "default": 0
     },
-    "Medium Corners ◎": {
-      "discount": null
-    },
-    "Medium Corners ○": {
-      "discount": null
-    },
     "Blue Rose Closer": {
-      "discount": 10,
-      "default": 10
+      "discount": null
     },
     "Certain Victory": {
-      "discount": 10,
-      "default": 10
+      "discount": null
     },
     "Tokyo Racecourse": {
       "discount": null
@@ -210,20 +182,13 @@
       "default": 0
     },
     "Escape Artist": {
-      "discount": 0,
-      "default": 0
+      "discount": null
     },
     "Fast-Paced": {
-      "discount": 0,
+      "discount": 30,
       "default": 0
     },
     "Final Push": {
-      "discount": null
-    },
-    "Rosy Outlook": {
-      "discount": null
-    },
-    "Steadfast": {
       "discount": null
     },
     "Leader's Pride": {
@@ -233,35 +198,79 @@
       "discount": null
     },
     "Tail Held High": {
-      "discount": 0,
+      "discount": 10,
       "default": 0
     },
     "Plan X": {
-      "discount": 0
+      "discount": 10,
+      "default": 10
+    },
+    "Turbo Sprint": {
+      "discount": 0,
+      "default": 0
+    },
+    "Sprinting Gear": {
+      "discount": 0,
+      "default": 0
+    },
+    "Gap Closer": {
+      "discount": null
+    },
+    "Sprint Straightaways ◎": {
+      "discount": 40
+    },
+    "Sprint Straightaways ○": {
+      "discount": 40
+    },
+    "Huge Lead": {
+      "discount": 0,
+      "default": 0
+    },
+    "Countermeasure": {
+      "discount": 20,
+      "default": 0
+    },
+    "Moxie": {
+      "discount": 40
+    },
+    "Front Runner Savvy": {
+      "discount": 20
     }
   },
   "track": {
     "courseId": "",
-    "distance": 1000,
+    "distance": "<Sprint>",
     "groundCondition": "<Random>",
     "numUmas": 12,
     "season": "<Random>",
-    "trackName": "Niigata",
+    "trackName": "<Random>",
     "weather": "<Random>",
     "surface": "Turf"
   },
   "uma": {
     "distanceAptitude": "A",
-    "guts": 408,
-    "power": 771,
+    "guts": 391,
+    "power": 778,
     "mood": null,
-    "skills": [],
-    "speed": 1103,
-    "stamina": 947,
+    "skills": [
+      "Corner Adept ○",
+      "Right-Handed ○",
+      "Corner Recovery ○",
+      "Taking the Lead",
+      "Fast-Paced",
+      "Turbo Sprint",
+      "Sprint Straightaways ○",
+      "Plan X",
+      "Front Runner Savvy ○",
+      "Tail Held High",
+      "Ignited Spirit SPD"
+    ],
+    "speed": 1200,
+    "stamina": 512,
     "strategy": "Front Runner",
     "styleAptitude": "A",
     "surfaceAptitude": "A",
-    "unique": "Angling and Scheming",
-    "wisdom": 658
+    "unique": "Genius x Bakushin = Victory",
+    "wisdom": 1163
   }
 }
