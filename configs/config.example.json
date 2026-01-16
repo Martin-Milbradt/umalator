@@ -1,33 +1,33 @@
 {
-  "deterministic": false,
-  "confidenceInterval": 90,
-  "skills": {
-    "Right-Handed": { "discount": 0 },
-    "Left-Handed": { "discount": 10, "default": 0 },
-    "Tokyo Racecourse": { "discount": null }
-  },
-  "track": {
-    "courseId": "",
-    "trackName": "Kyoto",
-    "distance": 3000,
-    "surface": "Turf",
-    "groundCondition": "Firm",
-    "weather": "Sunny",
-    "season": "Fall",
-    "numUmas": 9
-  },
-  "uma": {
-    "speed": 1200,
-    "stamina": 1200,
-    "power": 800,
-    "guts": 400,
-    "wisdom": 400,
-    "strategy": "Pace Chaser",
-    "distanceAptitude": "A",
-    "surfaceAptitude": "A",
-    "styleAptitude": "A",
-    "mood": null,
-    "skills": ["Right-Handed ◎", "Left-Handed ○"],
-    "unique": "Anchors Aweigh!"
-  }
+    "deterministic": false,
+    "confidenceInterval": 90,
+    "skills": {
+        "Right-Handed": { "discount": 0 },
+        "Left-Handed": { "discount": 10, "default": 0 },
+        "Tokyo Racecourse": { "discount": null }
+    },
+    "track": {
+        "courseId": "",
+        "trackName": "Kyoto",
+        "distance": 3000,
+        "surface": "Turf",
+        "groundCondition": "Firm",
+        "weather": "Sunny",
+        "season": "Fall",
+        "numUmas": 9
+    },
+    "uma": {
+        "speed": 1200,
+        "stamina": 1200,
+        "power": 800,
+        "guts": 400,
+        "wisdom": 400,
+        "strategy": "Pace Chaser",
+        "distanceAptitude": "A",
+        "surfaceAptitude": "A",
+        "styleAptitude": "A",
+        "mood": null,
+        "skills": ["Right-Handed ◎", "Left-Handed ○"],
+        "unique": "Anchors Aweigh!"
+    }
 }

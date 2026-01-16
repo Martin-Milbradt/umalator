@@ -1,31 +1,31 @@
 {
-  "name": "umalator-global-cli",
-  "version": "1.0.0",
-  "type": "module",
-  "scripts": {
-    "build": "tsx build.ts",
-    "build:frontend": "vite build",
-    "dev": "concurrently \"tsx server.ts\" \"vite\"",
-    "markdownlint": "markdownlint-cli2 \"**/*.md\"",
-    "start": "node cli.js",
-    "test": "vitest run",
-    "web": "npm run build:frontend && tsx server.ts"
-  },
-  "dependencies": {
-    "commander": "^11.0.0",
-    "esbuild": "^0.27.2",
-    "express": "^4.18.0",
-    "immutable": "^4.3.0"
-  },
-  "devDependencies": {
-    "@tailwindcss/cli": "^4.1.18",
-    "@tailwindcss/vite": "^4.1.18",
-    "@types/express": "^5.0.6",
-    "@types/node": "^25.0.3",
-    "concurrently": "^9.2.1",
-    "tailwindcss": "^4.1.18",
-    "tsx": "^4.21.0",
-    "vite": "^7.3.0",
-    "vitest": "^4.0.17"
-  }
+    "name": "umalator-global-cli",
+    "version": "1.0.0",
+    "type": "module",
+    "scripts": {
+        "build": "tsx build.ts",
+        "build:frontend": "vite build",
+        "dev": "concurrently \"tsx server.ts\" \"vite\"",
+        "markdownlint": "markdownlint-cli2 \"**/*.md\"",
+        "start": "node cli.js",
+        "test": "vitest run",
+        "web": "npm run build:frontend && tsx server.ts"
+    },
+    "dependencies": {
+        "commander": "^11.0.0",
+        "esbuild": "^0.27.2",
+        "express": "^4.18.0",
+        "immutable": "^4.3.0"
+    },
+    "devDependencies": {
+        "@tailwindcss/cli": "^4.1.18",
+        "@tailwindcss/vite": "^4.1.18",
+        "@types/express": "^5.0.6",
+        "@types/node": "^25.0.3",
+        "concurrently": "^9.2.1",
+        "tailwindcss": "^4.1.18",
+        "tsx": "^4.21.0",
+        "vite": "^7.3.0",
+        "vitest": "^4.0.17"
+    }
 }

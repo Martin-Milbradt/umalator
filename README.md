@@ -83,8 +83,8 @@ node cli.js myconfig.json
 ### Options
 
 - `[config]` - Config file name (positional argument, default: `default.json`)
-  - The config file is loaded from the `configs/` directory
-  - Example: `node cli.js myconfig.json` loads `configs/myconfig.json`
+    - The config file is loaded from the `configs/` directory
+    - Example: `node cli.js myconfig.json` loads `configs/myconfig.json`
 
 ### Config File Format
 
@@ -93,8 +93,8 @@ See `configs/config.example.json` for the config file format.
 #### Simulation Settings
 
 - `deterministic`: Boolean (default: `false`)
-  - When `true`, uses deterministic simulation options (seed: 0, all optional features disabled)
-  - When `false`, uses randomized simulations with all optional features enabled
+    - When `true`, uses deterministic simulation options (seed: 0, all optional features disabled)
+    - When `false`, uses randomized simulations with all optional features enabled
 - `confidenceInterval`: Confidence interval percentage for statistics (default: `95`)
 
 The tool uses a tiered simulation approach:
@@ -111,8 +111,8 @@ This ensures more accurate results for the most promising skills while still eva
 
 - Skills are specified by their **global English names** (e.g., "Right-Handed ◎" instead of skill IDs)
 - Each skill can have:
-  - `discount`: Percentage discount (0-100) or `null` to exclude the skill from evaluation
-  - `default`: Optional default discount value used by the web interface's reset function
+    - `discount`: Percentage discount (0-100) or `null` to exclude the skill from evaluation
+    - `default`: Optional default discount value used by the web interface's reset function
 
 #### Track Settings
 
@@ -132,17 +132,17 @@ This ensures more accurate results for the most promising skills while still eva
 - `distanceAptitude`, `surfaceAptitude`, `styleAptitude`: Aptitude grades ("S", "A", "B", "C", "D", "E", "F", "G")
 - `mood`: Mood value (number, can be `null`)
 - `skills`: Array of skill names (not IDs) that are active during simulations
-  - When multiple skills share the same name, the one with a cost > 0 (skillpoints) is preferred
+    - When multiple skills share the same name, the one with a cost > 0 (skillpoints) is preferred
 - `unique`: Single unique skill name (exactly one skill)
-  - Must be a skill with cost 0 (unique skills)
-  - When multiple skills share the same name, the one with cost 0 is preferred
+    - Must be a skill with cost 0 (unique skills)
+    - When multiple skills share the same name, the one with cost 0 is preferred
 
 #### Skill Name Resolution
 
 - All skill references use **global English names** (e.g., "Right-Handed ◎")
 - When multiple skills share the same name:
-  - For `skills` array and top-level `skills` config: prefer skills with cost > 0 (skillpoints)
-  - For `uma.unique`: prefer skills with cost 0 (unique skills)
+    - For `skills` array and top-level `skills` config: prefer skills with cost > 0 (skillpoints)
+    - For `uma.unique`: prefer skills with cost 0 (unique skills)
 
 ### Output
 

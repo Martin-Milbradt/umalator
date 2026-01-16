@@ -1,19 +1,19 @@
 {
-  "compilerOptions": {
-    "lib": ["es2018", "dom"],
-    "target": "es2018",
-    "resolveJsonModule": true,
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "preserveConstEnums": true,
-    "jsx": "react",
-    "jsxFactory": "h",
-    "jsxFragmentFactory": "Fragment",
-    "module": "ESNext",
-    "noEmit": true,
-    "types": ["node"]
-  },
-  "include": ["**/*.ts"]
+    "compilerOptions": {
+        "lib": ["es2018", "dom"],
+        "target": "es2018",
+        "resolveJsonModule": true,
+        "moduleResolution": "bundler",
+        "allowImportingTsExtensions": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "preserveConstEnums": true,
+        "jsx": "react",
+        "jsxFactory": "h",
+        "jsxFragmentFactory": "Fragment",
+        "module": "ESNext",
+        "noEmit": true,
+        "types": ["node"]
+    },
+    "include": ["**/*.ts"]
 }
