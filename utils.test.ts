@@ -4,6 +4,12 @@ import {
     Season,
 } from "../uma-tools/uma-skill-tools/RaceParameters";
 import {
+    DistanceType,
+    Surface,
+    Orientation,
+    ThresholdStat,
+} from "../uma-tools/uma-skill-tools/CourseData";
+import {
     parseGroundCondition,
     parseWeather,
     parseSeason,
@@ -406,8 +412,15 @@ describe("findSkillVariantsByName", () => {
 describe("processCourseData", () => {
     it("adds synthetic corner for straight courses", () => {
         const rawCourse = {
-            corners: [],
+            raceTrackId: 10001,
             distance: 1000,
+            distanceType: DistanceType.Short,
+            surface: Surface.Turf,
+            turn: Orientation.NoTurns,
+            courseSetStatus: [] as readonly ThresholdStat[],
+            corners: [],
+            straights: [] as readonly { start: number; end: number; frontType: number }[],
+            slopes: [] as readonly { start: number; length: number; slope: number }[],
             laneMax: 10000,
         };
         const result = processCourseData(rawCourse);
@@ -417,8 +430,15 @@ describe("processCourseData", () => {
 
     it("preserves existing corners", () => {
         const rawCourse = {
-            corners: [{ start: 200, length: 100 }],
+            raceTrackId: 10001,
             distance: 1000,
+            distanceType: DistanceType.Short,
+            surface: Surface.Turf,
+            turn: Orientation.Clockwise,
+            courseSetStatus: [] as readonly ThresholdStat[],
+            corners: [{ start: 200, length: 100 }],
+            straights: [] as readonly { start: number; end: number; frontType: number }[],
+            slopes: [] as readonly { start: number; length: number; slope: number }[],
             laneMax: 10000,
         };
         const result = processCourseData(rawCourse);
@@ -428,8 +448,15 @@ describe("processCourseData", () => {
 
     it("calculates lane parameters correctly", () => {
         const rawCourse = {
-            corners: [{ start: 100, length: 50 }],
+            raceTrackId: 10001,
             distance: 1000,
+            distanceType: DistanceType.Short,
+            surface: Surface.Turf,
+            turn: Orientation.Clockwise,
+            courseSetStatus: [] as readonly ThresholdStat[],
+            corners: [{ start: 100, length: 50 }],
+            straights: [] as readonly { start: number; end: number; frontType: number }[],
+            slopes: [] as readonly { start: number; length: number; slope: number }[],
             laneMax: 10000,
         };
         const result = processCourseData(rawCourse);

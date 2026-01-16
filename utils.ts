@@ -2,7 +2,30 @@ import {
     GroundCondition,
     Season,
 } from "../uma-tools/uma-skill-tools/RaceParameters";
-import { CourseData } from "../uma-tools/uma-skill-tools/CourseData";
+import {
+    DistanceType,
+    Surface,
+    Orientation,
+    ThresholdStat,
+} from "../uma-tools/uma-skill-tools/CourseData";
+
+export interface CourseData {
+    readonly raceTrackId: number
+	readonly distance: number
+	readonly distanceType: DistanceType
+	readonly surface: Surface
+	readonly turn: Orientation
+	readonly courseSetStatus: readonly ThresholdStat[]
+	readonly corners: readonly {readonly start: number, readonly length: number}[]
+	readonly straights: readonly {readonly start: number, readonly end: number, readonly frontType: number}[]
+	readonly slopes: readonly {readonly start: number, readonly length: number, readonly slope: number}[]
+	readonly courseWidth: number
+	readonly horseLane: number
+	readonly laneChangeAcceleration: number
+	readonly laneChangeAccelerationPerFrame: number
+	readonly maxLaneDistance: number
+	readonly moveLanePoint: number
+}
 
 export interface SkillResult {
     skill: string;
@@ -265,8 +288,15 @@ export function findSkillVariantsByName(
 }
 
 export function processCourseData(rawCourse: {
-    corners: Array<{ start: number; length: number }>;
+    raceTrackId: number;
     distance: number;
+    distanceType: DistanceType;
+    surface: Surface;
+    turn: Orientation;
+    courseSetStatus: readonly ThresholdStat[];
+    corners: Array<{ start: number; length: number }>;
+    straights: readonly { start: number; end: number; frontType: number }[];
+    slopes: readonly { start: number; length: number; slope: number }[];
     laneMax: number;
     [key: string]: unknown;
 }): CourseData {
@@ -283,15 +313,22 @@ export function processCourseData(rawCourse: {
     const moveLanePoint = corners[0].start;
 
     return {
-        ...rawCourse,
+        raceTrackId: rawCourse.raceTrackId,
+        distance: rawCourse.distance,
+        distanceType: rawCourse.distanceType,
+        surface: rawCourse.surface,
+        turn: rawCourse.turn,
+        courseSetStatus: rawCourse.courseSetStatus,
         corners,
+        straights: rawCourse.straights,
+        slopes: rawCourse.slopes,
         courseWidth,
         horseLane,
         laneChangeAcceleration,
         laneChangeAccelerationPerFrame,
         maxLaneDistance,
         moveLanePoint,
-    } as CourseData;
+    };
 }
 
 export function calculateStatsFromRawResults(
@@ -433,7 +470,19 @@ export function findMatchingCoursesWithFilters(
             }
         }
 
-        const processedCourse = processCourseData(rawCourse);
+        const processedCourse = processCourseData(rawCourse as {
+            raceTrackId: number;
+            distance: number;
+            distanceType: DistanceType;
+            surface: Surface;
+            turn: Orientation;
+            courseSetStatus: readonly ThresholdStat[];
+            corners: Array<{ start: number; length: number }>;
+            straights: readonly { start: number; end: number; frontType: number }[];
+            slopes: readonly { start: number; length: number; slope: number }[];
+            laneMax: number;
+            [key: string]: unknown;
+        });
         matches.push({ courseId, course: processedCourse });
     }
 
