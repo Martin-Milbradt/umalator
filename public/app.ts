@@ -243,10 +243,10 @@ function updateSkillVariantsDefault(
     const baseName = getBaseSkillName(skillName)
     const variants = getVariantsForBaseName(baseName)
 
-    // Determine which skills to update
+    // Determine which skills to update - always include skillName
     let skillsToUpdate: string[]
     if (variants.length === 2) {
-        skillsToUpdate = variants
+        skillsToUpdate = [...new Set([skillName, ...variants])]
     } else {
         const otherVariant = getOtherVariant(skillName)
         if (otherVariant) {
