@@ -1,41 +1,42 @@
 import { parentPort, workerData } from 'node:worker_threads'
-import type { CourseData } from '../uma-tools/uma-skill-tools/CourseData'
-import type {
-    Mood,
-    RaceParameters,
-} from '../uma-tools/uma-skill-tools/RaceParameters'
-import { HorseState, SkillSet } from '../uma-tools/components/HorseDefTypes'
+import type { Mood } from '../uma-tools/uma-skill-tools/RaceParameters'
+import {
+    HorseState as HorseStateBase,
+    SkillSet,
+} from '../uma-tools/components/HorseDefTypes'
 import { runComparison } from '../uma-tools/umalator/compare'
 import skillmeta from '../uma-tools/skill_meta.json'
+import type { SimulationTask, HorseStateData } from './types'
 
-interface SimulationTask {
-    skillId: string
-    skillName: string
-    courses: CourseData[]
-    racedef: RaceParameters
-    // biome-ignore lint/suspicious/noExplicitAny: Worker data is serialized from main thread
-    baseUma: any
-    // biome-ignore lint/suspicious/noExplicitAny: Worker data is serialized from main thread
-    simOptions: any
-    numSimulations: number
-    useRandomMood?: boolean
-    useRandomSeason?: boolean
-    useRandomWeather?: boolean
-    useRandomCondition?: boolean
-    weightedSeasons?: number[]
-    weightedWeathers?: number[]
-    weightedConditions?: number[]
-    confidenceInterval?: number
-    returnRawResults?: boolean
+/**
+ * HorseState from uma-tools extends immutable.js Record.
+ * TypeScript cannot properly infer types across the boundary,
+ * so we cast it to a compatible interface for construction.
+ */
+interface HorseStateInstance {
+    set(key: string, value: unknown): HorseStateInstance
 }
+const HorseState = HorseStateBase as unknown as new (
+    props: HorseStateData & { mood?: Mood },
+) => HorseStateInstance
 
-// biome-ignore lint/suspicious/noExplicitAny: Worker data is serialized from main thread
-function convertSkillsToArray(skills: any): string[] {
+/** Type alias for uma-tools HorseState (used for casting in function calls). */
+type UmaToolsHorseState = typeof HorseStateBase extends new (
+    ...args: unknown[]
+) => infer R
+    ? R
+    : never
+
+/**
+ * Converts skills from HorseStateData to an array of skill IDs.
+ * Skills can be either an array (direct) or a Record (from immutable Map serialization).
+ */
+function convertSkillsToArray(skills: HorseStateData['skills']): string[] {
     if (Array.isArray(skills)) {
         return skills
     }
     if (skills && typeof skills === 'object') {
-        return Object.values(skills) as string[]
+        return Object.values(skills)
     }
     return []
 }
@@ -113,8 +114,8 @@ function runSkillSimulation(task: SimulationTask) {
                 1,
                 course,
                 racedefForSim,
-                baseUma,
-                umaWithSkill,
+                baseUma as unknown as UmaToolsHorseState,
+                umaWithSkill as unknown as UmaToolsHorseState,
                 singleSimOptions,
             )
             results.push(singleResults[0])
@@ -132,8 +133,8 @@ function runSkillSimulation(task: SimulationTask) {
             task.numSimulations,
             courses[0],
             task.racedef,
-            baseUma,
-            umaWithSkill,
+            baseUma as unknown as UmaToolsHorseState,
+            umaWithSkill as unknown as UmaToolsHorseState,
             task.simOptions,
         )
         results.push(...batchResults)

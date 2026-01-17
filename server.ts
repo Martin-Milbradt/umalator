@@ -13,6 +13,7 @@ import {
     buildSkillNameLookup,
     normalizeConfigSkillNames,
 } from './utils'
+import type { SkillMeta, RawCourseData } from './types'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -31,8 +32,8 @@ const fileChangeListeners: Set<express.Response> = new Set()
 // Cached data for static JSON files (loaded once at startup)
 const umaToolsDir = resolve(__dirname, '..', 'uma-tools', 'umalator-global')
 let cachedSkillnames: Record<string, string[]> | null = null
-let cachedSkillmeta: Record<string, unknown> | null = null
-let cachedCourseData: Record<string, unknown> | null = null
+let cachedSkillmeta: Record<string, SkillMeta> | null = null
+let cachedCourseData: Record<string, RawCourseData> | null = null
 
 // Case-insensitive skill name lookup map (built once after skillnames loads)
 let skillNameLookup: Map<string, string> | null = null
