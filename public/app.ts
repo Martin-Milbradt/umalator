@@ -227,6 +227,50 @@ function getOtherVariant(skillName: string): string | string[] | null {
     return null
 }
 
+type VariantDefaultOperation = 'remove' | 'set'
+
+/**
+ * Updates the default value for a skill and all its variants.
+ * Handles both ○/◎ variant pairs consistently.
+ */
+function updateSkillVariantsDefault(
+    skillName: string,
+    operation: VariantDefaultOperation,
+    newValue?: number | null,
+): void {
+    if (!currentConfig) return
+
+    const baseName = getBaseSkillName(skillName)
+    const variants = getVariantsForBaseName(baseName)
+
+    // Determine which skills to update - always include skillName
+    let skillsToUpdate: string[]
+    if (variants.length === 2) {
+        skillsToUpdate = [...new Set([skillName, ...variants])]
+    } else {
+        const otherVariant = getOtherVariant(skillName)
+        if (otherVariant) {
+            const variantsToAdd = Array.isArray(otherVariant)
+                ? otherVariant
+                : [otherVariant]
+            skillsToUpdate = [skillName, ...variantsToAdd]
+        } else {
+            skillsToUpdate = [skillName]
+        }
+    }
+
+    // Apply the operation to all relevant skills
+    for (const variantName of skillsToUpdate) {
+        if (!currentConfig.skills[variantName]) continue
+
+        if (operation === 'remove') {
+            delete currentConfig.skills[variantName].default
+        } else if (operation === 'set' && newValue !== undefined) {
+            currentConfig.skills[variantName].default = newValue
+        }
+    }
+}
+
 function findSkillId(skillName: string): string | null {
     if (!skillNameToId || !skillnames) return null
     if (skillNameToId[skillName]) {
@@ -456,79 +500,11 @@ function renderSkills(): void {
                 ((skillDefault === undefined || skillDefault === null) &&
                     (currentDiscount === null || currentDiscount === undefined))
             if (isCurrentlyDefault) {
-                delete currentConfig.skills[skillName].default
-                const baseName = getBaseSkillName(skillName)
-                const variants = getVariantsForBaseName(baseName)
-                if (variants.length > 1) {
-                    variants.forEach((variantName) => {
-                        if (currentConfig.skills[variantName]) {
-                            delete currentConfig.skills[variantName].default
-                        }
-                    })
-                } else {
-                    const otherVariant = getOtherVariant(skillName)
-                    if (otherVariant) {
-                        const variantsToUpdate = Array.isArray(otherVariant)
-                            ? otherVariant
-                            : [otherVariant]
-                        variantsToUpdate.forEach((variantName) => {
-                            if (currentConfig.skills[variantName]) {
-                                delete currentConfig.skills[variantName].default
-                            }
-                        })
-                    }
-                }
+                updateSkillVariantsDefault(skillName, 'remove')
+            } else if (currentDiscount === null || currentDiscount === undefined) {
+                updateSkillVariantsDefault(skillName, 'remove')
             } else {
-                if (currentDiscount === null || currentDiscount === undefined) {
-                    delete currentConfig.skills[skillName].default
-                    const baseName = getBaseSkillName(skillName)
-                    const variants = getVariantsForBaseName(baseName)
-                    if (variants.length === 2) {
-                        variants.forEach((variantName) => {
-                            if (currentConfig.skills[variantName]) {
-                                delete currentConfig.skills[variantName].default
-                            }
-                        })
-                    } else {
-                        const otherVariant = getOtherVariant(skillName)
-                        if (otherVariant) {
-                            const variantsToUpdate = Array.isArray(otherVariant)
-                                ? otherVariant
-                                : [otherVariant]
-                            variantsToUpdate.forEach((variantName) => {
-                                if (currentConfig.skills[variantName]) {
-                                    delete currentConfig.skills[variantName]
-                                        .default
-                                }
-                            })
-                        }
-                    }
-                } else {
-                    currentConfig.skills[skillName].default = currentDiscount
-                    const baseName = getBaseSkillName(skillName)
-                    const variants = getVariantsForBaseName(baseName)
-                    if (variants.length === 2) {
-                        variants.forEach((variantName) => {
-                            if (currentConfig.skills[variantName]) {
-                                currentConfig.skills[variantName].default =
-                                    currentDiscount
-                            }
-                        })
-                    } else {
-                        const otherVariant = getOtherVariant(skillName)
-                        if (otherVariant) {
-                            const variantsToUpdate = Array.isArray(otherVariant)
-                                ? otherVariant
-                                : [otherVariant]
-                            variantsToUpdate.forEach((variantName) => {
-                                if (currentConfig.skills[variantName]) {
-                                    currentConfig.skills[variantName].default =
-                                        currentDiscount
-                                }
-                            })
-                        }
-                    }
-                }
+                updateSkillVariantsDefault(skillName, 'set', currentDiscount)
             }
             renderSkills()
             autoSave()
@@ -1502,79 +1478,11 @@ function setupSkillsContainerDelegation(): void {
                     (currentDiscount === null || currentDiscount === undefined))
 
             if (isCurrentlyDefault) {
-                delete currentConfig.skills[skillName].default
-                const baseName = getBaseSkillName(skillName)
-                const variants = getVariantsForBaseName(baseName)
-                if (variants.length === 2) {
-                    variants.forEach((variantName) => {
-                        if (currentConfig.skills[variantName]) {
-                            delete currentConfig.skills[variantName].default
-                        }
-                    })
-                } else {
-                    const otherVariant = getOtherVariant(skillName)
-                    if (otherVariant) {
-                        const variantsToUpdate = Array.isArray(otherVariant)
-                            ? otherVariant
-                            : [otherVariant]
-                        variantsToUpdate.forEach((variantName) => {
-                            if (currentConfig.skills[variantName]) {
-                                delete currentConfig.skills[variantName].default
-                            }
-                        })
-                    }
-                }
+                updateSkillVariantsDefault(skillName, 'remove')
+            } else if (currentDiscount === null || currentDiscount === undefined) {
+                updateSkillVariantsDefault(skillName, 'remove')
             } else {
-                if (currentDiscount === null || currentDiscount === undefined) {
-                    delete currentConfig.skills[skillName].default
-                    const baseName = getBaseSkillName(skillName)
-                    const variants = getVariantsForBaseName(baseName)
-                    if (variants.length === 2) {
-                        variants.forEach((variantName) => {
-                            if (currentConfig.skills[variantName]) {
-                                delete currentConfig.skills[variantName].default
-                            }
-                        })
-                    } else {
-                        const otherVariant = getOtherVariant(skillName)
-                        if (otherVariant) {
-                            const variantsToUpdate = Array.isArray(otherVariant)
-                                ? otherVariant
-                                : [otherVariant]
-                            variantsToUpdate.forEach((variantName) => {
-                                if (currentConfig.skills[variantName]) {
-                                    delete currentConfig.skills[variantName]
-                                        .default
-                                }
-                            })
-                        }
-                    }
-                } else {
-                    currentConfig.skills[skillName].default = currentDiscount
-                    const baseName = getBaseSkillName(skillName)
-                    const variants = getVariantsForBaseName(baseName)
-                    if (variants.length === 2) {
-                        variants.forEach((variantName) => {
-                            if (currentConfig.skills[variantName]) {
-                                currentConfig.skills[variantName].default =
-                                    currentDiscount
-                            }
-                        })
-                    } else {
-                        const otherVariant = getOtherVariant(skillName)
-                        if (otherVariant) {
-                            const variantsToUpdate = Array.isArray(otherVariant)
-                                ? otherVariant
-                                : [otherVariant]
-                            variantsToUpdate.forEach((variantName) => {
-                                if (currentConfig.skills[variantName]) {
-                                    currentConfig.skills[variantName].default =
-                                        currentDiscount
-                                }
-                            })
-                        }
-                    }
-                }
+                updateSkillVariantsDefault(skillName, 'set', currentDiscount)
             }
         } else {
             currentConfig.skills[skillName].discount =

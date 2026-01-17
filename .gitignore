@@ -7,3 +7,6 @@ public/style.css
 dist/
 settings.local.json
 tsconfig.tsbuildinfo
+.prettierrc
+biome.json
+.markdownlint.json
