@@ -604,16 +604,16 @@ async function main() {
         limit: number,
     ): Promise<T[]> => {
         const results: T[] = []
-        const executing: Promise<void>[] = []
+        const executing = new Set<Promise<void>>()
 
         for (const itemFactory of items) {
             const promise = itemFactory().then((result) => {
                 results.push(result)
-                executing.splice(executing.indexOf(promise), 1)
+                executing.delete(promise)
             })
-            executing.push(promise)
+            executing.add(promise)
 
-            if (executing.length >= limit) {
+            if (executing.size >= limit) {
                 await Promise.race(executing)
             }
         }

@@ -65,6 +65,7 @@ const tracknames: Record<string, [string, string]> = {
 let currentConfig: Config | null = null
 let currentConfigFile: string | null = null
 let saveTimeout: ReturnType<typeof setTimeout> | null = null
+let pendingSavePromise: Promise<void> | null = null
 let skillnames: SkillNames | null = null
 let skillNameToId: Record<string, string> | null = null
 let skillmeta: SkillMeta | null = null
@@ -1224,7 +1225,7 @@ function autoSave(): void {
         clearTimeout(saveTimeout)
     }
     saveTimeout = setTimeout(() => {
-        saveConfig()
+        pendingSavePromise = saveConfig()
     }, 500)
 }
 
@@ -1238,6 +1239,9 @@ async function runCalculations(): Promise<void> {
 
     if (saveTimeout) {
         clearTimeout(saveTimeout)
+    }
+    if (pendingSavePromise) {
+        await pendingSavePromise
     }
     await saveConfig()
 
