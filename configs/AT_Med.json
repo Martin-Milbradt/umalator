@@ -160,9 +160,6 @@
     "Productive Plan": {
       "discount": null
     },
-    "Shifting Gears": {
-      "discount": null
-    },
     "Pace Chaser Straightaways ◎": {
       "discount": null
     },
@@ -211,6 +208,9 @@
     },
     "Tail Held High": {
       "discount": null
+    },
+    "Shifting Gears": {
+      "discount": 0
     }
   },
   "track": {

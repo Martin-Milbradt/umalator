@@ -1,70 +1,74 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Umalator Global CLI - Web Interface</title>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Umalator Global CLI - Web Interface</title>
 
-    <script type="module" crossorigin src="/app.js"></script>
-    <link rel="stylesheet" crossorigin href="/index.css" />
-  </head>
-  <body
-    class="m-0 p-0 box-border font-sans bg-zinc-900 text-zinc-200 h-screen overflow-hidden"
-  >
-    <div class="flex h-screen">
-      <div
-        class="p-2.5 overflow-y-auto bg-zinc-800 border-r border-zinc-700 w-[800px]"
-      >
-        <h3 class="mt-0 mb-2.5 text-teal-400 text-base flex items-center gap-2">
-          <button
-            id="add-skill-button"
-            class="bg-sky-600 text-white border-none rounded w-6 h-6 text-lg leading-none cursor-pointer flex items-center justify-center p-0 transition-colors hover:bg-sky-700 active:bg-sky-800"
-            title="Add new skill"
-          >
-            +
-          </button>
-          Skills
-        </h3>
-        <div id="skills-container"></div>
-      </div>
+        <script type="module" crossorigin src="/app.js"></script>
+        <link rel="stylesheet" crossorigin href="/index.css" />
+    </head>
+    <body
+        class="m-0 p-0 box-border font-sans bg-zinc-900 text-zinc-200 h-screen overflow-hidden"
+    >
+        <div class="flex h-screen">
+            <div
+                class="p-2.5 overflow-y-auto bg-zinc-800 border-r border-zinc-700 w-[800px]"
+            >
+                <h3
+                    class="mt-0 mb-2.5 text-teal-400 text-base flex items-center gap-2"
+                >
+                    <button
+                        id="add-skill-button"
+                        class="bg-sky-600 text-white border-none rounded w-6 h-6 text-lg leading-none cursor-pointer flex items-center justify-center p-0 transition-colors hover:bg-sky-700 active:bg-sky-800"
+                        title="Add new skill"
+                    >
+                        +
+                    </button>
+                    Skills
+                </h3>
+                <div id="skills-container"></div>
+            </div>
 
-      <div class="w-full p-2.5 flex flex-col bg-zinc-900 overflow-y-auto">
-        <div class="flex items-center gap-2.5 mb-2.5">
-          <select
-            id="config-select"
-            class="flex-1 p-2 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-sm focus:outline-none focus:border-sky-500"
-          ></select>
-          <button
-            id="duplicate-config-button"
-            class="bg-sky-600 text-white border-none rounded h-9 w-9 text-lg leading-none cursor-pointer flex items-center justify-center p-0 transition-colors hover:bg-sky-700 active:bg-sky-800"
-            title="Duplicate config file"
-          >
-            +
-          </button>
-          <button
-            id="run-button"
-            class="h-9 px-4 text-white border-none rounded-md text-base font-semibold cursor-pointer transition-colors bg-sky-600 hover:bg-sky-700 active:bg-sky-800 disabled:bg-zinc-600 disabled:cursor-not-allowed flex items-center"
-          >
-            Run Calculations
-          </button>
-          <button
-            id="reset-button"
-            class="h-9 px-4 text-white border-none rounded-md text-base font-semibold cursor-pointer transition-colors bg-red-600 hover:bg-red-700 active:bg-red-800 flex items-center"
-          >
-            Reset
-          </button>
+            <div class="w-full p-2.5 flex flex-col bg-zinc-900 overflow-y-auto">
+                <div class="flex items-center gap-2.5 mb-2.5">
+                    <select
+                        id="config-select"
+                        class="flex-1 p-2 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-sm focus:outline-none focus:border-sky-500"
+                    ></select>
+                    <button
+                        id="duplicate-config-button"
+                        class="bg-sky-600 text-white border-none rounded h-9 w-9 text-lg leading-none cursor-pointer flex items-center justify-center p-0 transition-colors hover:bg-sky-700 active:bg-sky-800"
+                        title="Duplicate config file"
+                    >
+                        +
+                    </button>
+                    <button
+                        id="run-button"
+                        class="h-9 px-4 text-white border-none rounded-md text-base font-semibold cursor-pointer transition-colors bg-sky-600 hover:bg-sky-700 active:bg-sky-800 disabled:bg-zinc-600 disabled:cursor-not-allowed flex items-center"
+                    >
+                        Run Calculations
+                    </button>
+                    <button
+                        id="reset-button"
+                        class="h-9 px-4 text-white border-none rounded-md text-base font-semibold cursor-pointer transition-colors bg-red-600 hover:bg-red-700 active:bg-red-800 flex items-center"
+                    >
+                        Reset
+                    </button>
+                </div>
+
+                <pre
+                    id="terminal-output"
+                    class="flex-1 bg-slate-950 text-slate-300 p-2.5 rounded-md font-mono text-[13px] leading-normal overflow-y-auto whitespace-pre-wrap wrap-break-word border border-slate-700 mb-2.5"
+                ></pre>
+
+                <div
+                    class="p-2.5 bg-zinc-800 rounded-md border border-zinc-700"
+                >
+                    <div id="uma-container"></div>
+                    <div id="track-container"></div>
+                </div>
+            </div>
         </div>
-
-        <pre
-          id="terminal-output"
-          class="flex-1 bg-slate-950 text-slate-300 p-2.5 rounded-md font-mono text-[13px] leading-normal overflow-y-auto whitespace-pre-wrap wrap-break-word border border-slate-700 mb-2.5"
-        ></pre>
-
-        <div class="p-2.5 bg-zinc-800 rounded-md border border-zinc-700">
-          <div id="uma-container"></div>
-          <div id="track-container"></div>
-        </div>
-      </div>
-    </div>
-  </body>
+    </body>
 </html>
