@@ -87,17 +87,18 @@ interface CurrentSettings {
 }
 
 // Mapping constants for skill trigger checking
+// NOTE: Keep in sync with utils.ts STRATEGY_TO_RUNNING_STYLE
 const STRATEGY_TO_RUNNING_STYLE: Record<string, number> = {
-    Oonige: 1,
-    Nige: 2,
-    Runaway: 1,
-    'Front Runner': 2,
-    'Pace Chaser': 3,
-    'Late Surger': 4,
     'End Closer': 5,
-    Senkou: 3,
-    Sasi: 4,
+    'Front Runner': 2,
+    'Late Surger': 4,
+    Nige: 2,
+    Oonige: 1,
     Oikomi: 5,
+    'Pace Chaser': 3,
+    Runaway: 1,
+    Sasi: 4,
+    Senkou: 3,
 }
 
 const TRACK_NAME_TO_ID: Record<string, number> = {

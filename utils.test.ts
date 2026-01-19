@@ -1030,12 +1030,20 @@ describe('getDistanceType', () => {
 })
 
 describe('STRATEGY_TO_RUNNING_STYLE', () => {
-    it('maps strategy names to running style numbers', () => {
+    it('maps Japanese strategy names to running style numbers', () => {
         expect(STRATEGY_TO_RUNNING_STYLE['Oonige']).toBe(1)
         expect(STRATEGY_TO_RUNNING_STYLE['Nige']).toBe(2)
         expect(STRATEGY_TO_RUNNING_STYLE['Senkou']).toBe(3)
         expect(STRATEGY_TO_RUNNING_STYLE['Sasi']).toBe(4)
         expect(STRATEGY_TO_RUNNING_STYLE['Oikomi']).toBe(5)
+    })
+
+    it('maps English strategy names to running style numbers', () => {
+        expect(STRATEGY_TO_RUNNING_STYLE['Runaway']).toBe(1)
+        expect(STRATEGY_TO_RUNNING_STYLE['Front Runner']).toBe(2)
+        expect(STRATEGY_TO_RUNNING_STYLE['Pace Chaser']).toBe(3)
+        expect(STRATEGY_TO_RUNNING_STYLE['Late Surger']).toBe(4)
+        expect(STRATEGY_TO_RUNNING_STYLE['End Closer']).toBe(5)
     })
 })
 
@@ -1559,5 +1567,70 @@ describe('canSkillTrigger with empty restriction arrays', () => {
             trackId: 10006,
         }
         expect(canSkillTrigger(result, settings)).toBe(false)
+    })
+})
+
+describe('skill filtering with English strategy names', () => {
+    // Regression tests to ensure English strategy names work correctly
+    // with skill filtering (previously only Japanese names were supported)
+
+    it('Front Runner skills should trigger for Front Runner strategy', () => {
+        // Preferred Position has running_style==2 (Front Runner/Nige)
+        const restrictions = extractStaticRestrictions('running_style==2&phase_random==1&order_rate<=50')
+        expect(restrictions.runningStyles).toEqual([2])
+
+        const runningStyle = STRATEGY_TO_RUNNING_STYLE['Front Runner']
+        expect(runningStyle).toBe(2)
+
+        const settings: CurrentSettings = {
+            distanceType: null,
+            runningStyle: runningStyle ?? 3,
+            groundType: null,
+            groundCondition: null,
+            weather: null,
+            season: null,
+            trackId: null,
+        }
+        expect(canSkillTrigger(restrictions, settings)).toBe(true)
+    })
+
+    it('Pace Chaser skills should NOT trigger for Front Runner strategy', () => {
+        // Fast & Furious has running_style==3 (Pace Chaser/Senkou)
+        const restrictions = extractStaticRestrictions('running_style==3&phase_random==1&order_rate>50')
+        expect(restrictions.runningStyles).toEqual([3])
+
+        const runningStyle = STRATEGY_TO_RUNNING_STYLE['Front Runner']
+        expect(runningStyle).toBe(2)
+
+        const settings: CurrentSettings = {
+            distanceType: null,
+            runningStyle: runningStyle ?? 3,
+            groundType: null,
+            groundCondition: null,
+            weather: null,
+            season: null,
+            trackId: null,
+        }
+        expect(canSkillTrigger(restrictions, settings)).toBe(false)
+    })
+
+    it('Runaway skills should trigger for Runaway strategy', () => {
+        // Early Lead has running_style==1 (Runaway/Oonige)
+        const restrictions = extractStaticRestrictions('running_style==1&phase==0&order==0')
+        expect(restrictions.runningStyles).toEqual([1])
+
+        const runningStyle = STRATEGY_TO_RUNNING_STYLE['Runaway']
+        expect(runningStyle).toBe(1)
+
+        const settings: CurrentSettings = {
+            distanceType: null,
+            runningStyle: runningStyle ?? 3,
+            groundType: null,
+            groundCondition: null,
+            weather: null,
+            season: null,
+            trackId: null,
+        }
+        expect(canSkillTrigger(restrictions, settings)).toBe(true)
     })
 })

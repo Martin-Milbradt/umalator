@@ -651,11 +651,16 @@ export function normalizeConfigSkillNames(
 
 // Mapping constants for skill trigger checking
 export const STRATEGY_TO_RUNNING_STYLE: Record<string, number> = {
-    Oonige: 1, // Runaway
-    Nige: 2, // Front Runner
-    Senkou: 3, // Pace Chaser
-    Sasi: 4, // Late Surger
-    Oikomi: 5, // End Closer
+    'End Closer': 5,
+    'Front Runner': 2,
+    'Late Surger': 4,
+    Nige: 2,
+    Oonige: 1,
+    Oikomi: 5,
+    'Pace Chaser': 3,
+    Runaway: 1,
+    Sasi: 4,
+    Senkou: 3,
 }
 
 export const TRACK_NAME_TO_ID: Record<string, number> = {
