@@ -3,13 +3,9 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { Worker } from 'node:worker_threads'
 import { cpus } from 'node:os'
-import {
-    type RaceParameters,
-    GroundCondition,
-    Grade,
-    type Mood,
-    Time,
-    Season,
+import type {
+    RaceParameters,
+    Mood,
 } from '../uma-tools/uma-skill-tools/RaceParameters'
 import {
     HorseState as HorseStateBase,
@@ -18,6 +14,10 @@ import {
 import { ThresholdStat } from '../uma-tools/uma-skill-tools/CourseData'
 import type { SkillMeta, RawCourseData } from './types'
 import {
+    Grade,
+    GroundCondition,
+    Season,
+    Time,
     parseGroundCondition,
     parseWeather,
     parseSeason,
@@ -36,6 +36,7 @@ import {
     findSkillVariantsByName,
     processCourseData,
     calculateSkillCost,
+    type SkillCostContext,
     findMatchingCoursesWithFilters,
     formatTrackDetails,
     formatTable,
@@ -657,20 +658,20 @@ async function main() {
 
     const skillRawResultsMap: Map<string, SkillRawResults> = new Map()
 
+    const skillCostContext: SkillCostContext = {
+        skillMeta,
+        baseUmaSkillIds: umaSkillIds,
+        skillNames,
+        configSkills,
+        skillIdToName,
+        skillNameToConfigKey,
+    }
+
     for (const skillName of availableSkillNames) {
         const skillId = skillNameToId[skillName]
         const configKey = skillNameToConfigKey[skillName] || skillName
         const skillConfig = configSkills[configKey]
-        const cost = calculateSkillCost(
-            skillId,
-            skillMeta,
-            skillConfig,
-            umaSkillIds,
-            skillNames,
-            configSkills,
-            skillIdToName,
-            skillNameToConfigKey,
-        )
+        const cost = calculateSkillCost(skillId, skillConfig, skillCostContext)
         skillRawResultsMap.set(skillName, {
             skillName,
             rawResults: [],
