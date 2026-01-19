@@ -3,13 +3,9 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { Worker } from 'node:worker_threads'
 import { cpus } from 'node:os'
-import {
-    type RaceParameters,
-    GroundCondition,
-    Grade,
-    type Mood,
-    Time,
-    Season,
+import type {
+    RaceParameters,
+    Mood,
 } from '../uma-tools/uma-skill-tools/RaceParameters'
 import {
     HorseState as HorseStateBase,
@@ -18,6 +14,10 @@ import {
 import { ThresholdStat } from '../uma-tools/uma-skill-tools/CourseData'
 import type { SkillMeta, RawCourseData } from './types'
 import {
+    Grade,
+    GroundCondition,
+    Season,
+    Time,
     parseGroundCondition,
     parseWeather,
     parseSeason,

@@ -1,8 +1,13 @@
 // Local constants mirroring const enum values (const enums aren't exported at runtime)
-const GroundCondition = { Good: 1, Heavy: 4, Soft: 3, Yielding: 2 } as const
-type GroundCondition = (typeof GroundCondition)[keyof typeof GroundCondition]
-const Season = { Autumn: 3, Sakura: 5, Spring: 1, Summer: 2, Winter: 4 } as const
-type Season = (typeof Season)[keyof typeof Season]
+// Values must match ../uma-tools/uma-skill-tools/RaceParameters.ts
+export const Grade = { Daily: 999, Debut: 900, G1: 100, G2: 200, G3: 300, Maiden: 800, OP: 400, PreOP: 700 } as const
+export type Grade = (typeof Grade)[keyof typeof Grade]
+export const GroundCondition = { Good: 1, Heavy: 4, Soft: 3, Yielding: 2 } as const
+export type GroundCondition = (typeof GroundCondition)[keyof typeof GroundCondition]
+export const Season = { Autumn: 3, Sakura: 5, Spring: 1, Summer: 2, Winter: 4 } as const
+export type Season = (typeof Season)[keyof typeof Season]
+export const Time = { Evening: 3, Midday: 2, Morning: 1, Night: 4, NoTime: 0 } as const
+export type Time = (typeof Time)[keyof typeof Time]
 import type {
     DistanceType,
     Surface,
@@ -404,7 +409,7 @@ export function calculateStatsFromRawResults(
 export interface SkillCostContext {
     skillMeta: Record<
         string,
-        { baseCost: number; groupId?: number; order?: number }
+        { baseCost: number; groupId?: string; order?: number }
     >
     baseUmaSkillIds?: string[]
     skillNames?: Record<string, string[]>

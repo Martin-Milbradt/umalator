@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest'
 import {
-    GroundCondition,
-    Season,
-} from '../uma-tools/uma-skill-tools/RaceParameters'
-import {
     DistanceType,
     Surface,
     Orientation,
     type ThresholdStat,
 } from '../uma-tools/uma-skill-tools/CourseData'
 import {
+    Grade,
+    GroundCondition,
+    Season,
+    Time,
     parseGroundCondition,
     parseWeather,
     parseSeason,
@@ -47,6 +47,43 @@ import {
     type CurrentSettings,
     type SkillDataEntry,
 } from './utils'
+
+// Tests to ensure local enum values match upstream uma-tools/uma-skill-tools/RaceParameters.ts
+describe('enum values match upstream', () => {
+    it('Grade values match RaceParameters', () => {
+        expect(Grade.G1).toBe(100)
+        expect(Grade.G2).toBe(200)
+        expect(Grade.G3).toBe(300)
+        expect(Grade.OP).toBe(400)
+        expect(Grade.PreOP).toBe(700)
+        expect(Grade.Maiden).toBe(800)
+        expect(Grade.Debut).toBe(900)
+        expect(Grade.Daily).toBe(999)
+    })
+
+    it('GroundCondition values match RaceParameters', () => {
+        expect(GroundCondition.Good).toBe(1)
+        expect(GroundCondition.Yielding).toBe(2)
+        expect(GroundCondition.Soft).toBe(3)
+        expect(GroundCondition.Heavy).toBe(4)
+    })
+
+    it('Season values match RaceParameters', () => {
+        expect(Season.Spring).toBe(1)
+        expect(Season.Summer).toBe(2)
+        expect(Season.Autumn).toBe(3)
+        expect(Season.Winter).toBe(4)
+        expect(Season.Sakura).toBe(5)
+    })
+
+    it('Time values match RaceParameters', () => {
+        expect(Time.NoTime).toBe(0)
+        expect(Time.Morning).toBe(1)
+        expect(Time.Midday).toBe(2)
+        expect(Time.Evening).toBe(3)
+        expect(Time.Night).toBe(4)
+    })
+})
 
 describe('parseGroundCondition', () => {
     it.each([
@@ -676,11 +713,11 @@ describe('calculateStatsFromRawResults', () => {
 describe('calculateSkillCost', () => {
     const skillMeta: Record<
         string,
-        { baseCost: number; groupId?: number; order?: number }
+        { baseCost: number; groupId?: string; order?: number }
     > = {
         skill001: { baseCost: 200 },
-        skill002: { baseCost: 150, groupId: 1, order: 1 },
-        skill003: { baseCost: 100, groupId: 1, order: 2 },
+        skill002: { baseCost: 150, groupId: '1', order: 1 },
+        skill003: { baseCost: 100, groupId: '1', order: 2 },
     }
     const context = { skillMeta }
 
