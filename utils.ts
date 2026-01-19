@@ -649,6 +649,496 @@ export function normalizeConfigSkillNames(
     return config
 }
 
+// Mapping constants for skill trigger checking
+export const STRATEGY_TO_RUNNING_STYLE: Record<string, number> = {
+    Oonige: 1, // Runaway
+    Nige: 2, // Front Runner
+    Senkou: 3, // Pace Chaser
+    Sasi: 4, // Late Surger
+    Oikomi: 5, // End Closer
+}
+
+export const TRACK_NAME_TO_ID: Record<string, number> = {
+    Chukyo: 10007,
+    Fukushima: 10004,
+    Hakodate: 10002,
+    Hanshin: 10009,
+    Kokura: 10010,
+    Kyoto: 10008,
+    Nakayama: 10005,
+    Niigata: 10003,
+    Ooi: 10101,
+    Sapporo: 10001,
+    Tokyo: 10006,
+}
+
+/**
+ * Gets distance type from distance in meters.
+ * Distance types: 1=Sprint (<=1400m), 2=Mile (<=1800m), 3=Medium (<=2400m), 4=Long (>2400m)
+ */
+export function getDistanceType(distanceMeters: number): number {
+    if (distanceMeters <= 1400) return 1 // Sprint
+    if (distanceMeters <= 1800) return 2 // Mile
+    if (distanceMeters <= 2400) return 3 // Medium
+    return 4 // Long
+}
+
+/**
+ * Represents static restrictions extracted from a skill's condition/precondition.
+ * All fields are optional - undefined means no restriction on that field.
+ */
+export interface SkillRestrictions {
+    distanceTypes?: number[] // e.g., [4] for Long-only
+    groundConditions?: number[] // e.g., [3,4] for Soft or Heavy
+    groundTypes?: number[] // e.g., [2] for Dirt only
+    runningStyles?: number[] // e.g., [3] for Pace Chaser only
+    seasons?: number[] // e.g., [1] for Spring only
+    trackIds?: number[] // e.g., [10001, 10005] for specific tracks
+    weathers?: number[] // e.g., [3,4] for Rainy or Snowy
+}
+
+/**
+ * Current settings for checking if a skill can trigger.
+ * null values indicate random/unspecified settings where any value is acceptable.
+ */
+export interface CurrentSettings {
+    distanceType: number | null // null if <Random> or distance category
+    groundCondition: number | null // null if <Random>
+    groundType: number | null // 1=Turf, 2=Dirt, null if random
+    runningStyle: number // from uma.strategy (always known)
+    season: number | null // null if <Random>
+    trackId: number | null // null if <Random> location
+    weather: number | null // null if <Random>
+}
+
+// Static field names we care about for filtering
+const STATIC_FIELDS = [
+    'distance_type',
+    'ground_condition',
+    'ground_type',
+    'running_style',
+    'season',
+    'track_id',
+    'weather',
+] as const
+
+type StaticField = (typeof STATIC_FIELDS)[number]
+
+// Max values for fields that support inequality expansion
+const FIELD_MAX_VALUES: Partial<Record<StaticField, number>> = {
+    distance_type: 4, // Sprint=1, Mile=2, Medium=3, Long=4
+    ground_condition: 4, // Good=1, Yielding=2, Soft=3, Heavy=4
+    ground_type: 2, // Turf=1, Dirt=2
+    running_style: 5, // Runaway=1, Front Runner=2, Pace Chaser=3, Late Surger=4, End Closer=5
+    season: 5, // Spring=1, Summer=2, Autumn=3, Winter=4, Sakura=5
+    weather: 4, // Sunny=1, Cloudy=2, Rainy=3, Snowy=4
+}
+
+/**
+ * Expand a comparison to an array of values based on operator.
+ * For track_id, returns single value array since expansion is not meaningful.
+ */
+function expandComparisonToValues(
+    field: StaticField,
+    operator: string,
+    value: number,
+): number[] {
+    const maxValue = FIELD_MAX_VALUES[field]
+
+    // For track_id or unknown fields, don't expand - return single value
+    if (maxValue === undefined) {
+        return [value]
+    }
+
+    switch (operator) {
+        case '==':
+            return [value]
+        case '>=': {
+            const values: number[] = []
+            for (let i = value; i <= maxValue; i++) {
+                values.push(i)
+            }
+            return values
+        }
+        case '<=': {
+            const values: number[] = []
+            for (let i = 1; i <= value; i++) {
+                values.push(i)
+            }
+            return values
+        }
+        case '>': {
+            const values: number[] = []
+            for (let i = value + 1; i <= maxValue; i++) {
+                values.push(i)
+            }
+            return values
+        }
+        case '<': {
+            const values: number[] = []
+            for (let i = 1; i < value; i++) {
+                values.push(i)
+            }
+            return values
+        }
+        default:
+            return [value]
+    }
+}
+
+/**
+ * Parse a single condition term like "distance_type==4" or "distance_type>=3"
+ * and extract values if it's a static field.
+ * Supports ==, >=, <=, >, < operators.
+ * Returns null if not a static field or not a supported comparison.
+ */
+function parseConditionTerm(
+    term: string,
+): { field: StaticField; values: number[] } | null {
+    // Match field, operator, and value
+    const match = term.match(/^([a-z_]+)(==|>=|<=|>|<)(\d+)$/)
+    if (!match) return null
+
+    const field = match[1] as StaticField
+    if (!STATIC_FIELDS.includes(field)) return null
+
+    const operator = match[2]
+    const value = parseInt(match[3], 10)
+    const values = expandComparisonToValues(field, operator, value)
+
+    return { field, values }
+}
+
+/**
+ * Parse a single AND-branch (conditions separated by &) and extract static restrictions.
+ * Returns restrictions that must ALL be satisfied for this branch.
+ */
+function parseAndBranch(branch: string): SkillRestrictions {
+    const restrictions: SkillRestrictions = {}
+    const terms = branch.split('&')
+
+    for (const term of terms) {
+        const parsed = parseConditionTerm(term.trim())
+        if (!parsed) continue
+
+        switch (parsed.field) {
+            case 'distance_type':
+                restrictions.distanceTypes = parsed.values
+                break
+            case 'ground_condition':
+                restrictions.groundConditions = parsed.values
+                break
+            case 'ground_type':
+                restrictions.groundTypes = parsed.values
+                break
+            case 'running_style':
+                restrictions.runningStyles = parsed.values
+                break
+            case 'season':
+                restrictions.seasons = parsed.values
+                break
+            case 'track_id':
+                restrictions.trackIds = parsed.values
+                break
+            case 'weather':
+                restrictions.weathers = parsed.values
+                break
+        }
+    }
+
+    return restrictions
+}
+
+/**
+ * Merge two restriction sets (union for OR alternatives).
+ * If any branch allows a value, the merged result allows it.
+ */
+function mergeRestrictions(
+    a: SkillRestrictions,
+    b: SkillRestrictions,
+): SkillRestrictions {
+    const merged: SkillRestrictions = {}
+
+    // For each field, if both have restrictions, union them
+    // If only one has restrictions, keep those (the other branch has no restriction = allows all)
+    // If neither has restrictions, the merged result has no restriction
+
+    const fields: (keyof SkillRestrictions)[] = [
+        'distanceTypes',
+        'groundConditions',
+        'groundTypes',
+        'runningStyles',
+        'seasons',
+        'trackIds',
+        'weathers',
+    ]
+
+    for (const field of fields) {
+        const aVals = a[field]
+        const bVals = b[field]
+
+        if (aVals && bVals) {
+            // Both branches have restrictions - union them
+            merged[field] = [...new Set([...aVals, ...bVals])]
+        }
+        // If only one has restrictions, the other branch allows all values,
+        // so the merged result has no restriction (undefined)
+    }
+
+    return merged
+}
+
+/**
+ * Intersect two restriction sets (for combining condition and precondition).
+ * Both must be satisfiable for the skill to trigger.
+ */
+function intersectRestrictions(
+    a: SkillRestrictions,
+    b: SkillRestrictions,
+): SkillRestrictions {
+    const result: SkillRestrictions = { ...a }
+
+    const fields: (keyof SkillRestrictions)[] = [
+        'distanceTypes',
+        'groundConditions',
+        'groundTypes',
+        'runningStyles',
+        'seasons',
+        'trackIds',
+        'weathers',
+    ]
+
+    for (const field of fields) {
+        const aVals = a[field]
+        const bVals = b[field]
+
+        if (aVals && bVals) {
+            // Both have restrictions - intersect (values that satisfy both)
+            const intersection = aVals.filter((v) => bVals.includes(v))
+            if (intersection.length > 0) {
+                result[field] = intersection
+            } else {
+                // No overlap - this combination can never trigger
+                result[field] = []
+            }
+        } else if (bVals) {
+            // Only b has restrictions
+            result[field] = bVals
+        }
+        // If only a has restrictions, already in result from spread
+    }
+
+    return result
+}
+
+/**
+ * Extract static restrictions from a condition string.
+ * Handles OR-separated alternatives (split on @) and AND-separated conditions (split on &).
+ */
+export function extractStaticRestrictions(
+    condition: string,
+    precondition?: string,
+): SkillRestrictions {
+    if (!condition) return {}
+
+    // Split by @ for OR alternatives
+    const orBranches = condition.split('@')
+
+    // Parse each OR branch and merge results
+    let conditionRestrictions: SkillRestrictions | null = null
+
+    for (const branch of orBranches) {
+        const branchRestrictions = parseAndBranch(branch)
+
+        if (conditionRestrictions === null) {
+            conditionRestrictions = branchRestrictions
+        } else {
+            conditionRestrictions = mergeRestrictions(
+                conditionRestrictions,
+                branchRestrictions,
+            )
+        }
+    }
+
+    if (!conditionRestrictions) {
+        conditionRestrictions = {}
+    }
+
+    // If there's a precondition, parse it and intersect with condition restrictions
+    if (precondition) {
+        const preOrBranches = precondition.split('@')
+        let preconditionRestrictions: SkillRestrictions | null = null
+
+        for (const branch of preOrBranches) {
+            const branchRestrictions = parseAndBranch(branch)
+
+            if (preconditionRestrictions === null) {
+                preconditionRestrictions = branchRestrictions
+            } else {
+                preconditionRestrictions = mergeRestrictions(
+                    preconditionRestrictions,
+                    branchRestrictions,
+                )
+            }
+        }
+
+        if (preconditionRestrictions) {
+            conditionRestrictions = intersectRestrictions(
+                conditionRestrictions,
+                preconditionRestrictions,
+            )
+        }
+    }
+
+    return conditionRestrictions
+}
+
+/**
+ * Check if a skill can trigger under the current settings.
+ * Returns true if the skill's restrictions are compatible with current settings.
+ * Returns false if any restriction array exists but is empty (impossible condition).
+ */
+export function canSkillTrigger(
+    restrictions: SkillRestrictions,
+    settings: CurrentSettings,
+): boolean {
+    // Check each restriction field
+    // If restriction array exists but is empty, condition is impossible - return false
+    // If setting is null (random), that restriction passes (unless empty)
+    // If restriction field is undefined, that field always passes
+    // Otherwise, check if current value is in allowed values array
+
+    // Distance type
+    if (restrictions.distanceTypes) {
+        if (restrictions.distanceTypes.length === 0) {
+            return false // Impossible condition from intersection
+        }
+        if (settings.distanceType !== null) {
+            if (!restrictions.distanceTypes.includes(settings.distanceType)) {
+                return false
+            }
+        }
+    }
+
+    // Running style
+    if (restrictions.runningStyles) {
+        if (restrictions.runningStyles.length === 0) {
+            return false // Impossible condition from intersection
+        }
+        if (!restrictions.runningStyles.includes(settings.runningStyle)) {
+            return false
+        }
+    }
+
+    // Ground type (surface)
+    if (restrictions.groundTypes) {
+        if (restrictions.groundTypes.length === 0) {
+            return false // Impossible condition from intersection
+        }
+        if (settings.groundType !== null) {
+            if (!restrictions.groundTypes.includes(settings.groundType)) {
+                return false
+            }
+        }
+    }
+
+    // Ground condition
+    if (restrictions.groundConditions) {
+        if (restrictions.groundConditions.length === 0) {
+            return false // Impossible condition from intersection
+        }
+        if (settings.groundCondition !== null) {
+            if (!restrictions.groundConditions.includes(settings.groundCondition)) {
+                return false
+            }
+        }
+    }
+
+    // Weather
+    if (restrictions.weathers) {
+        if (restrictions.weathers.length === 0) {
+            return false // Impossible condition from intersection
+        }
+        if (settings.weather !== null) {
+            if (!restrictions.weathers.includes(settings.weather)) {
+                return false
+            }
+        }
+    }
+
+    // Season
+    if (restrictions.seasons) {
+        if (restrictions.seasons.length === 0) {
+            return false // Impossible condition from intersection
+        }
+        if (settings.season !== null) {
+            if (!restrictions.seasons.includes(settings.season)) {
+                return false
+            }
+        }
+    }
+
+    // Track ID
+    if (restrictions.trackIds) {
+        if (restrictions.trackIds.length === 0) {
+            return false // Impossible condition from intersection
+        }
+        if (settings.trackId !== null) {
+            if (!restrictions.trackIds.includes(settings.trackId)) {
+                return false
+            }
+        }
+    }
+
+    return true
+}
+
+/**
+ * Skill data entry from skill_data.json.
+ */
+export interface SkillDataEntry {
+    alternatives: Array<{
+        baseDuration: number
+        condition: string
+        effects: Array<{ modifier: number; target: number; type: number }>
+        precondition: string
+    }>
+    rarity: number
+    wisdomCheck: number
+}
+
+/**
+ * Extract restrictions from a skill data entry by merging restrictions from all alternatives.
+ * A skill can trigger if ANY of its alternatives can trigger.
+ */
+export function extractSkillRestrictions(
+    skillData: SkillDataEntry,
+): SkillRestrictions {
+    if (!skillData.alternatives || skillData.alternatives.length === 0) {
+        return {}
+    }
+
+    let mergedRestrictions: SkillRestrictions | null = null
+
+    for (const alt of skillData.alternatives) {
+        const altRestrictions = extractStaticRestrictions(
+            alt.condition,
+            alt.precondition || undefined,
+        )
+
+        if (mergedRestrictions === null) {
+            mergedRestrictions = altRestrictions
+        } else {
+            mergedRestrictions = mergeRestrictions(
+                mergedRestrictions,
+                altRestrictions,
+            )
+        }
+    }
+
+    return mergedRestrictions || {}
+}
+
 export function formatTable(
     results: SkillResult[],
     confidenceInterval: number,

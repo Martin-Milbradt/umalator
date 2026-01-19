@@ -39,8 +39,16 @@ import {
     findMatchingCoursesWithFilters,
     formatTrackDetails,
     formatTable,
+    getDistanceType,
+    extractSkillRestrictions,
+    canSkillTrigger,
+    parseSurface,
+    STRATEGY_TO_RUNNING_STYLE,
+    TRACK_NAME_TO_ID,
     type SkillResult,
     type CourseData,
+    type CurrentSettings,
+    type SkillDataEntry,
 } from './utils'
 
 // HorseState extends immutable.js Record which TypeScript can't infer properly
@@ -119,6 +127,9 @@ async function main() {
     )
     const trackNames = loadJson<Record<string, string[]>>(
         '../uma-tools/umalator-global/tracknames.json',
+    )
+    const skillData = loadJson<Record<string, SkillDataEntry>>(
+        '../uma-tools/umalator-global/skill_data.json',
     )
 
     if (!config.track) {
@@ -363,6 +374,41 @@ async function main() {
     const skillIdToName: Record<string, string> = {}
     const skillNameToConfigKey: Record<string, string> = {}
 
+    // Compute current settings for skill filtering
+    const currentSettings: CurrentSettings = {
+        distanceType:
+            distanceCategory !== null
+                ? null // Distance category means multiple types
+                : useMultipleCourses
+                  ? null // Random/multiple courses
+                  : typeof distanceValue === 'number'
+                    ? getDistanceType(distanceValue)
+                    : null,
+        runningStyle: STRATEGY_TO_RUNNING_STYLE[strategyName] ?? 3,
+        groundType: parseSurface(config.track.surface),
+        groundCondition: useRandomCondition
+            ? null
+            : config.track.groundCondition
+              ? parseGroundCondition(config.track.groundCondition)
+              : 1, // Default to Good
+        weather: useRandomWeather
+            ? null
+            : config.track.weather
+              ? parseWeather(config.track.weather)
+              : 1, // Default to Sunny
+        season: useRandomSeason
+            ? null
+            : config.track.season
+              ? parseSeason(config.track.season)
+              : 1, // Default to Spring
+        trackId:
+            isRandomTrack || useMultipleCourses
+                ? null
+                : trackNameValue
+                  ? (TRACK_NAME_TO_ID[trackNameValue] ?? null)
+                  : null,
+    }
+
     for (const [skillName, skillConfig] of Object.entries(configSkills)) {
         if (
             skillConfig.discount === null ||
@@ -410,6 +456,15 @@ async function main() {
                     }
                 }
                 if (shouldSkip) {
+                    continue
+                }
+            }
+
+            // Skip if skill cannot trigger under current settings
+            const skillDataEntry = skillData[skillId]
+            if (skillDataEntry) {
+                const restrictions = extractSkillRestrictions(skillDataEntry)
+                if (!canSkillTrigger(restrictions, currentSettings)) {
                     continue
                 }
             }

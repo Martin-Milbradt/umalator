@@ -14,6 +14,7 @@ import {
     normalizeConfigSkillNames,
 } from './utils'
 import type { SkillMeta, RawCourseData } from './types'
+import type { SkillDataEntry } from './utils'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -34,6 +35,7 @@ const umaToolsDir = resolve(__dirname, '..', 'uma-tools', 'umalator-global')
 let cachedSkillnames: Record<string, string[]> | null = null
 let cachedSkillmeta: Record<string, SkillMeta> | null = null
 let cachedCourseData: Record<string, RawCourseData> | null = null
+let cachedSkillData: Record<string, SkillDataEntry> | null = null
 
 // Case-insensitive skill name lookup map (built once after skillnames loads)
 let skillNameLookup: Map<string, string> | null = null
@@ -48,6 +50,9 @@ function loadStaticData(): void {
         )
         cachedCourseData = JSON.parse(
             readFileSync(join(umaToolsDir, 'course_data.json'), 'utf-8'),
+        )
+        cachedSkillData = JSON.parse(
+            readFileSync(join(umaToolsDir, 'skill_data.json'), 'utf-8'),
         )
         skillNameLookup = buildSkillNameLookup(cachedSkillnames)
     } catch (error) {
@@ -108,6 +113,14 @@ app.get('/api/coursedata', (_req, res) => {
         return
     }
     res.json(cachedCourseData)
+})
+
+app.get('/api/skilldata', (_req, res) => {
+    if (!cachedSkillData) {
+        res.status(500).json({ error: 'Skill data not loaded' })
+        return
+    }
+    res.json(cachedSkillData)
 })
 
 app.get('/api/config/:filename', (req, res) => {

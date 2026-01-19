@@ -49,6 +49,94 @@ type CourseData = Record<
     }
 >
 
+// Skill data types for trigger checking
+interface SkillDataAlternative {
+    baseDuration: number
+    condition: string
+    effects: Array<{ modifier: number; target: number; type: number }>
+    precondition: string
+}
+
+interface SkillDataEntry {
+    alternatives: SkillDataAlternative[]
+    rarity: number
+    wisdomCheck: number
+}
+
+type SkillData = Record<string, SkillDataEntry>
+
+// Skill restrictions for filtering
+interface SkillRestrictions {
+    distanceTypes?: number[]
+    groundConditions?: number[]
+    groundTypes?: number[]
+    runningStyles?: number[]
+    seasons?: number[]
+    trackIds?: number[]
+    weathers?: number[]
+}
+
+interface CurrentSettings {
+    distanceType: number | null
+    groundCondition: number | null
+    groundType: number | null
+    runningStyle: number
+    season: number | null
+    trackId: number | null
+    weather: number | null
+}
+
+// Mapping constants for skill trigger checking
+const STRATEGY_TO_RUNNING_STYLE: Record<string, number> = {
+    Oonige: 1,
+    Nige: 2,
+    Runaway: 1,
+    'Front Runner': 2,
+    'Pace Chaser': 3,
+    'Late Surger': 4,
+    'End Closer': 5,
+    Senkou: 3,
+    Sasi: 4,
+    Oikomi: 5,
+}
+
+const TRACK_NAME_TO_ID: Record<string, number> = {
+    Chukyo: 10007,
+    Fukushima: 10004,
+    Hakodate: 10002,
+    Hanshin: 10009,
+    Kokura: 10010,
+    Kyoto: 10008,
+    Nakayama: 10005,
+    Niigata: 10003,
+    Ooi: 10101,
+    Sapporo: 10001,
+    Tokyo: 10006,
+}
+
+const CONDITION_MAP: Record<string, number> = {
+    firm: 1,
+    good: 2,
+    heavy: 4,
+    soft: 3,
+}
+
+const WEATHER_MAP: Record<string, number> = {
+    cloudy: 2,
+    rainy: 3,
+    snowy: 4,
+    sunny: 1,
+}
+
+const SEASON_MAP: Record<string, number> = {
+    autumn: 3,
+    fall: 3,
+    sakura: 5,
+    spring: 1,
+    summer: 2,
+    winter: 4,
+}
+
 const tracknames: Record<string, [string, string]> = {
     10001: ['', 'Sapporo'],
     10002: ['', 'Hakodate'],
@@ -71,6 +159,7 @@ let skillnames: SkillNames | null = null
 let skillNameToId: Record<string, string> | null = null
 let skillmeta: SkillMeta | null = null
 let courseData: CourseData | null = null
+let skillData: SkillData | null = null
 
 // Cache for variant lookups (built once after skillnames loads)
 let variantCache: Map<string, string[]> | null = null
@@ -107,6 +196,478 @@ function buildVariantCache(): void {
     }
 }
 
+// Static fields we care about for filtering
+const STATIC_FIELDS = [
+    'distance_type',
+    'ground_condition',
+    'ground_type',
+    'running_style',
+    'season',
+    'track_id',
+    'weather',
+] as const
+
+type StaticField = (typeof STATIC_FIELDS)[number]
+
+// Max values for fields that support inequality expansion
+const FIELD_MAX_VALUES: Partial<Record<StaticField, number>> = {
+    distance_type: 4, // Sprint=1, Mile=2, Medium=3, Long=4
+    ground_condition: 4, // Good=1, Yielding=2, Soft=3, Heavy=4
+    ground_type: 2, // Turf=1, Dirt=2
+    running_style: 5, // Runaway=1, Front Runner=2, Pace Chaser=3, Late Surger=4, End Closer=5
+    season: 5, // Spring=1, Summer=2, Autumn=3, Winter=4, Sakura=5
+    weather: 4, // Sunny=1, Cloudy=2, Rainy=3, Snowy=4
+}
+
+function expandComparisonToValues(
+    field: StaticField,
+    operator: string,
+    value: number,
+): number[] {
+    const maxValue = FIELD_MAX_VALUES[field]
+
+    // For track_id or unknown fields, don't expand - return single value
+    if (maxValue === undefined) {
+        return [value]
+    }
+
+    switch (operator) {
+        case '==':
+            return [value]
+        case '>=': {
+            const values: number[] = []
+            for (let i = value; i <= maxValue; i++) {
+                values.push(i)
+            }
+            return values
+        }
+        case '<=': {
+            const values: number[] = []
+            for (let i = 1; i <= value; i++) {
+                values.push(i)
+            }
+            return values
+        }
+        case '>': {
+            const values: number[] = []
+            for (let i = value + 1; i <= maxValue; i++) {
+                values.push(i)
+            }
+            return values
+        }
+        case '<': {
+            const values: number[] = []
+            for (let i = 1; i < value; i++) {
+                values.push(i)
+            }
+            return values
+        }
+        default:
+            return [value]
+    }
+}
+
+function parseConditionTerm(
+    term: string,
+): { field: StaticField; values: number[] } | null {
+    const match = term.match(/^([a-z_]+)(==|>=|<=|>|<)(\d+)$/)
+    if (!match) return null
+    const field = match[1] as StaticField
+    if (!STATIC_FIELDS.includes(field)) return null
+    const operator = match[2]
+    const value = parseInt(match[3], 10)
+    const values = expandComparisonToValues(field, operator, value)
+    return { field, values }
+}
+
+function parseAndBranch(branch: string): SkillRestrictions {
+    const restrictions: SkillRestrictions = {}
+    const terms = branch.split('&')
+
+    for (const term of terms) {
+        const parsed = parseConditionTerm(term.trim())
+        if (!parsed) continue
+
+        switch (parsed.field) {
+            case 'distance_type':
+                restrictions.distanceTypes = parsed.values
+                break
+            case 'ground_condition':
+                restrictions.groundConditions = parsed.values
+                break
+            case 'ground_type':
+                restrictions.groundTypes = parsed.values
+                break
+            case 'running_style':
+                restrictions.runningStyles = parsed.values
+                break
+            case 'season':
+                restrictions.seasons = parsed.values
+                break
+            case 'track_id':
+                restrictions.trackIds = parsed.values
+                break
+            case 'weather':
+                restrictions.weathers = parsed.values
+                break
+        }
+    }
+
+    return restrictions
+}
+
+function mergeRestrictions(
+    a: SkillRestrictions,
+    b: SkillRestrictions,
+): SkillRestrictions {
+    const merged: SkillRestrictions = {}
+    const fields: (keyof SkillRestrictions)[] = [
+        'distanceTypes',
+        'groundConditions',
+        'groundTypes',
+        'runningStyles',
+        'seasons',
+        'trackIds',
+        'weathers',
+    ]
+
+    for (const field of fields) {
+        const aVals = a[field]
+        const bVals = b[field]
+        if (aVals && bVals) {
+            merged[field] = [...new Set([...aVals, ...bVals])]
+        }
+    }
+
+    return merged
+}
+
+function intersectRestrictions(
+    a: SkillRestrictions,
+    b: SkillRestrictions,
+): SkillRestrictions {
+    const result: SkillRestrictions = { ...a }
+    const fields: (keyof SkillRestrictions)[] = [
+        'distanceTypes',
+        'groundConditions',
+        'groundTypes',
+        'runningStyles',
+        'seasons',
+        'trackIds',
+        'weathers',
+    ]
+
+    for (const field of fields) {
+        const aVals = a[field]
+        const bVals = b[field]
+
+        if (aVals && bVals) {
+            const intersection = aVals.filter((v) => bVals.includes(v))
+            if (intersection.length > 0) {
+                result[field] = intersection
+            } else {
+                result[field] = []
+            }
+        } else if (bVals) {
+            result[field] = bVals
+        }
+    }
+
+    return result
+}
+
+function extractStaticRestrictions(
+    condition: string,
+    precondition?: string,
+): SkillRestrictions {
+    if (!condition) return {}
+
+    const orBranches = condition.split('@')
+    let conditionRestrictions: SkillRestrictions | null = null
+
+    for (const branch of orBranches) {
+        const branchRestrictions = parseAndBranch(branch)
+        if (conditionRestrictions === null) {
+            conditionRestrictions = branchRestrictions
+        } else {
+            conditionRestrictions = mergeRestrictions(
+                conditionRestrictions,
+                branchRestrictions,
+            )
+        }
+    }
+
+    if (!conditionRestrictions) {
+        conditionRestrictions = {}
+    }
+
+    if (precondition) {
+        const preOrBranches = precondition.split('@')
+        let preconditionRestrictions: SkillRestrictions | null = null
+
+        for (const branch of preOrBranches) {
+            const branchRestrictions = parseAndBranch(branch)
+            if (preconditionRestrictions === null) {
+                preconditionRestrictions = branchRestrictions
+            } else {
+                preconditionRestrictions = mergeRestrictions(
+                    preconditionRestrictions,
+                    branchRestrictions,
+                )
+            }
+        }
+
+        if (preconditionRestrictions) {
+            conditionRestrictions = intersectRestrictions(
+                conditionRestrictions,
+                preconditionRestrictions,
+            )
+        }
+    }
+
+    return conditionRestrictions
+}
+
+function extractSkillRestrictions(
+    skillDataEntry: SkillDataEntry,
+): SkillRestrictions {
+    if (
+        !skillDataEntry.alternatives ||
+        skillDataEntry.alternatives.length === 0
+    ) {
+        return {}
+    }
+
+    let mergedRestrictions: SkillRestrictions | null = null
+
+    for (const alt of skillDataEntry.alternatives) {
+        const altRestrictions = extractStaticRestrictions(
+            alt.condition,
+            alt.precondition || undefined,
+        )
+
+        if (mergedRestrictions === null) {
+            mergedRestrictions = altRestrictions
+        } else {
+            mergedRestrictions = mergeRestrictions(
+                mergedRestrictions,
+                altRestrictions,
+            )
+        }
+    }
+
+    return mergedRestrictions || {}
+}
+
+function canSkillTrigger(
+    restrictions: SkillRestrictions,
+    settings: CurrentSettings,
+): boolean {
+    // Check each restriction field
+    // If restriction array exists but is empty, condition is impossible - return false
+    // If setting is null (random), that restriction passes (unless empty)
+    // If restriction field is undefined, that field always passes
+    // Otherwise, check if current value is in allowed values array
+
+    // Distance type
+    if (restrictions.distanceTypes) {
+        if (restrictions.distanceTypes.length === 0) {
+            return false // Impossible condition from intersection
+        }
+        if (settings.distanceType !== null) {
+            if (!restrictions.distanceTypes.includes(settings.distanceType)) {
+                return false
+            }
+        }
+    }
+
+    // Running style
+    if (restrictions.runningStyles) {
+        if (restrictions.runningStyles.length === 0) {
+            return false // Impossible condition from intersection
+        }
+        if (!restrictions.runningStyles.includes(settings.runningStyle)) {
+            return false
+        }
+    }
+
+    // Ground type (surface)
+    if (restrictions.groundTypes) {
+        if (restrictions.groundTypes.length === 0) {
+            return false // Impossible condition from intersection
+        }
+        if (settings.groundType !== null) {
+            if (!restrictions.groundTypes.includes(settings.groundType)) {
+                return false
+            }
+        }
+    }
+
+    // Ground condition
+    if (restrictions.groundConditions) {
+        if (restrictions.groundConditions.length === 0) {
+            return false // Impossible condition from intersection
+        }
+        if (settings.groundCondition !== null) {
+            if (!restrictions.groundConditions.includes(settings.groundCondition)) {
+                return false
+            }
+        }
+    }
+
+    // Weather
+    if (restrictions.weathers) {
+        if (restrictions.weathers.length === 0) {
+            return false // Impossible condition from intersection
+        }
+        if (settings.weather !== null) {
+            if (!restrictions.weathers.includes(settings.weather)) {
+                return false
+            }
+        }
+    }
+
+    // Season
+    if (restrictions.seasons) {
+        if (restrictions.seasons.length === 0) {
+            return false // Impossible condition from intersection
+        }
+        if (settings.season !== null) {
+            if (!restrictions.seasons.includes(settings.season)) {
+                return false
+            }
+        }
+    }
+
+    // Track ID
+    if (restrictions.trackIds) {
+        if (restrictions.trackIds.length === 0) {
+            return false // Impossible condition from intersection
+        }
+        if (settings.trackId !== null) {
+            if (!restrictions.trackIds.includes(settings.trackId)) {
+                return false
+            }
+        }
+    }
+
+    return true
+}
+
+function getDistanceType(distanceMeters: number): number {
+    if (distanceMeters <= 1400) return 1
+    if (distanceMeters <= 1800) return 2
+    if (distanceMeters <= 2400) return 3
+    return 4
+}
+
+function isRandomValue(value: string | undefined | null): boolean {
+    if (!value) return false
+    return value.trim().toLowerCase() === '<random>'
+}
+
+function getCurrentSettings(): CurrentSettings {
+    if (!currentConfig) {
+        return {
+            distanceType: null,
+            runningStyle: 3,
+            groundType: null,
+            groundCondition: null,
+            weather: null,
+            season: null,
+            trackId: null,
+        }
+    }
+
+    const track = currentConfig.track
+    const uma = currentConfig.uma
+
+    // Distance type
+    let distanceType: number | null = null
+    if (track?.distance) {
+        if (typeof track.distance === 'number') {
+            distanceType = getDistanceType(track.distance)
+        } else if (
+            typeof track.distance === 'string' &&
+            !isDistanceCategory(track.distance) &&
+            !isRandomValue(track.distance)
+        ) {
+            const parsed = parseInt(track.distance, 10)
+            if (!isNaN(parsed)) {
+                distanceType = getDistanceType(parsed)
+            }
+        }
+        // If distance category or random, distanceType stays null
+    }
+
+    // Running style - always required, defaults to Pace Chaser (3)
+    let runningStyle = 3
+    if (uma?.strategy) {
+        runningStyle = STRATEGY_TO_RUNNING_STYLE[uma.strategy] ?? 3
+    }
+
+    // Ground type (surface)
+    let groundType: number | null = null
+    if (track?.surface && !isRandomValue(track.surface)) {
+        const surfaceLower = track.surface.toLowerCase()
+        if (surfaceLower === 'turf') {
+            groundType = 1
+        } else if (surfaceLower === 'dirt') {
+            groundType = 2
+        }
+    }
+
+    // Ground condition
+    let groundCondition: number | null = null
+    if (track?.groundCondition && !isRandomValue(track.groundCondition)) {
+        groundCondition =
+            CONDITION_MAP[track.groundCondition.toLowerCase()] ?? null
+    }
+
+    // Weather
+    let weather: number | null = null
+    if (track?.weather && !isRandomValue(track.weather)) {
+        weather = WEATHER_MAP[track.weather.toLowerCase()] ?? null
+    }
+
+    // Season
+    let season: number | null = null
+    if (track?.season && !isRandomValue(track.season)) {
+        season = SEASON_MAP[track.season.toLowerCase()] ?? null
+    }
+
+    // Track ID
+    let trackId: number | null = null
+    if (track?.trackName && !isRandomValue(track.trackName)) {
+        trackId = TRACK_NAME_TO_ID[track.trackName] ?? null
+    }
+
+    return {
+        distanceType,
+        groundCondition,
+        groundType,
+        runningStyle,
+        season,
+        trackId,
+        weather,
+    }
+}
+
+function canSkillTriggerByName(skillName: string): boolean {
+    if (!skillData || !skillNameToId) return true // If data not loaded, don't filter
+
+    const skillId = skillNameToId[skillName]
+    if (!skillId) return true // Unknown skill, don't filter
+
+    const entry = skillData[skillId]
+    if (!entry) return true // No data for skill, don't filter
+
+    const restrictions = extractSkillRestrictions(entry)
+    const settings = getCurrentSettings()
+
+    return canSkillTrigger(restrictions, settings)
+}
+
 ;(async function loadSkillnamesOnInit() {
     const response = await fetch('/api/skillnames')
     if (!response.ok) {
@@ -140,6 +701,21 @@ function buildVariantCache(): void {
     }
 })().catch(() => {
     showToast({ type: 'error', message: 'Failed to load skill metadata' })
+})
+
+;(async function loadSkillDataOnInit() {
+    const response = await fetch('/api/skilldata')
+    if (!response.ok) {
+        throw new Error(
+            `Failed to load skilldata: ${response.status} ${response.statusText}`,
+        )
+    }
+    skillData = (await response.json()) as SkillData
+    if (!skillData || typeof skillData !== 'object') {
+        throw new Error('Invalid skilldata received')
+    }
+})().catch(() => {
+    showToast({ type: 'error', message: 'Failed to load skill data' })
 })
 
 async function waitForCourseData(): Promise<void> {
@@ -435,7 +1011,10 @@ function renderSkills(): void {
         return (skillIdCache.get(a) || 0) - (skillIdCache.get(b) || 0)
     })
 
-    sortedSkillNames.forEach((skillName) => {
+    // Filter out skills that cannot trigger under current settings
+    const triggerableSkills = sortedSkillNames.filter(canSkillTriggerByName)
+
+    triggerableSkills.forEach((skillName) => {
         const skill = skills[skillName]
         if (!skill) return
 
@@ -1007,6 +1586,19 @@ function renderTrack(): void {
                 }
             }
 
+            // Re-render skills when settings that affect skill filtering change
+            const skillFilterFields: (keyof Track)[] = [
+                'trackName',
+                'surface',
+                'distance',
+                'groundCondition',
+                'weather',
+                'season',
+            ]
+            if (skillFilterFields.includes(field.key)) {
+                renderSkills()
+            }
+
             autoSave()
         })
         wrapper.appendChild(input)
@@ -1136,6 +1728,12 @@ function renderUma(): void {
                 currentConfig.uma = {}
             }
             ;(currentConfig.uma as Record<string, unknown>)[field.key] = value
+
+            // Re-render skills when strategy changes (affects running style filtering)
+            if (field.key === 'strategy') {
+                renderSkills()
+            }
+
             autoSave()
         })
         wrapper.appendChild(input)

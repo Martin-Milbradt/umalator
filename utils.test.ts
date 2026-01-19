@@ -36,7 +36,16 @@ import {
     buildSkillNameLookup,
     getCanonicalSkillName,
     normalizeConfigSkillNames,
+    getDistanceType,
+    extractStaticRestrictions,
+    canSkillTrigger,
+    extractSkillRestrictions,
+    STRATEGY_TO_RUNNING_STYLE,
+    TRACK_NAME_TO_ID,
     type SkillResult,
+    type SkillRestrictions,
+    type CurrentSettings,
+    type SkillDataEntry,
 } from './utils'
 
 describe('parseGroundCondition', () => {
@@ -998,5 +1007,557 @@ describe('normalizeConfigSkillNames', () => {
         const result = normalizeConfigSkillNames(config, lookup)
         expect(result.uma?.speed).toBe(1200)
         expect(result.uma?.stamina).toBe(800)
+    })
+})
+
+describe('getDistanceType', () => {
+    it.each([
+        [1000, 1],
+        [1200, 1],
+        [1400, 1],
+        [1401, 2],
+        [1600, 2],
+        [1800, 2],
+        [1801, 3],
+        [2000, 3],
+        [2400, 3],
+        [2401, 4],
+        [3000, 4],
+        [3600, 4],
+    ])('returns correct distance type for %dm', (distance, expected) => {
+        expect(getDistanceType(distance)).toBe(expected)
+    })
+})
+
+describe('STRATEGY_TO_RUNNING_STYLE', () => {
+    it('maps strategy names to running style numbers', () => {
+        expect(STRATEGY_TO_RUNNING_STYLE['Oonige']).toBe(1)
+        expect(STRATEGY_TO_RUNNING_STYLE['Nige']).toBe(2)
+        expect(STRATEGY_TO_RUNNING_STYLE['Senkou']).toBe(3)
+        expect(STRATEGY_TO_RUNNING_STYLE['Sasi']).toBe(4)
+        expect(STRATEGY_TO_RUNNING_STYLE['Oikomi']).toBe(5)
+    })
+})
+
+describe('TRACK_NAME_TO_ID', () => {
+    it('maps track names to IDs', () => {
+        expect(TRACK_NAME_TO_ID['Tokyo']).toBe(10006)
+        expect(TRACK_NAME_TO_ID['Nakayama']).toBe(10005)
+        expect(TRACK_NAME_TO_ID['Kyoto']).toBe(10008)
+        expect(TRACK_NAME_TO_ID['Hanshin']).toBe(10009)
+        expect(TRACK_NAME_TO_ID['Ooi']).toBe(10101)
+    })
+})
+
+describe('extractStaticRestrictions', () => {
+    it('extracts single distance_type restriction', () => {
+        const result = extractStaticRestrictions('distance_type==4&phase>=2')
+        expect(result.distanceTypes).toEqual([4])
+    })
+
+    it('extracts single running_style restriction', () => {
+        const result = extractStaticRestrictions(
+            'running_style==1&phase==0',
+        )
+        expect(result.runningStyles).toEqual([1])
+    })
+
+    it('extracts track_id restriction', () => {
+        const result = extractStaticRestrictions('track_id==10006')
+        expect(result.trackIds).toEqual([10006])
+    })
+
+    it('extracts ground_condition restriction', () => {
+        const result = extractStaticRestrictions('ground_condition==1')
+        expect(result.groundConditions).toEqual([1])
+    })
+
+    it('extracts ground_type restriction', () => {
+        const result = extractStaticRestrictions(
+            'ground_type==2&phase==1',
+        )
+        expect(result.groundTypes).toEqual([2])
+    })
+
+    it('extracts weather restriction', () => {
+        const result = extractStaticRestrictions('weather==3')
+        expect(result.weathers).toEqual([3])
+    })
+
+    it('extracts season restriction', () => {
+        const result = extractStaticRestrictions('season==2')
+        expect(result.seasons).toEqual([2])
+    })
+
+    it('merges OR alternatives for same field', () => {
+        const result = extractStaticRestrictions(
+            'ground_condition==2@ground_condition==3@ground_condition==4',
+        )
+        expect(result.groundConditions).toEqual([2, 3, 4])
+    })
+
+    it('merges OR alternatives for season with spring/sakura', () => {
+        const result = extractStaticRestrictions('season==1@season==5')
+        expect(result.seasons).toEqual([1, 5])
+    })
+
+    it('returns empty for conditions without static restrictions', () => {
+        const result = extractStaticRestrictions(
+            'phase>=2&order>=1&order_rate<=50',
+        )
+        expect(result.distanceTypes).toBeUndefined()
+        expect(result.runningStyles).toBeUndefined()
+        expect(result.groundTypes).toBeUndefined()
+    })
+
+    it('handles empty condition string', () => {
+        const result = extractStaticRestrictions('')
+        expect(result).toEqual({})
+    })
+
+    it('intersects condition and precondition restrictions', () => {
+        const result = extractStaticRestrictions(
+            'running_style==1&phase==0',
+            'distance_type==4',
+        )
+        expect(result.runningStyles).toEqual([1])
+        expect(result.distanceTypes).toEqual([4])
+    })
+
+    it('handles OR in both condition and precondition', () => {
+        const result = extractStaticRestrictions(
+            'season==1@season==2',
+            'weather==1@weather==2',
+        )
+        expect(result.seasons).toEqual([1, 2])
+        expect(result.weathers).toEqual([1, 2])
+    })
+
+    it('returns undefined when OR branches have different field restrictions', () => {
+        // If one OR branch has no restriction on a field, the merged result has no restriction
+        const result = extractStaticRestrictions(
+            'distance_type==4&phase==1@phase==2',
+        )
+        expect(result.distanceTypes).toBeUndefined()
+    })
+})
+
+describe('canSkillTrigger', () => {
+    it('returns true when no restrictions', () => {
+        const restrictions: SkillRestrictions = {}
+        const settings: CurrentSettings = {
+            distanceType: 4,
+            runningStyle: 3,
+            groundType: 1,
+            groundCondition: 1,
+            weather: 1,
+            season: 1,
+            trackId: 10006,
+        }
+        expect(canSkillTrigger(restrictions, settings)).toBe(true)
+    })
+
+    it('returns true when distance type matches', () => {
+        const restrictions: SkillRestrictions = { distanceTypes: [4] }
+        const settings: CurrentSettings = {
+            distanceType: 4,
+            runningStyle: 3,
+            groundType: 1,
+            groundCondition: 1,
+            weather: 1,
+            season: 1,
+            trackId: 10006,
+        }
+        expect(canSkillTrigger(restrictions, settings)).toBe(true)
+    })
+
+    it('returns false when distance type does not match', () => {
+        const restrictions: SkillRestrictions = { distanceTypes: [4] }
+        const settings: CurrentSettings = {
+            distanceType: 2,
+            runningStyle: 3,
+            groundType: 1,
+            groundCondition: 1,
+            weather: 1,
+            season: 1,
+            trackId: 10006,
+        }
+        expect(canSkillTrigger(restrictions, settings)).toBe(false)
+    })
+
+    it('returns true when distance type is null (random)', () => {
+        const restrictions: SkillRestrictions = { distanceTypes: [4] }
+        const settings: CurrentSettings = {
+            distanceType: null,
+            runningStyle: 3,
+            groundType: 1,
+            groundCondition: 1,
+            weather: 1,
+            season: 1,
+            trackId: 10006,
+        }
+        expect(canSkillTrigger(restrictions, settings)).toBe(true)
+    })
+
+    it('returns false when running style does not match', () => {
+        const restrictions: SkillRestrictions = { runningStyles: [1] }
+        const settings: CurrentSettings = {
+            distanceType: 4,
+            runningStyle: 3,
+            groundType: 1,
+            groundCondition: 1,
+            weather: 1,
+            season: 1,
+            trackId: 10006,
+        }
+        expect(canSkillTrigger(restrictions, settings)).toBe(false)
+    })
+
+    it('returns true when running style matches one of allowed values', () => {
+        const restrictions: SkillRestrictions = { runningStyles: [1, 2, 3] }
+        const settings: CurrentSettings = {
+            distanceType: 4,
+            runningStyle: 2,
+            groundType: 1,
+            groundCondition: 1,
+            weather: 1,
+            season: 1,
+            trackId: 10006,
+        }
+        expect(canSkillTrigger(restrictions, settings)).toBe(true)
+    })
+
+    it('returns false when track id does not match', () => {
+        const restrictions: SkillRestrictions = { trackIds: [10006] }
+        const settings: CurrentSettings = {
+            distanceType: 4,
+            runningStyle: 3,
+            groundType: 1,
+            groundCondition: 1,
+            weather: 1,
+            season: 1,
+            trackId: 10008,
+        }
+        expect(canSkillTrigger(restrictions, settings)).toBe(false)
+    })
+
+    it('returns true when track id is null (random location)', () => {
+        const restrictions: SkillRestrictions = { trackIds: [10006] }
+        const settings: CurrentSettings = {
+            distanceType: 4,
+            runningStyle: 3,
+            groundType: 1,
+            groundCondition: 1,
+            weather: 1,
+            season: 1,
+            trackId: null,
+        }
+        expect(canSkillTrigger(restrictions, settings)).toBe(true)
+    })
+
+    it('returns false when ground condition does not match', () => {
+        const restrictions: SkillRestrictions = { groundConditions: [2, 3, 4] }
+        const settings: CurrentSettings = {
+            distanceType: 4,
+            runningStyle: 3,
+            groundType: 1,
+            groundCondition: 1,
+            weather: 1,
+            season: 1,
+            trackId: 10006,
+        }
+        expect(canSkillTrigger(restrictions, settings)).toBe(false)
+    })
+
+    it('returns true when ground condition is null (random)', () => {
+        const restrictions: SkillRestrictions = { groundConditions: [2, 3, 4] }
+        const settings: CurrentSettings = {
+            distanceType: 4,
+            runningStyle: 3,
+            groundType: 1,
+            groundCondition: null,
+            weather: 1,
+            season: 1,
+            trackId: 10006,
+        }
+        expect(canSkillTrigger(restrictions, settings)).toBe(true)
+    })
+
+    it('checks multiple restrictions together', () => {
+        const restrictions: SkillRestrictions = {
+            distanceTypes: [4],
+            runningStyles: [3],
+            groundTypes: [1],
+        }
+        const settings: CurrentSettings = {
+            distanceType: 4,
+            runningStyle: 3,
+            groundType: 1,
+            groundCondition: 1,
+            weather: 1,
+            season: 1,
+            trackId: 10006,
+        }
+        expect(canSkillTrigger(restrictions, settings)).toBe(true)
+    })
+
+    it('returns false if any restriction fails', () => {
+        const restrictions: SkillRestrictions = {
+            distanceTypes: [4],
+            runningStyles: [1], // Does not match
+            groundTypes: [1],
+        }
+        const settings: CurrentSettings = {
+            distanceType: 4,
+            runningStyle: 3,
+            groundType: 1,
+            groundCondition: 1,
+            weather: 1,
+            season: 1,
+            trackId: 10006,
+        }
+        expect(canSkillTrigger(restrictions, settings)).toBe(false)
+    })
+})
+
+describe('extractSkillRestrictions', () => {
+    it('extracts restrictions from skill with single alternative', () => {
+        const skillData: SkillDataEntry = {
+            alternatives: [
+                {
+                    baseDuration: 50000,
+                    condition: 'distance_type==4&phase>=2',
+                    effects: [],
+                    precondition: '',
+                },
+            ],
+            rarity: 4,
+            wisdomCheck: 0,
+        }
+        const result = extractSkillRestrictions(skillData)
+        expect(result.distanceTypes).toEqual([4])
+    })
+
+    it('merges restrictions from multiple alternatives', () => {
+        const skillData: SkillDataEntry = {
+            alternatives: [
+                {
+                    baseDuration: 50000,
+                    condition: 'running_style==1&phase==0',
+                    effects: [],
+                    precondition: '',
+                },
+                {
+                    baseDuration: 50000,
+                    condition: 'running_style==2&phase==0',
+                    effects: [],
+                    precondition: '',
+                },
+            ],
+            rarity: 4,
+            wisdomCheck: 0,
+        }
+        const result = extractSkillRestrictions(skillData)
+        expect(result.runningStyles).toEqual([1, 2])
+    })
+
+    it('returns empty for skill without restrictions', () => {
+        const skillData: SkillDataEntry = {
+            alternatives: [
+                {
+                    baseDuration: 50000,
+                    condition: 'phase>=2&order>=1',
+                    effects: [],
+                    precondition: '',
+                },
+            ],
+            rarity: 4,
+            wisdomCheck: 0,
+        }
+        const result = extractSkillRestrictions(skillData)
+        expect(result.distanceTypes).toBeUndefined()
+        expect(result.runningStyles).toBeUndefined()
+    })
+
+    it('returns empty for skill with no alternatives', () => {
+        const skillData: SkillDataEntry = {
+            alternatives: [],
+            rarity: 4,
+            wisdomCheck: 0,
+        }
+        const result = extractSkillRestrictions(skillData)
+        expect(result).toEqual({})
+    })
+
+    it('handles precondition in alternatives', () => {
+        const skillData: SkillDataEntry = {
+            alternatives: [
+                {
+                    baseDuration: 50000,
+                    condition: 'phase>=2',
+                    effects: [],
+                    precondition: 'ground_type==2',
+                },
+            ],
+            rarity: 4,
+            wisdomCheck: 0,
+        }
+        const result = extractSkillRestrictions(skillData)
+        expect(result.groundTypes).toEqual([2])
+    })
+})
+
+describe('extractStaticRestrictions with inequality operators', () => {
+    it('expands distance_type>=3 to [3, 4]', () => {
+        const result = extractStaticRestrictions('distance_type>=3')
+        expect(result.distanceTypes).toEqual([3, 4])
+    })
+
+    it('expands distance_type<=2 to [1, 2]', () => {
+        const result = extractStaticRestrictions('distance_type<=2')
+        expect(result.distanceTypes).toEqual([1, 2])
+    })
+
+    it('expands distance_type>2 to [3, 4]', () => {
+        const result = extractStaticRestrictions('distance_type>2')
+        expect(result.distanceTypes).toEqual([3, 4])
+    })
+
+    it('expands distance_type<3 to [1, 2]', () => {
+        const result = extractStaticRestrictions('distance_type<3')
+        expect(result.distanceTypes).toEqual([1, 2])
+    })
+
+    it('expands ground_condition>=3 to [3, 4]', () => {
+        const result = extractStaticRestrictions('ground_condition>=3')
+        expect(result.groundConditions).toEqual([3, 4])
+    })
+
+    it('expands running_style<=3 to [1, 2, 3]', () => {
+        const result = extractStaticRestrictions('running_style<=3')
+        expect(result.runningStyles).toEqual([1, 2, 3])
+    })
+
+    it('expands season>=4 to [4, 5]', () => {
+        const result = extractStaticRestrictions('season>=4')
+        expect(result.seasons).toEqual([4, 5])
+    })
+
+    it('expands weather<=2 to [1, 2]', () => {
+        const result = extractStaticRestrictions('weather<=2')
+        expect(result.weathers).toEqual([1, 2])
+    })
+
+    it('does not expand track_id with inequality', () => {
+        const result = extractStaticRestrictions('track_id>=10006')
+        expect(result.trackIds).toEqual([10006])
+    })
+
+    it('handles >= at boundary (max value)', () => {
+        const result = extractStaticRestrictions('distance_type>=4')
+        expect(result.distanceTypes).toEqual([4])
+    })
+
+    it('handles <= at boundary (1)', () => {
+        const result = extractStaticRestrictions('ground_type<=1')
+        expect(result.groundTypes).toEqual([1])
+    })
+
+    it('handles > at max-1 (produces single value)', () => {
+        const result = extractStaticRestrictions('ground_type>1')
+        expect(result.groundTypes).toEqual([2])
+    })
+
+    it('handles < at 2 (produces single value)', () => {
+        const result = extractStaticRestrictions('ground_type<2')
+        expect(result.groundTypes).toEqual([1])
+    })
+
+    it('handles > at max (produces empty array)', () => {
+        const result = extractStaticRestrictions('ground_type>2')
+        expect(result.groundTypes).toEqual([])
+    })
+
+    it('handles < at 1 (produces empty array)', () => {
+        const result = extractStaticRestrictions('distance_type<1')
+        expect(result.distanceTypes).toEqual([])
+    })
+})
+
+describe('canSkillTrigger with empty restriction arrays', () => {
+    it('returns false when distanceTypes is empty array', () => {
+        const restrictions: SkillRestrictions = { distanceTypes: [] }
+        const settings: CurrentSettings = {
+            distanceType: 4,
+            runningStyle: 3,
+            groundType: 1,
+            groundCondition: 1,
+            weather: 1,
+            season: 1,
+            trackId: 10006,
+        }
+        expect(canSkillTrigger(restrictions, settings)).toBe(false)
+    })
+
+    it('returns false when runningStyles is empty array', () => {
+        const restrictions: SkillRestrictions = { runningStyles: [] }
+        const settings: CurrentSettings = {
+            distanceType: 4,
+            runningStyle: 3,
+            groundType: 1,
+            groundCondition: 1,
+            weather: 1,
+            season: 1,
+            trackId: 10006,
+        }
+        expect(canSkillTrigger(restrictions, settings)).toBe(false)
+    })
+
+    it('returns false when groundTypes is empty array', () => {
+        const restrictions: SkillRestrictions = { groundTypes: [] }
+        const settings: CurrentSettings = {
+            distanceType: 4,
+            runningStyle: 3,
+            groundType: 1,
+            groundCondition: 1,
+            weather: 1,
+            season: 1,
+            trackId: 10006,
+        }
+        expect(canSkillTrigger(restrictions, settings)).toBe(false)
+    })
+
+    it('returns false when empty array even with null setting', () => {
+        const restrictions: SkillRestrictions = { distanceTypes: [] }
+        const settings: CurrentSettings = {
+            distanceType: null, // Random distance type
+            runningStyle: 3,
+            groundType: 1,
+            groundCondition: 1,
+            weather: 1,
+            season: 1,
+            trackId: 10006,
+        }
+        expect(canSkillTrigger(restrictions, settings)).toBe(false)
+    })
+
+    it('returns false when intersection produces empty array', () => {
+        // Condition requires distance_type==1, precondition requires distance_type==4
+        // Intersection produces empty array - impossible condition
+        const result = extractStaticRestrictions(
+            'distance_type==1',
+            'distance_type==4',
+        )
+        expect(result.distanceTypes).toEqual([])
+        const settings: CurrentSettings = {
+            distanceType: 4,
+            runningStyle: 3,
+            groundType: 1,
+            groundCondition: 1,
+            weather: 1,
+            season: 1,
+            trackId: 10006,
+        }
+        expect(canSkillTrigger(result, settings)).toBe(false)
     })
 })
