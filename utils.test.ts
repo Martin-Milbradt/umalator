@@ -1598,6 +1598,198 @@ describe('canSkillTrigger with empty restriction arrays', () => {
     })
 })
 
+describe('skill filtering by distance type', () => {
+    // Tests for filtering skills like "Long Straightaways ○" (distance_type==4),
+    // "Medium Straightaways ○" (distance_type==3), etc.
+
+    it('getDistanceType: 2000m maps to Medium (3)', () => {
+        expect(getDistanceType(2000)).toBe(3)
+    })
+
+    it('getDistanceType: 3000m maps to Long (4)', () => {
+        expect(getDistanceType(3000)).toBe(4)
+    })
+
+    it('Long Straightaways ○ is filtered OUT when distance is 2000m (Medium)', () => {
+        // Long Straightaways ○ has condition: distance_type==4
+        const restrictions = extractStaticRestrictions('distance_type==4&straight_random==1')
+        expect(restrictions.distanceTypes).toEqual([4])
+
+        const settings: CurrentSettings = {
+            distanceType: getDistanceType(2000), // 3 (Medium)
+            runningStyle: 3,
+            groundType: null,
+            groundCondition: null,
+            weather: null,
+            season: null,
+            trackId: null,
+        }
+        expect(settings.distanceType).toBe(3) // Verify 2000m -> Medium
+        expect(canSkillTrigger(restrictions, settings)).toBe(false)
+    })
+
+    it('Medium Straightaways ○ triggers when distance is 2000m (Medium)', () => {
+        // Medium Straightaways ○ has condition: distance_type==3
+        const restrictions = extractStaticRestrictions('distance_type==3&straight_random==1')
+        expect(restrictions.distanceTypes).toEqual([3])
+
+        const settings: CurrentSettings = {
+            distanceType: getDistanceType(2000), // 3 (Medium)
+            runningStyle: 3,
+            groundType: null,
+            groundCondition: null,
+            weather: null,
+            season: null,
+            trackId: null,
+        }
+        expect(canSkillTrigger(restrictions, settings)).toBe(true)
+    })
+
+    it('Long Straightaways ○ triggers when distance is 3000m (Long)', () => {
+        // Long Straightaways ○ has condition: distance_type==4
+        const restrictions = extractStaticRestrictions('distance_type==4&straight_random==1')
+        expect(restrictions.distanceTypes).toEqual([4])
+
+        const settings: CurrentSettings = {
+            distanceType: getDistanceType(3000), // 4 (Long)
+            runningStyle: 3,
+            groundType: null,
+            groundCondition: null,
+            weather: null,
+            season: null,
+            trackId: null,
+        }
+        expect(settings.distanceType).toBe(4) // Verify 3000m -> Long
+        expect(canSkillTrigger(restrictions, settings)).toBe(true)
+    })
+
+    it('Medium Straightaways ○ is filtered OUT when distance is 3000m (Long)', () => {
+        // Medium Straightaways ○ has condition: distance_type==3
+        const restrictions = extractStaticRestrictions('distance_type==3&straight_random==1')
+        expect(restrictions.distanceTypes).toEqual([3])
+
+        const settings: CurrentSettings = {
+            distanceType: getDistanceType(3000), // 4 (Long)
+            runningStyle: 3,
+            groundType: null,
+            groundCondition: null,
+            weather: null,
+            season: null,
+            trackId: null,
+        }
+        expect(canSkillTrigger(restrictions, settings)).toBe(false)
+    })
+
+    it('Sprint Straightaways ○ only triggers at Sprint distances (<=1400m)', () => {
+        const restrictions = extractStaticRestrictions('distance_type==1&straight_random==1')
+        expect(restrictions.distanceTypes).toEqual([1])
+
+        // 1200m = Sprint
+        const sprintSettings: CurrentSettings = {
+            distanceType: getDistanceType(1200), // 1 (Sprint)
+            runningStyle: 3,
+            groundType: null, groundCondition: null, weather: null, season: null, trackId: null,
+        }
+        expect(sprintSettings.distanceType).toBe(1)
+        expect(canSkillTrigger(restrictions, sprintSettings)).toBe(true)
+
+        // 1600m = Mile
+        const mileSettings: CurrentSettings = {
+            distanceType: getDistanceType(1600), // 2 (Mile)
+            runningStyle: 3,
+            groundType: null, groundCondition: null, weather: null, season: null, trackId: null,
+        }
+        expect(mileSettings.distanceType).toBe(2)
+        expect(canSkillTrigger(restrictions, mileSettings)).toBe(false)
+    })
+
+    it('Mile Straightaways ○ only triggers at Mile distances (1401-1800m)', () => {
+        const restrictions = extractStaticRestrictions('distance_type==2&straight_random==1')
+        expect(restrictions.distanceTypes).toEqual([2])
+
+        // 1600m = Mile
+        const mileSettings: CurrentSettings = {
+            distanceType: getDistanceType(1600), // 2 (Mile)
+            runningStyle: 3,
+            groundType: null, groundCondition: null, weather: null, season: null, trackId: null,
+        }
+        expect(canSkillTrigger(restrictions, mileSettings)).toBe(true)
+
+        // 2000m = Medium
+        const mediumSettings: CurrentSettings = {
+            distanceType: getDistanceType(2000), // 3 (Medium)
+            runningStyle: 3,
+            groundType: null, groundCondition: null, weather: null, season: null, trackId: null,
+        }
+        expect(canSkillTrigger(restrictions, mediumSettings)).toBe(false)
+    })
+
+    it('skills with distance_type restriction pass when distanceType is null (random)', () => {
+        const restrictions = extractStaticRestrictions('distance_type==4&straight_random==1')
+
+        const randomSettings: CurrentSettings = {
+            distanceType: null, // Random distance (e.g., <Random> or distance category)
+            runningStyle: 3,
+            groundType: null, groundCondition: null, weather: null, season: null, trackId: null,
+        }
+        // When distanceType is null (random), skill should pass (might trigger)
+        expect(canSkillTrigger(restrictions, randomSettings)).toBe(true)
+    })
+})
+
+describe('extractSkillRestrictions integration with distance filtering', () => {
+    it('extracts distance_type from skill with alternatives', () => {
+        // Simulating Long Straightaways ○ skill data
+        const skillData: SkillDataEntry = {
+            alternatives: [
+                {
+                    baseDuration: 30000,
+                    condition: 'distance_type==4&straight_random==1',
+                    effects: [],
+                    precondition: '',
+                },
+            ],
+            rarity: 1,
+            wisdomCheck: 1,
+        }
+        const restrictions = extractSkillRestrictions(skillData)
+        expect(restrictions.distanceTypes).toEqual([4])
+    })
+
+    it('combines distance filter with running style filter', () => {
+        // Skill that requires both Long distance AND Front Runner
+        const restrictions = extractStaticRestrictions(
+            'distance_type==4&running_style==1&phase>=2'
+        )
+        expect(restrictions.distanceTypes).toEqual([4])
+        expect(restrictions.runningStyles).toEqual([1])
+
+        // Long distance, Front Runner - should pass
+        const validSettings: CurrentSettings = {
+            distanceType: 4,
+            runningStyle: 1,
+            groundType: null, groundCondition: null, weather: null, season: null, trackId: null,
+        }
+        expect(canSkillTrigger(restrictions, validSettings)).toBe(true)
+
+        // Long distance, Pace Chaser - should fail (wrong running style)
+        const wrongStyleSettings: CurrentSettings = {
+            distanceType: 4,
+            runningStyle: 2,
+            groundType: null, groundCondition: null, weather: null, season: null, trackId: null,
+        }
+        expect(canSkillTrigger(restrictions, wrongStyleSettings)).toBe(false)
+
+        // Medium distance, Front Runner - should fail (wrong distance)
+        const wrongDistanceSettings: CurrentSettings = {
+            distanceType: 3,
+            runningStyle: 1,
+            groundType: null, groundCondition: null, weather: null, season: null, trackId: null,
+        }
+        expect(canSkillTrigger(restrictions, wrongDistanceSettings)).toBe(false)
+    })
+})
+
 describe('skill filtering by strategy', () => {
     // Use canonical "<Strategy> Straightaways ○" skills which have running_style==N conditions
 
