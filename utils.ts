@@ -1,13 +1,72 @@
-import {
-    GroundCondition,
-    Season,
-} from '../uma-tools/uma-skill-tools/RaceParameters'
+// Local constants mirroring const enum values (const enums aren't exported at runtime)
+const GroundCondition = { Good: 1, Heavy: 4, Soft: 3, Yielding: 2 } as const
+type GroundCondition = (typeof GroundCondition)[keyof typeof GroundCondition]
+const Season = { Autumn: 3, Sakura: 5, Spring: 1, Summer: 2, Winter: 4 } as const
+type Season = (typeof Season)[keyof typeof Season]
 import type {
     DistanceType,
     Surface,
     Orientation,
     ThresholdStat,
 } from '../uma-tools/uma-skill-tools/CourseData'
+
+// Mapping constants for parsing functions
+const CONDITION_MAP: Record<string, GroundCondition> = {
+    firm: GroundCondition.Good,
+    good: GroundCondition.Yielding,
+    soft: GroundCondition.Soft,
+    heavy: GroundCondition.Heavy,
+}
+
+const WEATHER_MAP: Record<string, number> = {
+    sunny: 1,
+    cloudy: 2,
+    rainy: 3,
+    snowy: 4,
+}
+
+const SEASON_MAP: Record<string, Season> = {
+    spring: Season.Spring,
+    summer: Season.Summer,
+    fall: Season.Autumn,
+    autumn: Season.Autumn,
+    winter: Season.Winter,
+    sakura: Season.Sakura,
+}
+
+const STRATEGY_TO_INTERNAL: Record<string, string> = {
+    runaway: 'Oonige',
+    'front runner': 'Nige',
+    'pace chaser': 'Senkou',
+    'late surger': 'Sasi',
+    'end closer': 'Oikomi',
+    oonige: 'Oonige',
+    nige: 'Nige',
+    senkou: 'Senkou',
+    sasi: 'Sasi',
+    oikomi: 'Oikomi',
+}
+
+const STRATEGY_TO_DISPLAY: Record<string, string> = {
+    Oonige: 'Runaway',
+    Nige: 'Front Runner',
+    Senkou: 'Pace Chaser',
+    Sasi: 'Late Surger',
+    Oikomi: 'End Closer',
+}
+
+function parseWithMap<T>(
+    value: string,
+    map: Record<string, T>,
+    context: string,
+): T {
+    const normalized = value.toLowerCase().trim()
+    const result = map[normalized]
+    if (result === undefined) {
+        throw new Error(`Invalid ${context}: ${value}`)
+    }
+    return result
+}
 
 export interface CourseData {
     readonly raceTrackId: number
@@ -53,83 +112,23 @@ export interface SkillResult {
 }
 
 export function parseGroundCondition(name: string): GroundCondition {
-    const normalized = name.toLowerCase()
-    switch (normalized) {
-        case 'firm':
-            return GroundCondition.Good
-        case 'good':
-            return GroundCondition.Yielding
-        case 'soft':
-            return GroundCondition.Soft
-        case 'heavy':
-            return GroundCondition.Heavy
-        default:
-            throw new Error(`Invalid ground condition: ${name}`)
-    }
+    return parseWithMap(name, CONDITION_MAP, 'ground condition')
 }
 
 export function parseWeather(name: string): number {
-    const normalized = name.toLowerCase()
-    switch (normalized) {
-        case 'sunny':
-            return 1
-        case 'cloudy':
-            return 2
-        case 'rainy':
-            return 3
-        case 'snowy':
-            return 4
-        default:
-            throw new Error(`Invalid weather: ${name}`)
-    }
+    return parseWithMap(name, WEATHER_MAP, 'weather')
 }
 
 export function parseSeason(name: string): Season {
-    const normalized = name.toLowerCase()
-    switch (normalized) {
-        case 'spring':
-            return Season.Spring
-        case 'summer':
-            return Season.Summer
-        case 'fall':
-        case 'autumn':
-            return Season.Autumn
-        case 'winter':
-            return Season.Winter
-        case 'sakura':
-            return Season.Sakura
-        default:
-            throw new Error(`Invalid season: ${name}`)
-    }
+    return parseWithMap(name, SEASON_MAP, 'season')
 }
 
 export function parseStrategyName(name: string): string {
-    const normalized = name.toLowerCase()
-    const strategyMap: Record<string, string> = {
-        runaway: 'Oonige',
-        'front runner': 'Nige',
-        'pace chaser': 'Senkou',
-        'late surger': 'Sasi',
-        'end closer': 'Oikomi',
-    }
-
-    for (const [key, value] of Object.entries(strategyMap)) {
-        if (normalized === key || normalized === value.toLowerCase()) {
-            return value
-        }
-    }
-    throw new Error(`Invalid strategy: ${name}`)
+    return parseWithMap(name, STRATEGY_TO_INTERNAL, 'strategy')
 }
 
 export function formatStrategyName(japaneseName: string): string {
-    const strategyMap: Record<string, string> = {
-        Oonige: 'Runaway',
-        Nige: 'Front Runner',
-        Senkou: 'Pace Chaser',
-        Sasi: 'Late Surger',
-        Oikomi: 'End Closer',
-    }
-    return strategyMap[japaneseName] ?? japaneseName
+    return STRATEGY_TO_DISPLAY[japaneseName] ?? japaneseName
 }
 
 export function formatDistanceType(distanceType: number): string {
