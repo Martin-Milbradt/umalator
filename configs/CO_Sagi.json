@@ -6,7 +6,7 @@
             "discount": null
         },
         "Professor of Curvature": {
-            "discount": 10,
+            "discount": 30,
             "default": 10
         },
         "Corner Adept ○": {
@@ -19,14 +19,11 @@
         "Corner Recovery": {
             "discount": null
         },
-        "Highlander": {
-            "discount": null
-        },
         "Uma Stan": {
             "discount": null
         },
         "Ramp Up": {
-            "discount": 0,
+            "discount": 30,
             "default": 0
         },
         "Slipstream": {
@@ -40,7 +37,7 @@
             "discount": null
         },
         "Rushing Gale!": {
-            "discount": 10,
+            "discount": 30,
             "default": 10
         },
         "Straightaway Acceleration": {
@@ -55,20 +52,15 @@
             "default": 10
         },
         "No Stopping Me!": {
-            "discount": 10,
-            "default": 10
+            "discount": null
         },
         "Nimble Navigator": {
-            "discount": 0,
-            "default": 0
+            "discount": null
         },
         "Burning Spirit SPD": {
             "discount": null
         },
         "Lay Low": {
-            "discount": null
-        },
-        "The Duty of Dignity Calls": {
             "discount": null
         },
         "Competitive Spirit": {
@@ -80,15 +72,11 @@
         "Competitive Spirit ○": {
             "discount": null
         },
-        "This Dance Is for Vittoria!": {
-            "discount": null
-        },
         "Lone Wolf": {
             "discount": null
         },
         "Homestretch Haste": {
-            "discount": 10,
-            "default": 10
+            "discount": null
         },
         "Straightaway Adept": {
             "discount": null
@@ -111,13 +99,7 @@
         "Wet Conditions ○": {
             "discount": null
         },
-        "Early Lead": {
-            "discount": null
-        },
         "Fast-Paced": {
-            "discount": null
-        },
-        "Killer Tunes": {
             "discount": null
         },
         "Up-Tempo": {
@@ -126,44 +108,22 @@
         "Steadfast": {
             "discount": null
         },
-        "Medium Straightaways ◎": {
-            "discount": 0,
-            "default": 0
-        },
-        "Medium Straightaways ○": {
-            "discount": 0,
-            "default": 0
-        },
-        "Medium Corners ◎": {
-            "discount": null
-        },
-        "Medium Corners ○": {
-            "discount": null
-        },
         "Groundwork": {
             "discount": null
         },
         "Right-Handed ◎": {
-            "discount": null
+            "discount": 30
         },
         "Right-Handed ○": {
-            "discount": null
-        },
-        "Triumphant Pulse": {
-            "discount": 20,
-            "default": 20
+            "discount": 30
         },
         "Prepared to Pass": {
-            "discount": 0,
-            "default": 0
+            "discount": null
         },
         "Productive Plan": {
             "discount": null
         },
-        "Pace Chaser Straightaways ◎": {
-            "discount": null
-        },
-        "Pace Chaser Straightaways ○": {
+        "Shifting Gears": {
             "discount": null
         },
         "Pace Chaser Corners ◎": {
@@ -172,33 +132,17 @@
         "Pace Chaser Corners ○": {
             "discount": null
         },
-        "Pace Chaser Savvy ◎": {
-            "discount": null
-        },
-        "Pace Chaser Savvy ○": {
-            "discount": null
-        },
         "Head-On": {
             "discount": null
-        },
-        "Schwarzes Schwert": {
-            "discount": 20,
-            "default": 20
-        },
-        "Let's Pump Some Iron!": {
-            "discount": 20,
-            "default": 20
         },
         "Stamina to Spare": {
             "discount": null
         },
         "Preferred Position": {
-            "discount": 0,
-            "default": 0
+            "discount": null
         },
         "Soft Step": {
-            "discount": 0,
-            "default": 0
+            "discount": null
         },
         "Shrewd Step": {
             "discount": null
@@ -209,32 +153,126 @@
         "Tail Held High": {
             "discount": null
         },
-        "Shifting Gears": {
-            "discount": 0
+        "Triple 7s": {
+            "discount": 10
+        },
+        "Hydrate": {
+            "discount": null
+        },
+        "Gourmand": {
+            "discount": null
+        },
+        "Cut and Drive!": {
+            "discount": null
+        },
+        "Red Shift/LP1211-M": {
+            "discount": null
+        },
+        "Sunny Days": {
+            "discount": null
+        },
+        "Sunny Days ◎": {
+            "discount": null
+        },
+        "Sunny Days ○": {
+            "discount": null
+        },
+        "Corner Acceleration ○": {
+            "discount": null
+        },
+        "Corner Connoisseur": {
+            "discount": null
+        },
+        "Acceleration": {
+            "discount": null
+        },
+        "A Small Breather": {
+            "discount": 35
+        },
+        "Moving Past, and Beyond": {
+            "discount": 20,
+            "default": 20
+        },
+        "Let's Pump Some Iron!": {
+            "discount": 20,
+            "default": 20
+        },
+        "Winter Runner": {
+            "discount": 30
+        },
+        "Winter Runner ◎": {
+            "discount": 30
+        },
+        "Winter Runner ○": {
+            "discount": 30
+        },
+        "Innate Experience": {
+            "discount": 0,
+            "default": 0
+        },
+        "Inside Scoop": {
+            "discount": 0,
+            "default": 0
+        },
+        "Long Straightaways ◎": {
+            "discount": 30
+        },
+        "Long Straightaways ○": {
+            "discount": 30
+        },
+        "Late Surger Straightaways ◎": {
+            "discount": 20
+        },
+        "Late Surger Straightaways ○": {
+            "discount": 20
+        },
+        "Late Surger Savvy ◎": {
+            "discount": 20
+        },
+        "Late Surger Savvy ○": {
+            "discount": 20
+        },
+        "Shake It Out": {
+            "discount": 0,
+            "default": 0
         }
     },
     "track": {
         "courseId": "",
-        "distance": 3400,
-        "groundCondition": "<Random>",
+        "distance": 2500,
+        "groundCondition": "Firm",
         "numUmas": 9,
-        "season": "Fall",
-        "trackName": "Tokyo",
-        "weather": "Rainy",
+        "season": "Winter",
+        "trackName": "Nakayama",
+        "weather": "Sunny",
         "surface": "Turf"
     },
     "uma": {
-        "distanceAptitude": "S",
-        "guts": 413,
-        "power": 1024,
+        "distanceAptitude": "A",
+        "guts": 455,
+        "power": 925,
         "mood": null,
-        "skills": [],
+        "skills": [
+            "Playtime's Over!",
+            "Ignited Spirit SPD",
+            "Uma Stan",
+            "Deep Breaths",
+            "Let's Pump Some Iron!",
+            "Moving Past, and Beyond",
+            "Late Surger Straightaways ○",
+            "Long Straightaways ○",
+            "Late Surger Savvy ○",
+            "Triple 7s",
+            "A Small Breather",
+            "Innate Experience",
+            "Shake It Out"
+        ],
         "speed": 1200,
-        "stamina": 300,
-        "strategy": "Pace Chaser",
+        "stamina": 565,
+        "strategy": "Late Surger",
         "styleAptitude": "A",
         "surfaceAptitude": "A",
-        "unique": "U=ma2",
-        "wisdom": 828
+        "unique": "Festive Miracle",
+        "wisdom": 876
     }
 }
