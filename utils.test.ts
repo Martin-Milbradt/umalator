@@ -752,9 +752,10 @@ describe('calculateSkillCost', () => {
 
     it('calculates cost for Professor of Curvature with multi-skill discounts', () => {
         // Professor of Curvature is a multi-skill that includes Corner Adept ○
-        // Professor of Curvature: 10% discount, Corner Adept ○: 10% discount
+        // Professor of Curvature: baseCost 170, 10% discount
+        // Corner Adept ○: baseCost 170, 10% discount (higher order in same group)
         // Expected cost: 306
-        // Calculation: ceil(170 * 0.9) + round(170 * 0.9) = 153 + 153 = 306
+        // Calculation: ceil(170 * 0.9) for first skill + round(170 * 0.9) for additional = 153 + 153 = 306
         const skillMeta: Record<
             string,
             { baseCost: number; groupId?: string; order?: number }
@@ -796,9 +797,10 @@ describe('calculateSkillCost', () => {
 
     it('calculates cost for Right-Handed ◎ with prerequisite skill owned', () => {
         // When uma already has Right-Handed ○, upgrading to Right-Handed ◎
-        // Right-Handed ○: baseCost 100, Right-Handed ◎: baseCost 110
-        // Expected cost: 110 (only the upgrade cost, not the already-owned skill)
-        // Calculation: ceil(110 * 1.0) = 110, Right-Handed ○ is skipped because it's owned
+        // Right-Handed ○: baseCost 100 (already owned, not included in cost)
+        // Right-Handed ◎: baseCost 110, no discount
+        // Expected cost: 110
+        // Only the target skill cost is calculated; owned prerequisites are excluded
         const skillMeta: Record<
             string,
             { baseCost: number; groupId?: string; order?: number }
