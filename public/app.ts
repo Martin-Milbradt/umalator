@@ -3221,81 +3221,13 @@ function refreshResultsCosts(): void {
 }
 
 /**
- * When a basic skill (○) is added to Uma, naively update any upgraded skill (◎)
- * in the results by subtracting the basic skill's stats.
- * The proper calculation will be done on the next "Run Calculations".
+ * When a basic skill is added/removed from Uma, mark upgraded skills for recalculation.
+ * The frontend cache is keyed only by skill name (not Uma state), so we must invalidate it.
+ * The server-side cache IS keyed by config hash (including Uma skills) and will return
+ * fresh results for the new Uma state.
  */
-function updateUpgradedSkillsForBasicSkill(basicSkillName: string): void {
-    if (!skillmeta || !skillnames) return
-
-    const basicSkillId = findSkillId(basicSkillName)
-    if (!basicSkillId) return
-
-    const basicMeta = skillmeta[basicSkillId]
-    if (!basicMeta?.groupId) return
-
-    const basicGroupId = basicMeta.groupId
-    const basicOrder = basicMeta.order ?? 0
-
-    // Get the basic skill's result data (if available)
-    const basicResult = resultsMap.get(basicSkillName)
-    if (!basicResult || basicResult.status === 'pending') return
-
-    // Find upgraded skills (lower order = upgraded) in the same group
-    for (const [upgradedSkillId, upgradedMeta] of Object.entries(skillmeta)) {
-        if (
-            upgradedMeta.groupId === basicGroupId &&
-            (upgradedMeta.order ?? 0) < basicOrder
-        ) {
-            // Find the skill name for this upgraded skill
-            const upgradedSkillNames = skillnames[upgradedSkillId]
-            if (!upgradedSkillNames) continue
-
-            const upgradedSkillName = upgradedSkillNames[0]
-            const upgradedResult = resultsMap.get(upgradedSkillName)
-
-            if (upgradedResult && upgradedResult.status !== 'pending') {
-                // Naively subtract basic skill stats from upgraded skill
-                upgradedResult.meanLength = Math.max(
-                    0,
-                    upgradedResult.meanLength - basicResult.meanLength,
-                )
-                upgradedResult.medianLength = Math.max(
-                    0,
-                    upgradedResult.medianLength - basicResult.medianLength,
-                )
-                upgradedResult.minLength = Math.max(
-                    0,
-                    upgradedResult.minLength - basicResult.minLength,
-                )
-                upgradedResult.maxLength = Math.max(
-                    0,
-                    upgradedResult.maxLength - basicResult.maxLength,
-                )
-                upgradedResult.ciLower = Math.max(
-                    0,
-                    upgradedResult.ciLower - basicResult.ciLower,
-                )
-                upgradedResult.ciUpper = Math.max(
-                    0,
-                    upgradedResult.ciUpper - basicResult.ciUpper,
-                )
-                // Recalculate efficiency
-                if (upgradedResult.cost > 0) {
-                    upgradedResult.meanLengthPerCost =
-                        upgradedResult.meanLength / upgradedResult.cost
-                }
-            }
-        }
-    }
-}
-
-/**
- * When a basic skill is removed from Uma, restore upgraded skill stats from cache.
- * This reverses the incremental stat adjustment made by updateUpgradedSkillsForBasicSkill.
- */
-function restoreUpgradedSkillsForBasicSkill(basicSkillName: string): void {
-    if (!skillmeta || !skillnames) return
+function recalculateUpgradedSkillsForBasicChange(basicSkillName: string): void {
+    if (!skillmeta || !skillnames || !currentConfig?.skills) return
 
     const basicSkillId = findSkillId(basicSkillName)
     if (!basicSkillId) return
@@ -3316,27 +3248,31 @@ function restoreUpgradedSkillsForBasicSkill(basicSkillName: string): void {
             if (!upgradedSkillNames) continue
 
             const upgradedSkillName = upgradedSkillNames[0]
-            const upgradedResult = resultsMap.get(upgradedSkillName)
 
-            if (upgradedResult && upgradedResult.status !== 'pending') {
-                // Restore from cache if available
-                const cachedResult = calculatedResultsCache.get(upgradedSkillName)
-                if (cachedResult) {
-                    upgradedResult.meanLength = cachedResult.meanLength
-                    upgradedResult.medianLength = cachedResult.medianLength
-                    upgradedResult.minLength = cachedResult.minLength
-                    upgradedResult.maxLength = cachedResult.maxLength
-                    upgradedResult.ciLower = cachedResult.ciLower
-                    upgradedResult.ciUpper = cachedResult.ciUpper
-                    if (upgradedResult.cost > 0) {
-                        upgradedResult.meanLengthPerCost =
-                            upgradedResult.meanLength / upgradedResult.cost
-                    }
-                }
+            // Only recalculate if the skill has a discount (is in the skill list)
+            const skillConfig = currentConfig.skills[upgradedSkillName]
+            if (
+                !skillConfig ||
+                skillConfig.discount === null ||
+                skillConfig.discount === undefined
+            ) {
+                continue
+            }
+
+            // Invalidate frontend cache (keyed only by skill name, not Uma state)
+            calculatedResultsCache.delete(upgradedSkillName)
+
+            // Mark as pending for recalculation - server will return fresh results
+            if (resultsMap.has(upgradedSkillName)) {
+                addPendingSkillToResults(upgradedSkillName, skillConfig.discount)
             }
         }
     }
 }
+
+// Aliases for clarity at call sites
+const updateUpgradedSkillsForBasicSkill = recalculateUpgradedSkillsForBasicChange
+const restoreUpgradedSkillsForBasicSkill = recalculateUpgradedSkillsForBasicChange
 
 /**
  * Add a skill back to the results table when removed from Uma.
