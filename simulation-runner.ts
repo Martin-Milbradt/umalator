@@ -22,9 +22,9 @@ import {
     findMatchingCoursesWithFilters,
     findSkillIdByNameWithPreference,
     findSkillVariantsByName,
-    getDistanceType,
     Grade,
     GroundCondition,
+    getDistanceType,
     isRandomLocation,
     isRandomValue,
     parseDistanceCategory,
@@ -33,6 +33,7 @@ import {
     parseStrategyName,
     parseSurface,
     parseWeather,
+    processCourseData,
     Season,
     type SkillCostContext,
     type SkillDataEntry,
@@ -40,7 +41,6 @@ import {
     STRATEGY_TO_RUNNING_STYLE,
     Time,
     TRACK_NAME_TO_ID,
-    processCourseData,
 } from './utils'
 
 /**
@@ -240,35 +240,44 @@ export async function processWithConcurrency<T>(
 }
 
 export class SimulationRunner {
-    private config: SimulationRunnerConfig
-    private staticData: StaticData
-    private workerPath: URL
-
-    constructor(config: SimulationRunnerConfig, staticData: StaticData, workerPath: URL) {
-        this.config = config
-        this.staticData = staticData
-        this.workerPath = workerPath
-    }
+    constructor(
+        readonly config: SimulationRunnerConfig,
+        readonly staticData: StaticData,
+        readonly workerPath: URL,
+    ) {}
 
     async run(onProgress: ProgressCallback): Promise<void> {
-        const { config, staticData } = this
-        const { skillMeta, skillNames, skillData, courseData, trackNames } = staticData
+        const { config, staticData, workerPath } = this
+        const { skillMeta, skillNames, skillData, courseData, trackNames } =
+            staticData
 
         // Validate required fields
         if (!config.track.groundCondition) {
-            onProgress({ type: 'error', error: 'config.track.groundCondition must be specified' })
+            onProgress({
+                type: 'error',
+                error: 'config.track.groundCondition must be specified',
+            })
             return
         }
         if (!config.track.weather) {
-            onProgress({ type: 'error', error: 'config.track.weather must be specified' })
+            onProgress({
+                type: 'error',
+                error: 'config.track.weather must be specified',
+            })
             return
         }
         if (!config.track.season) {
-            onProgress({ type: 'error', error: 'config.track.season must be specified' })
+            onProgress({
+                type: 'error',
+                error: 'config.track.season must be specified',
+            })
             return
         }
         if (!config.uma.strategy) {
-            onProgress({ type: 'error', error: 'config.uma.strategy must be specified' })
+            onProgress({
+                type: 'error',
+                error: 'config.uma.strategy must be specified',
+            })
             return
         }
 
@@ -285,12 +294,18 @@ export class SimulationRunner {
             const selectedCourseId = config.track.courseId
             const rawCourse = courseData[selectedCourseId]
             if (!rawCourse) {
-                onProgress({ type: 'error', error: `Course ${selectedCourseId} not found` })
+                onProgress({
+                    type: 'error',
+                    error: `Course ${selectedCourseId} not found`,
+                })
                 return
             }
             const course = processCourseData(rawCourse)
             if (course.turn === undefined || course.turn === null) {
-                onProgress({ type: 'error', error: `Course ${selectedCourseId} is missing turn field` })
+                onProgress({
+                    type: 'error',
+                    error: `Course ${selectedCourseId} is missing turn field`,
+                })
                 return
             }
             courses.push({ courseId: selectedCourseId, course })
@@ -305,8 +320,13 @@ export class SimulationRunner {
 
             if (matches.length === 0) {
                 const locationDesc = isRandomTrack ? '<Random>' : trackNameValue
-                const distanceDesc = distanceCategory !== null ? distanceValue : `${distanceValue}m`
-                const surfaceFilter = config.track.surface ? ` and surface ${config.track.surface}` : ''
+                const distanceDesc =
+                    distanceCategory !== null
+                        ? distanceValue
+                        : `${distanceValue}m`
+                const surfaceFilter = config.track.surface
+                    ? ` and surface ${config.track.surface}`
+                    : ''
                 onProgress({
                     type: 'error',
                     error: `No courses found matching track "${locationDesc}" with distance ${distanceDesc}${surfaceFilter}`,
@@ -328,7 +348,10 @@ export class SimulationRunner {
 
             for (const { courseId, course } of courses) {
                 if (course.turn === undefined || course.turn === null) {
-                    onProgress({ type: 'error', error: `Course ${courseId} is missing turn field` })
+                    onProgress({
+                        type: 'error',
+                        error: `Course ${courseId} is missing turn field`,
+                    })
                     return
                 }
             }
@@ -457,7 +480,11 @@ export class SimulationRunner {
                 continue
             }
 
-            const variants = findSkillVariantsByName(skillName, skillNames, skillMeta)
+            const variants = findSkillVariantsByName(
+                skillName,
+                skillNames,
+                skillMeta,
+            )
             if (variants.length === 0) {
                 continue
             }
@@ -492,7 +519,8 @@ export class SimulationRunner {
 
                 const skillDataEntry = skillData[skillId]
                 if (skillDataEntry) {
-                    const restrictions = extractSkillRestrictions(skillDataEntry)
+                    const restrictions =
+                        extractSkillRestrictions(skillDataEntry)
                     if (!canSkillTrigger(restrictions, currentSettings)) {
                         continue
                     }
@@ -506,7 +534,10 @@ export class SimulationRunner {
 
         const availableSkillNames = Object.keys(skillNameToId)
         if (availableSkillNames.length === 0) {
-            onProgress({ type: 'error', error: 'No available skills specified in config' })
+            onProgress({
+                type: 'error',
+                error: 'No available skills specified in config',
+            })
             return
         }
 
@@ -521,7 +552,7 @@ export class SimulationRunner {
             return new Promise((resolve, reject) => {
                 const skillId = skillNameToId[skillName]
 
-                const worker = new Worker(this.workerPath, {
+                const worker = new Worker(workerPath, {
                     workerData: {
                         skillId,
                         skillName,
@@ -583,7 +614,11 @@ export class SimulationRunner {
             const skillId = skillNameToId[skillName]
             const configKey = skillNameToConfigKey[skillName] || skillName
             const skillConfig = configSkills[configKey]
-            const cost = calculateSkillCost(skillId, skillConfig, skillCostContext)
+            const cost = calculateSkillCost(
+                skillId,
+                skillConfig,
+                skillCostContext,
+            )
             skillRawResultsMap.set(skillName, {
                 skillName,
                 rawResults: [],
@@ -620,7 +655,10 @@ export class SimulationRunner {
         const firstPassFactories = availableSkillNames.map(
             (skillName) => () => runSimulationInWorker(skillName, 100, true),
         )
-        const firstPassResults = await processWithConcurrency(firstPassFactories, concurrency)
+        const firstPassResults = await processWithConcurrency(
+            firstPassFactories,
+            concurrency,
+        )
 
         for (const result of firstPassResults) {
             if (result.rawResults) {
@@ -653,9 +691,13 @@ export class SimulationRunner {
             })
 
             const factories = skillNames.map(
-                (skillName) => () => runSimulationInWorker(skillName, 100, true),
+                (skillName) => () =>
+                    runSimulationInWorker(skillName, 100, true),
             )
-            const passResults = await processWithConcurrency(factories, concurrency)
+            const passResults = await processWithConcurrency(
+                factories,
+                concurrency,
+            )
 
             for (const result of passResults) {
                 if (result.rawResults) {
@@ -679,7 +721,9 @@ export class SimulationRunner {
 
         // Tiered simulation passes
         const topHalfCount = Math.ceil(currentResults.length / 2)
-        const topHalfSkills = currentResults.slice(0, topHalfCount).map((r) => r.skill)
+        const topHalfSkills = currentResults
+            .slice(0, topHalfCount)
+            .map((r) => r.skill)
         await runAdditionalSimulations(topHalfSkills, 'top half')
 
         const top10Skills = currentResults
@@ -688,7 +732,9 @@ export class SimulationRunner {
         await runAdditionalSimulations(top10Skills, 'top 10')
 
         const top25PercentCount = Math.ceil(currentResults.length * 0.25)
-        const top25PercentSkills = currentResults.slice(0, top25PercentCount).map((r) => r.skill)
+        const top25PercentSkills = currentResults
+            .slice(0, top25PercentCount)
+            .map((r) => r.skill)
         await runAdditionalSimulations(top25PercentSkills, 'top 25%')
 
         const top5Skills = currentResults

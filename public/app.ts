@@ -61,7 +61,10 @@ interface SkillResultWithStatus extends SkillResult {
 }
 
 type SkillNames = Record<string, string[]>
-type SkillMeta = Record<string, { baseCost?: number; groupId?: string; order?: number }>
+type SkillMeta = Record<
+    string,
+    { baseCost?: number; groupId?: string; order?: number }
+>
 type CourseData = Record<
     string,
     {
@@ -1338,7 +1341,8 @@ function renderSkills(): void {
                         const existingSkill = currentConfig.uma.skills[i]
                         const existingGroupId = getSkillGroupId(existingSkill)
                         if (existingGroupId === newSkillGroupId) {
-                            replacedSkillCost = getSkillCostWithDiscount(existingSkill)
+                            replacedSkillCost =
+                                getSkillCostWithDiscount(existingSkill)
                             currentConfig.uma.skills[i] = skillName
                             replaced = true
                             break
@@ -2248,14 +2252,17 @@ function renderResultsTable(): void {
         // Discount
         const discountCell = document.createElement('td')
         discountCell.className = 'p-1 text-right'
-        discountCell.textContent = result.discount > 0 ? `${result.discount}%` : '-'
+        discountCell.textContent =
+            result.discount > 0 ? `${result.discount}%` : '-'
         row.appendChild(discountCell)
 
         // Sims
         const simsCell = document.createElement('td')
         simsCell.className = 'p-1 text-right'
         simsCell.textContent =
-            result.status === 'pending' ? '...' : result.numSimulations.toString()
+            result.status === 'pending'
+                ? '...'
+                : result.numSimulations.toString()
         row.appendChild(simsCell)
 
         // Mean
@@ -2376,7 +2383,8 @@ function updateSelectAllCheckbox(): void {
 
     const selectedCount = allSkills.filter((s) => selectedSkills.has(s)).length
     checkbox.checked = selectedCount === allSkills.length
-    checkbox.indeterminate = selectedCount > 0 && selectedCount < allSkills.length
+    checkbox.indeterminate =
+        selectedCount > 0 && selectedCount < allSkills.length
 }
 
 function addSkillToUmaFromTable(skillName: string, cost: number): void {
@@ -2529,7 +2537,10 @@ async function runCalculations(clearExisting = true): Promise<void> {
                             }
                         } else if (data.type === 'result' && data.result) {
                             // Individual skill result - add to map
-                            calculatedResultsCache.set(data.result.skill, data.result)
+                            calculatedResultsCache.set(
+                                data.result.skill,
+                                data.result,
+                            )
                             resultsMap.set(data.result.skill, {
                                 ...data.result,
                                 status: 'fresh',
@@ -2542,7 +2553,10 @@ async function runCalculations(clearExisting = true): Promise<void> {
                             // Update with final sorted results
                             if (data.results) {
                                 for (const result of data.results) {
-                                    calculatedResultsCache.set(result.skill, result)
+                                    calculatedResultsCache.set(
+                                        result.skill,
+                                        result,
+                                    )
                                     resultsMap.set(result.skill, {
                                         ...result,
                                         status: 'fresh',
@@ -2838,7 +2852,8 @@ function refreshResultsCosts(): void {
         if (result.status !== 'pending') {
             const newCost = getSkillCostWithDiscount(skillName)
             result.cost = newCost
-            result.meanLengthPerCost = newCost > 0 ? result.meanLength / newCost : 0
+            result.meanLengthPerCost =
+                newCost > 0 ? result.meanLength / newCost : 0
         }
     }
     renderResultsTable()
@@ -2923,7 +2938,11 @@ async function returnSkillToResultsTable(skillName: string): Promise<void> {
     if (!currentConfig?.skills) return
 
     const skillConfig = currentConfig.skills[skillName]
-    if (!skillConfig || skillConfig.discount === null || skillConfig.discount === undefined) {
+    if (
+        !skillConfig ||
+        skillConfig.discount === null ||
+        skillConfig.discount === undefined
+    ) {
         return
     }
 
@@ -2999,7 +3018,8 @@ async function calculatePendingSkills(): Promise<void> {
                 skill: pending.skill,
                 cost,
                 discount: pending.discount,
-                meanLengthPerCost: cost > 0 ? cachedResult.meanLength / cost : 0,
+                meanLengthPerCost:
+                    cost > 0 ? cachedResult.meanLength / cost : 0,
                 status: 'cached',
             })
         }
@@ -3049,7 +3069,7 @@ function setupSelectAllCheckbox(): void {
     checkbox.addEventListener('change', () => {
         const allSkills = Array.from(resultsMap.keys())
         if (checkbox.checked) {
-            allSkills.forEach((s) => selectedSkills.add(s))
+            for (const s of allSkills) selectedSkills.add(s)
         } else {
             selectedSkills.clear()
         }

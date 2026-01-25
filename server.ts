@@ -17,7 +17,10 @@ import {
     normalizeConfigSkillNames,
     type SkillResult,
 } from './utils'
-import { SimulationRunner, type SimulationRunnerConfig } from './simulation-runner'
+import {
+    SimulationRunner,
+    type SimulationRunnerConfig,
+} from './simulation-runner'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -514,7 +517,13 @@ app.get('/api/simulate', async (req, res) => {
     }
 
     // Check required static data is loaded
-    if (!cachedSkillmeta || !cachedSkillnames || !cachedSkillData || !cachedCourseData || !cachedTracknames) {
+    if (
+        !cachedSkillmeta ||
+        !cachedSkillnames ||
+        !cachedSkillData ||
+        !cachedCourseData ||
+        !cachedTracknames
+    ) {
         res.status(500).json({ error: 'Static data not loaded' })
         return
     }
@@ -553,7 +562,9 @@ app.get('/api/simulate', async (req, res) => {
         // Load config file
         const configPath = join(configDir, configFile)
         if (!existsSync(configPath)) {
-            res.write(`data: ${JSON.stringify({ type: 'error', error: `Config file not found: ${configFile}` })}\n\n`)
+            res.write(
+                `data: ${JSON.stringify({ type: 'error', error: `Config file not found: ${configFile}` })}\n\n`,
+            )
             res.end()
             return
         }
@@ -567,13 +578,17 @@ app.get('/api/simulate', async (req, res) => {
         }
 
         const workerPath = new URL('./simulation.worker.js', import.meta.url)
-        const runner = new SimulationRunner(config, {
-            skillMeta: cachedSkillmeta,
-            skillNames: cachedSkillnames,
-            skillData: cachedSkillData,
-            courseData: cachedCourseData,
-            trackNames: cachedTracknames,
-        }, workerPath)
+        const runner = new SimulationRunner(
+            config,
+            {
+                skillMeta: cachedSkillmeta,
+                skillNames: cachedSkillnames,
+                skillData: cachedSkillData,
+                courseData: cachedCourseData,
+                trackNames: cachedTracknames,
+            },
+            workerPath,
+        )
 
         await runner.run((progress) => {
             if (requestClosed) return
@@ -592,7 +607,9 @@ app.get('/api/simulate', async (req, res) => {
         console.error('Simulation error:', err)
         if (!requestClosed) {
             try {
-                res.write(`data: ${JSON.stringify({ type: 'error', error: err.message })}\n\n`)
+                res.write(
+                    `data: ${JSON.stringify({ type: 'error', error: err.message })}\n\n`,
+                )
                 res.end()
             } catch {
                 // Ignore write errors

@@ -30,7 +30,6 @@ import {
     Grade,
     getDistanceType,
     isRandomLocation,
-    isRandomValue,
     parseDistanceCategory,
     parseStrategyName,
     parseSurface,

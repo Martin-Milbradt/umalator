@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { parseRaceConditions, processWithConcurrency } from './simulation-runner'
+import {
+    parseRaceConditions,
+    processWithConcurrency,
+} from './simulation-runner'
 
 describe('processWithConcurrency', () => {
     it('processes items in parallel up to concurrency limit', async () => {
