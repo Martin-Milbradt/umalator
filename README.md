@@ -1,20 +1,14 @@
 # umalator-global-cli
 
-CLI tool for evaluating skills in umalator-global. It calculates mean length gains for skills and outputs a table sorted by efficiency (mean length / cost).
+Web interface for evaluating skills in umalator-global. It calculates mean length gains for skills and outputs a table sorted by efficiency (mean length / cost).
 
 Note: The results are different from the browser version, as all optional options are turned on in `simOptions` (unless `deterministic` is set to `true`).
 
 ## Commands
 
 ```bash
-# Build CLI (required before running)
+# Build worker (required before running)
 npm run build
-
-# Run CLI with default config
-npm start
-
-# Run CLI with specific config
-node cli.js myconfig.json
 
 # Start web server (builds frontend first)
 npm run web
@@ -36,10 +30,8 @@ npx vitest run utils.test.ts
 
 ### Web Interface
 
-The easiest way to use the tool is through the web interface:
-
 ```bash
-# Build the CLI first
+# Build the worker first
 npm run build
 
 # Start the web server
@@ -56,35 +48,6 @@ The web interface provides:
 - **Uma Editor**: Configure uma stats, strategy, aptitudes, mood, unique skill, and active skills
 - **Real-time Output**: View terminal output as calculations run
 - **Auto-save**: Changes are automatically saved to the config file
-
-### Command Line Interface
-
-#### Quick Run (Windows)
-
-```PowerShell
-.\run.bat
-```
-
-#### Build and Run Manually
-
-```PowerShell
-# Build the CLI
-npm run build
-
-# Run the CLI (uses default.json)
-npm start
-# or
-node cli.js
-
-# Run with a specific config file
-node cli.js myconfig.json
-```
-
-### Options
-
-- `[config]` - Config file name (positional argument, default: `default.json`)
-  - The config file is loaded from the `configs/` directory
-  - Example: `node cli.js myconfig.json` loads `configs/myconfig.json`
 
 ### Config File Format
 

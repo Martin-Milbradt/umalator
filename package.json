@@ -7,12 +7,10 @@
     "build:frontend": "vite build",
     "dev": "concurrently \"tsx server.ts\" \"vite\"",
     "markdownlint": "markdownlint-cli2 \"**/*.md\"",
-    "start": "node cli.js",
     "test": "vitest run",
     "web": "npm run build:frontend && tsx server.ts"
   },
   "dependencies": {
-    "commander": "^11.0.0",
     "esbuild": "^0.27.2",
     "express": "^4.18.0",
     "immutable": "^4.3.0"

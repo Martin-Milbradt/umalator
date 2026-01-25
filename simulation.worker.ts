@@ -71,59 +71,95 @@ function runSkillSimulation(task: SimulationTask) {
         task.useRandomCondition
 
     if (usePerSimulationMode) {
-        const moods: Mood[] = [-2, -1, 0, 1, 2]
-        const seasons = task.weightedSeasons ?? [task.racedef.season]
-        const weathers = task.weightedWeathers ?? [task.racedef.weather]
-        const conditions = task.weightedConditions ?? [
-            task.racedef.groundCondition,
-        ]
+        // Build all unique combinations of variable parameters
+        const moods: Mood[] = task.useRandomMood
+            ? [-2, -1, 0, 1, 2]
+            : [task.baseUma.mood as Mood]
+        const seasons = task.useRandomSeason
+            ? (task.weightedSeasons ?? [task.racedef.season])
+            : [task.racedef.season]
+        const weathers = task.useRandomWeather
+            ? (task.weightedWeathers ?? [task.racedef.weather])
+            : [task.racedef.weather]
+        const conditions = task.useRandomCondition
+            ? (task.weightedConditions ?? [task.racedef.groundCondition])
+            : [task.racedef.groundCondition]
 
-        for (let i = 0; i < task.numSimulations; i++) {
-            const course = courses[i % numCourses]
-            const mood = task.useRandomMood
-                ? moods[i % moods.length]
-                : (task.baseUma.mood as Mood)
-            const season = task.useRandomSeason
-                ? seasons[i % seasons.length]
-                : task.racedef.season
-            const weather = task.useRandomWeather
-                ? weathers[i % weathers.length]
-                : task.racedef.weather
-            const condition = task.useRandomCondition
-                ? conditions[i % conditions.length]
-                : task.racedef.groundCondition
+        // Generate all combinations
+        interface Combination {
+            course: (typeof courses)[0]
+            mood: Mood
+            season: number
+            weather: number
+            condition: number
+        }
+        const combinations: Combination[] = []
+        for (const course of courses) {
+            for (const mood of moods) {
+                for (const season of seasons) {
+                    for (const weather of weathers) {
+                        for (const condition of conditions) {
+                            combinations.push({
+                                course,
+                                mood,
+                                season,
+                                weather,
+                                condition,
+                            })
+                        }
+                    }
+                }
+            }
+        }
+
+        // Distribute simulations across combinations
+        // Each combination gets at least 1 simulation, with extras distributed evenly
+        const numCombinations = combinations.length
+        const baseSimsPerCombo = Math.max(
+            1,
+            Math.floor(task.numSimulations / numCombinations),
+        )
+        let remainingExtras = Math.max(
+            0,
+            task.numSimulations - baseSimsPerCombo * numCombinations,
+        )
+
+        const baseUma = createHorseState(task.baseUma, baseSkillIds)
+        const umaWithSkill = createHorseState(task.baseUma, filteredSkillIds)
+        let seedOffset = 0
+
+        for (const combo of combinations) {
+            // Give one extra simulation to early combinations if we have remainders
+            const simsForThisCombo =
+                baseSimsPerCombo + (remainingExtras > 0 ? 1 : 0)
+            if (remainingExtras > 0) remainingExtras--
 
             const racedefForSim = {
                 ...task.racedef,
-                season,
-                weather,
-                groundCondition: condition,
+                mood: combo.mood,
+                season: combo.season,
+                weather: combo.weather,
+                groundCondition: combo.condition,
             }
 
-            const baseUma = createHorseState(
-                { ...task.baseUma, mood: mood },
-                baseSkillIds,
-            )
-            const umaWithSkill = createHorseState(
-                { ...task.baseUma, mood: mood },
-                filteredSkillIds,
-            )
-            const singleSimOptions = { ...task.simOptions }
+            const comboSimOptions = { ...task.simOptions }
             if (
-                singleSimOptions.seed !== undefined &&
-                singleSimOptions.seed !== null
+                comboSimOptions.seed !== undefined &&
+                comboSimOptions.seed !== null
             ) {
-                singleSimOptions.seed = singleSimOptions.seed + i
+                comboSimOptions.seed = comboSimOptions.seed + seedOffset
             }
-            const { results: singleResults } = runComparison(
-                1,
-                course,
+            seedOffset += simsForThisCombo
+
+            const { results: comboResults } = runComparison(
+                simsForThisCombo,
+                combo.course,
                 racedefForSim,
                 baseUma,
                 umaWithSkill,
-                singleSimOptions,
+                comboSimOptions,
             )
-            results.push(singleResults[0])
+            results.push(...comboResults)
         }
     } else {
         const baseUma = createHorseState(task.baseUma, baseSkillIds)

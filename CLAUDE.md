@@ -4,18 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-CLI tool and web interface for evaluating skills in umalator-global. Calculates mean length gains for skills and outputs results sorted by efficiency (mean length / cost).
+Web interface for evaluating skills in umalator-global. Calculates mean length gains for skills and outputs results sorted by efficiency (mean length / cost).
 
 ## Commands
 
 ```bash
-# Build CLI (required before running)
+# Build worker (required before running)
 npm run build
-
-# Run CLI with default config
-npm start
-# Run CLI with specific config
-node cli.js myconfig.json
 
 # Start web server (builds frontend first)
 npm run web
@@ -34,15 +29,15 @@ npx vitest run utils.test.ts
 
 ## Architecture
 
-**Dual-stack application** with CLI and web interfaces sharing the same simulation engine.
+**Web application** with Express backend and vanilla TypeScript frontend sharing the same simulation engine.
 
 ### Core Files
 
-- `cli.ts` - CLI entry point using Commander.js, spawns Worker threads for parallel simulations
 - `utils.ts` - Pure utility functions for parsing, formatting, statistics, and skill resolution
 - `server.ts` - Express server (port 3000) serving the web UI and REST API endpoints
 - `simulation.worker.ts` - Worker thread that runs skill simulations using `uma-tools` comparison engine
-- `build.ts` - esbuild configuration for bundling CLI and worker
+- `simulation-runner.ts` - Orchestrates parallel simulations with tiered refinement
+- `build.ts` - esbuild configuration for bundling the worker
 
 ### Frontend (public/)
 
@@ -69,7 +64,7 @@ npx vitest run utils.test.ts
 - **Tiered Simulation**: 100 sims for all skills → 100 more for top half → 100 for top 10 → 100 for top 25% → 100 for top 5
 - **Skill Resolution**: Skills referenced by global English names; cost > 0 for regular skills, cost 0 for unique skills. Handles ○/◎ variants automatically.
 - **Auto-save**: Web UI automatically persists config changes to disk (500ms debounce)
-- **SSE Streaming**: Web UI receives simulation output via Server-Sent Events at `/api/run`
+- **SSE Streaming**: Web UI receives simulation output via Server-Sent Events at `/api/simulate`
 
 ## Implementation Guidance
 

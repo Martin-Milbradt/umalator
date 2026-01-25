@@ -438,8 +438,8 @@ export class SimulationRunner {
         })
 
         const deterministic = config.deterministic ?? false
-        const simOptions = {
-            seed: deterministic ? 0 : Math.floor(Math.random() * 1000000000),
+        // Base simOptions without seed - seed is generated per worker invocation
+        const baseSimOptions = {
             useEnhancedSpurt: !deterministic,
             accuracyMode: !deterministic,
             pacemakerCount: 1,
@@ -452,6 +452,8 @@ export class SimulationRunner {
             skillCheckChanceUma1: false,
             skillCheckChanceUma2: false,
         }
+        // Counter to ensure unique seeds across all worker invocations
+        let seedCounter = 0
 
         const configSkills = config.skills ?? {}
         const skillNameToId: Record<string, string> = {}
@@ -574,6 +576,11 @@ export class SimulationRunner {
         ): Promise<{ skillName: string; rawResults?: number[] }> => {
             return new Promise((resolve, reject) => {
                 const skillId = skillNameToId[skillName]
+                // Generate unique seed for this worker invocation
+                const seed = deterministic
+                    ? seedCounter++
+                    : Math.floor(Math.random() * 1000000000)
+                const simOptions = { ...baseSimOptions, seed }
 
                 const worker = new Worker(workerPath, {
                     workerData: {

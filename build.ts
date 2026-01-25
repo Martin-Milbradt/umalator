@@ -125,22 +125,6 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 `
 
-const buildOptions: esbuild.BuildOptions = {
-    entryPoints: ['cli.ts'],
-    bundle: true,
-    platform: 'node',
-    target: 'node20',
-    format: 'esm',
-    outfile: 'cli.js',
-    define: { CC_GLOBAL: 'true' },
-    external: [...nodeBuiltins],
-    mainFields: ['module', 'main'],
-    banner: {
-        js: requirePolyfill,
-    },
-    plugins: [markNodeBuiltinsExternal, resolveNodeModules, redirectData],
-}
-
 const workerBuildOptions: esbuild.BuildOptions = {
     entryPoints: ['simulation.worker.ts'],
     bundle: true,
@@ -158,10 +142,7 @@ const workerBuildOptions: esbuild.BuildOptions = {
 }
 
 try {
-    await Promise.all([
-        esbuild.build(buildOptions),
-        esbuild.build(workerBuildOptions),
-    ])
+    await esbuild.build(workerBuildOptions)
 } catch (error) {
     console.error('Build failed:', error)
     process.exit(1)

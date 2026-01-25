@@ -708,6 +708,113 @@ describe('calculateStatsFromRawResults', () => {
         expect(result.minLength).toBe(42)
         expect(result.maxLength).toBe(42)
     })
+
+    it('accumulated results produce correct mean (simulating tiered passes)', () => {
+        // Simulate 5 batches of 100 results each (like tiered simulation passes)
+        // Use seeded random for reproducibility
+        const seededRandom = (seed: number) => {
+            const x = Math.sin(seed) * 10000
+            return x - Math.floor(x)
+        }
+
+        const createBatch = (seedOffset: number) =>
+            Array.from(
+                { length: 100 },
+                (_, i) => seededRandom(i + seedOffset) * 10,
+            )
+
+        const batch1 = createBatch(0)
+        const batch2 = createBatch(100)
+        const batch3 = createBatch(200)
+        const batch4 = createBatch(300)
+        const batch5 = createBatch(400)
+
+        // Calculate mean of just first batch (100 sims)
+        const result100 = calculateStatsFromRawResults(
+            batch1,
+            100,
+            0,
+            'Test',
+            95,
+        )
+
+        // Accumulate all batches (500 sims, simulating tiered passes)
+        const accumulated = [
+            ...batch1,
+            ...batch2,
+            ...batch3,
+            ...batch4,
+            ...batch5,
+        ]
+        const result500 = calculateStatsFromRawResults(
+            accumulated,
+            100,
+            0,
+            'Test',
+            95,
+        )
+
+        // Verify accumulation count is correct
+        expect(result500.numSimulations).toBe(500)
+        expect(result100.numSimulations).toBe(100)
+
+        // Verify mean calculation is mathematically correct
+        const expectedMean = accumulated.reduce((a, b) => a + b, 0) / 500
+        expect(result500.meanLength).toBeCloseTo(expectedMean, 10)
+
+        // Verify that accumulated mean is NOT just the first batch's mean
+        // (this would catch a bug where we only use first batch)
+        const batch1Mean = batch1.reduce((a, b) => a + b, 0) / 100
+        expect(result500.meanLength).not.toBe(batch1Mean)
+
+        // Verify accumulated mean equals weighted average of all batches
+        const allBatchesMean =
+            (batch1.reduce((a, b) => a + b, 0) +
+                batch2.reduce((a, b) => a + b, 0) +
+                batch3.reduce((a, b) => a + b, 0) +
+                batch4.reduce((a, b) => a + b, 0) +
+                batch5.reduce((a, b) => a + b, 0)) /
+            500
+        expect(result500.meanLength).toBeCloseTo(allBatchesMean, 10)
+    })
+
+    it('same distribution sampled twice produces similar means', () => {
+        // This tests that if we run 100 vs 500 sims from the same distribution,
+        // the means should be statistically similar (within reasonable variance)
+        const seededRandom = (seed: number) => {
+            const x = Math.sin(seed) * 10000
+            return x - Math.floor(x)
+        }
+
+        // Create 500 samples from same distribution (mean ~5, range 0-10)
+        const allSamples = Array.from(
+            { length: 500 },
+            (_, i) => seededRandom(i * 7) * 10,
+        )
+
+        const first100 = allSamples.slice(0, 100)
+        const all500 = allSamples
+
+        const result100 = calculateStatsFromRawResults(
+            first100,
+            100,
+            0,
+            'Test',
+            95,
+        )
+        const result500 = calculateStatsFromRawResults(
+            all500,
+            100,
+            0,
+            'Test',
+            95,
+        )
+
+        // Means should be within 20% of each other for same distribution
+        const meanDiff = Math.abs(result100.meanLength - result500.meanLength)
+        const relativeDiff = meanDiff / result500.meanLength
+        expect(relativeDiff).toBeLessThan(0.2)
+    })
 })
 
 describe('calculateSkillCost', () => {
