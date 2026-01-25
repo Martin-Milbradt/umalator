@@ -989,6 +989,116 @@ function umaHasUpgradedVersion(skillName: string): boolean {
     return false
 }
 
+/**
+ * Check if Uma has a basic version of the given skill.
+ * Basic skills have higher order numbers in the same groupId.
+ */
+function umaHasBasicVersion(skillName: string): boolean {
+    if (!currentConfig?.uma?.skills || !skillmeta) return false
+
+    const groupId = getSkillGroupId(skillName)
+    if (!groupId) return false
+
+    const skillOrder = getSkillOrder(skillName)
+
+    for (const umaSkill of currentConfig.uma.skills) {
+        const umaGroupId = getSkillGroupId(umaSkill)
+        const umaOrder = getSkillOrder(umaSkill)
+        if (umaGroupId === groupId && umaOrder > skillOrder) {
+            return true
+        }
+    }
+    return false
+}
+
+/**
+ * Check if a skill is currently on Uma (exact match).
+ */
+function isSkillOnUma(skillName: string): boolean {
+    return currentConfig?.uma?.skills?.includes(skillName) ?? false
+}
+
+/**
+ * Get the skill from the same group that is currently on Uma.
+ * Returns null if no skill from the group is on Uma.
+ */
+function getGroupVariantOnUma(skillName: string): string | null {
+    if (!currentConfig?.uma?.skills || !skillmeta) return null
+
+    const groupId = getSkillGroupId(skillName)
+    if (!groupId) return null
+
+    for (const umaSkill of currentConfig.uma.skills) {
+        const umaGroupId = getSkillGroupId(umaSkill)
+        if (umaGroupId === groupId) {
+            return umaSkill
+        }
+    }
+    return null
+}
+
+/**
+ * Get the basic variant (higher order) of a skill in the same group.
+ * Returns null if no basic variant exists.
+ */
+function getBasicVariant(skillName: string): string | null {
+    if (!skillmeta || !skillnames) return null
+
+    const skillId = findSkillId(skillName)
+    if (!skillId) return null
+
+    const currentMeta = skillmeta[skillId]
+    if (!currentMeta?.groupId) return null
+
+    const currentGroupId = currentMeta.groupId
+    const currentOrder = currentMeta.order ?? 0
+
+    // Find skill with higher order (basic version) in the same group
+    for (const [otherId, otherMeta] of Object.entries(skillmeta)) {
+        if (
+            otherMeta.groupId === currentGroupId &&
+            (otherMeta.order ?? 0) > currentOrder
+        ) {
+            const names = skillnames[otherId]
+            if (names?.[0]) {
+                return names[0]
+            }
+        }
+    }
+    return null
+}
+
+/**
+ * Get the upgraded variant (lower order) of a skill in the same group.
+ * Returns null if no upgraded variant exists.
+ */
+function getUpgradedVariant(skillName: string): string | null {
+    if (!skillmeta || !skillnames) return null
+
+    const skillId = findSkillId(skillName)
+    if (!skillId) return null
+
+    const currentMeta = skillmeta[skillId]
+    if (!currentMeta?.groupId) return null
+
+    const currentGroupId = currentMeta.groupId
+    const currentOrder = currentMeta.order ?? 0
+
+    // Find skill with lower order (upgraded version) in the same group
+    for (const [otherId, otherMeta] of Object.entries(skillmeta)) {
+        if (
+            otherMeta.groupId === currentGroupId &&
+            (otherMeta.order ?? 0) < currentOrder
+        ) {
+            const names = skillnames[otherId]
+            if (names?.[0]) {
+                return names[0]
+            }
+        }
+    }
+    return null
+}
+
 function getSkillBaseCost(skillName: string): number {
     if (!skillmeta) return 200
     const skillId = findSkillId(skillName)
@@ -1315,65 +1425,12 @@ function renderSkills(): void {
             const currentlyInUmaSkills =
                 currentConfig.uma.skills.includes(skillName)
             if (currentlyInUmaSkills) {
-                // Removing skill - add cost back to skill points
-                const skillIndex = currentConfig.uma.skills.indexOf(skillName)
-                if (skillIndex !== -1) {
-                    const skillCost = getSkillCostWithDiscount(skillName)
-                    currentConfig.uma.skills.splice(skillIndex, 1)
-                    if (
-                        currentConfig.uma.skillPoints !== undefined &&
-                        currentConfig.uma.skillPoints !== null
-                    ) {
-                        currentConfig.uma.skillPoints += skillCost
-                    }
-                    // Return skill to results table and refresh costs
-                    void returnSkillToResultsTable(skillName)
-                    refreshResultsCosts()
-                }
+                // Removing skill
+                removeSkillFromUma(skillName)
             } else {
-                // Adding skill - deduct cost from skill points
-                const newSkillGroupId = getSkillGroupId(skillName)
-                let replaced = false
-                let replacedSkillCost = 0
-
-                if (newSkillGroupId) {
-                    for (let i = 0; i < currentConfig.uma.skills.length; i++) {
-                        const existingSkill = currentConfig.uma.skills[i]
-                        const existingGroupId = getSkillGroupId(existingSkill)
-                        if (existingGroupId === newSkillGroupId) {
-                            replacedSkillCost =
-                                getSkillCostWithDiscount(existingSkill)
-                            currentConfig.uma.skills[i] = skillName
-                            replaced = true
-                            break
-                        }
-                    }
-                }
-
-                if (
-                    !replaced &&
-                    !currentConfig.uma.skills.includes(skillName)
-                ) {
-                    currentConfig.uma.skills.push(skillName)
-                }
-
-                // Update skill points
-                if (
-                    currentConfig.uma.skillPoints !== undefined &&
-                    currentConfig.uma.skillPoints !== null
-                ) {
-                    const newSkillCost = getSkillCostWithDiscount(skillName)
-                    currentConfig.uma.skillPoints -= newSkillCost
-                    currentConfig.uma.skillPoints += replacedSkillCost
-                }
-
-                // Update upgraded skills before removing basic skill from results
-                updateUpgradedSkillsForBasicSkill(skillName)
-
-                // Remove from results table and refresh costs since Uma skills changed
-                resultsMap.delete(skillName)
-                selectedSkills.delete(skillName)
-                refreshResultsCosts()
+                // Adding skill
+                const cost = getSkillCostWithDiscount(skillName)
+                addSkillToUmaFromTable(skillName, cost)
             }
             renderUma()
             renderSkills()
@@ -2041,9 +2098,111 @@ function renderUma(): void {
             const finishEdit = () => {
                 const newValue = getCanonicalSkillName(editInput.value.trim())
                 if (newValue && newValue !== skill) {
-                    const newSkills = [...skills]
-                    newSkills[index] = newValue
-                    updateSkills(newSkills)
+                    // Renaming skill - treat as remove old + add new
+
+                    // Refund old skill cost
+                    const oldCost = getSkillCostWithDiscount(skill)
+                    if (
+                        currentConfig?.uma?.skillPoints !== undefined &&
+                        currentConfig?.uma?.skillPoints !== null
+                    ) {
+                        currentConfig.uma.skillPoints += oldCost
+                    }
+
+                    // Return old skill to results table
+                    void returnSkillToResultsTable(skill)
+
+                    // Handle old skill's variant restoration
+                    const oldUpgradedVariant = getUpgradedVariant(skill)
+                    if (!oldUpgradedVariant) {
+                        restoreUpgradedSkillsForBasicSkill(skill)
+                    }
+                    const oldBasicVariant = getBasicVariant(skill)
+                    if (oldBasicVariant) {
+                        void returnSkillToResultsTable(oldBasicVariant)
+                    }
+
+                    // Check if new skill already on Uma
+                    if (skills.includes(newValue)) {
+                        // Just remove the old skill
+                        const newSkills = skills.filter((_, i) => i !== index)
+                        updateSkills(newSkills)
+                        return
+                    }
+
+                    // Check if new skill's variant is already on Uma
+                    const existingVariant = getGroupVariantOnUma(newValue)
+                    if (existingVariant && existingVariant !== skill) {
+                        // Another variant already exists, need to handle that
+                        const existingCost = getSkillCostWithDiscount(existingVariant)
+                        if (
+                            currentConfig?.uma?.skillPoints !== undefined &&
+                            currentConfig?.uma?.skillPoints !== null
+                        ) {
+                            currentConfig.uma.skillPoints += existingCost
+                        }
+                        const existingVariantOrder = getSkillOrder(existingVariant)
+                        const newSkillOrder = getSkillOrder(newValue)
+                        if (existingVariantOrder < newSkillOrder) {
+                            void returnSkillToResultsTable(existingVariant)
+                            restoreUpgradedSkillsForBasicSkill(newValue)
+                        }
+                        // Remove existing variant from skills array
+                        const newSkills = skills.filter(
+                            (s, i) => i !== index && s !== existingVariant,
+                        )
+                        newSkills.push(newValue)
+
+                        // Deduct new skill cost
+                        const newCost = getSkillCostWithDiscount(newValue)
+                        if (
+                            currentConfig?.uma?.skillPoints !== undefined &&
+                            currentConfig?.uma?.skillPoints !== null
+                        ) {
+                            currentConfig.uma.skillPoints -= newCost
+                        }
+
+                        // Handle new skill's variant updates
+                        const newBasicVariant = getBasicVariant(newValue)
+                        if (!newBasicVariant) {
+                            updateUpgradedSkillsForBasicSkill(newValue)
+                        }
+                        resultsMap.delete(newValue)
+                        selectedSkills.delete(newValue)
+                        if (newBasicVariant) {
+                            resultsMap.delete(newBasicVariant)
+                            selectedSkills.delete(newBasicVariant)
+                        }
+
+                        updateSkills(newSkills)
+                    } else {
+                        // No conflicting variant, just replace
+                        const newSkills = [...skills]
+                        newSkills[index] = newValue
+
+                        // Deduct new skill cost
+                        const newCost = getSkillCostWithDiscount(newValue)
+                        if (
+                            currentConfig?.uma?.skillPoints !== undefined &&
+                            currentConfig?.uma?.skillPoints !== null
+                        ) {
+                            currentConfig.uma.skillPoints -= newCost
+                        }
+
+                        // Handle new skill's variant updates
+                        const newBasicVariant = getBasicVariant(newValue)
+                        if (!newBasicVariant) {
+                            updateUpgradedSkillsForBasicSkill(newValue)
+                        }
+                        resultsMap.delete(newValue)
+                        selectedSkills.delete(newValue)
+                        if (newBasicVariant) {
+                            resultsMap.delete(newBasicVariant)
+                            selectedSkills.delete(newBasicVariant)
+                        }
+
+                        updateSkills(newSkills)
+                    }
                 } else if (!newValue) {
                     // Empty value removes the skill - refund cost
                     if (
@@ -2053,6 +2212,21 @@ function renderUma(): void {
                         const skillCost = getSkillCostWithDiscount(skill)
                         currentConfig.uma.skillPoints += skillCost
                     }
+                    // Return skill to results table
+                    void returnSkillToResultsTable(skill)
+
+                    // Check if this was a basic skill - restore upgraded skill full stats
+                    const upgradedVariant = getUpgradedVariant(skill)
+                    if (upgradedVariant) {
+                        restoreUpgradedSkillsForBasicSkill(skill)
+                    }
+
+                    // If this was an upgraded skill, also show basic skill in results
+                    const basicVariant = getBasicVariant(skill)
+                    if (basicVariant) {
+                        void returnSkillToResultsTable(basicVariant)
+                    }
+
                     const newSkills = skills.filter((_, i) => i !== index)
                     updateSkills(newSkills)
                 } else {
@@ -2093,6 +2267,20 @@ function renderUma(): void {
             }
             // Return skill to results table
             void returnSkillToResultsTable(skill)
+
+            // Check if this was a basic skill - restore upgraded skill full stats
+            const upgradedVariant = getUpgradedVariant(skill)
+            if (upgradedVariant) {
+                // This is a basic skill (has an upgraded variant), restore upgraded skills
+                restoreUpgradedSkillsForBasicSkill(skill)
+            }
+
+            // If this was an upgraded skill, also show basic skill in results
+            const basicVariant = getBasicVariant(skill)
+            if (basicVariant) {
+                void returnSkillToResultsTable(basicVariant)
+            }
+
             const newSkills = skills.filter((_, i) => i !== index)
             updateSkills(newSkills)
         })
@@ -2124,7 +2312,91 @@ function renderUma(): void {
         const finishAdd = () => {
             const newSkill = getCanonicalSkillName(addInput.value.trim())
             if (newSkill) {
-                updateSkills([...skills, newSkill])
+                // Check if already on Uma
+                if (skills.includes(newSkill)) {
+                    renderUma()
+                    return
+                }
+
+                // Check if a variant from the same group is on Uma
+                const existingVariant = getGroupVariantOnUma(newSkill)
+                const existingVariantOrder = existingVariant
+                    ? getSkillOrder(existingVariant)
+                    : 0
+                const newSkillOrder = getSkillOrder(newSkill)
+
+                if (existingVariant) {
+                    // Refund the existing variant's cost
+                    const existingCost = getSkillCostWithDiscount(existingVariant)
+                    if (
+                        currentConfig?.uma?.skillPoints !== undefined &&
+                        currentConfig?.uma?.skillPoints !== null
+                    ) {
+                        currentConfig.uma.skillPoints += existingCost
+                    }
+
+                    // Handle stats restoration based on which variant is replaced
+                    if (existingVariantOrder < newSkillOrder) {
+                        // Existing is upgraded, new is basic - return upgraded to table
+                        void returnSkillToResultsTable(existingVariant)
+                        restoreUpgradedSkillsForBasicSkill(newSkill)
+                    }
+
+                    // Replace variant in skills array
+                    const idx = skills.indexOf(existingVariant)
+                    const newSkills = [...skills]
+                    newSkills[idx] = newSkill
+
+                    // Deduct new skill cost
+                    const newSkillCost = getSkillCostWithDiscount(newSkill)
+                    if (
+                        currentConfig?.uma?.skillPoints !== undefined &&
+                        currentConfig?.uma?.skillPoints !== null
+                    ) {
+                        currentConfig.uma.skillPoints -= newSkillCost
+                    }
+
+                    // Handle stats update for adding basic skill
+                    const basicVariant = getBasicVariant(newSkill)
+                    if (!basicVariant) {
+                        updateUpgradedSkillsForBasicSkill(newSkill)
+                    }
+
+                    // Hide variants from results
+                    resultsMap.delete(newSkill)
+                    selectedSkills.delete(newSkill)
+                    if (basicVariant) {
+                        resultsMap.delete(basicVariant)
+                        selectedSkills.delete(basicVariant)
+                    }
+
+                    updateSkills(newSkills)
+                } else {
+                    // No variant on Uma, just add the skill
+                    const newSkillCost = getSkillCostWithDiscount(newSkill)
+                    if (
+                        currentConfig?.uma?.skillPoints !== undefined &&
+                        currentConfig?.uma?.skillPoints !== null
+                    ) {
+                        currentConfig.uma.skillPoints -= newSkillCost
+                    }
+
+                    // Handle stats update for adding basic skill
+                    const basicVariant = getBasicVariant(newSkill)
+                    if (!basicVariant) {
+                        updateUpgradedSkillsForBasicSkill(newSkill)
+                    }
+
+                    // Hide variants from results
+                    resultsMap.delete(newSkill)
+                    selectedSkills.delete(newSkill)
+                    if (basicVariant) {
+                        resultsMap.delete(basicVariant)
+                        selectedSkills.delete(basicVariant)
+                    }
+
+                    updateSkills([...skills, newSkill])
+                }
             } else {
                 renderUma()
             }
@@ -2166,14 +2438,20 @@ function renderResultsTable(): void {
 
     tbody.innerHTML = ''
 
-    // Filter out basic skills where Uma has the upgraded version
-    const results = Array.from(resultsMap.values()).filter(
-        (result) => !umaHasUpgradedVersion(result.skill),
-    )
+    // Filter out:
+    // 1. Skills that are on Uma (exact match)
+    // 2. Basic skills where Uma has the upgraded version
+    const results = Array.from(resultsMap.values()).filter((result) => {
+        // Don't show skills that are on Uma
+        if (isSkillOnUma(result.skill)) return false
+        // Don't show basic skills when Uma has the upgraded version
+        if (umaHasUpgradedVersion(result.skill)) return false
+        return true
+    })
 
     // Clean up selectedSkills to remove any filtered-out skills
     for (const skill of selectedSkills) {
-        if (umaHasUpgradedVersion(skill)) {
+        if (isSkillOnUma(skill) || umaHasUpgradedVersion(skill)) {
             selectedSkills.delete(skill)
         }
     }
@@ -2396,31 +2674,114 @@ function addSkillToUmaFromTable(skillName: string, cost: number): void {
         currentConfig.uma.skills = []
     }
 
-    // Add skill if not already present
-    if (!currentConfig.uma.skills.includes(skillName)) {
-        currentConfig.uma.skills.push(skillName)
+    // Check if skill is already on Uma
+    if (currentConfig.uma.skills.includes(skillName)) return
 
-        // Deduct from skill points if available
+    // Check if a variant from the same group is already on Uma
+    const existingVariant = getGroupVariantOnUma(skillName)
+    const existingVariantOrder = existingVariant
+        ? getSkillOrder(existingVariant)
+        : 0
+    const newSkillOrder = getSkillOrder(skillName)
+
+    if (existingVariant) {
+        // Refund the existing variant's cost
+        const existingCost = getSkillCostWithDiscount(existingVariant)
         if (
             currentConfig.uma.skillPoints !== undefined &&
             currentConfig.uma.skillPoints !== null
         ) {
-            currentConfig.uma.skillPoints -= cost
+            currentConfig.uma.skillPoints += existingCost
         }
 
-        // Update upgraded skills before removing basic skill from results
-        updateUpgradedSkillsForBasicSkill(skillName)
+        // If existing was basic (higher order) and we're adding upgraded (lower order)
+        // The basic stays hidden, no need to return to table
+        // If existing was upgraded and we're adding basic, return upgraded to table
+        if (existingVariantOrder < newSkillOrder) {
+            // Existing is upgraded, new is basic - return upgraded to table with full stats
+            void returnSkillToResultsTable(existingVariant)
+        }
 
-        // Remove from results and refresh costs (Uma skills changed)
-        resultsMap.delete(skillName)
-        selectedSkills.delete(skillName)
-
-        // Re-render
-        refreshResultsCosts()
-        renderUma()
-        renderSkills()
-        autoSave()
+        // Replace the existing variant with the new skill
+        const idx = currentConfig.uma.skills.indexOf(existingVariant)
+        if (idx !== -1) {
+            currentConfig.uma.skills[idx] = skillName
+        }
+    } else {
+        // No variant on Uma, just add the skill
+        currentConfig.uma.skills.push(skillName)
     }
+
+    // Deduct from skill points
+    if (
+        currentConfig.uma.skillPoints !== undefined &&
+        currentConfig.uma.skillPoints !== null
+    ) {
+        currentConfig.uma.skillPoints -= cost
+    }
+
+    // Update upgraded skill stats if adding basic skill (show incremental)
+    const basicVariant = getBasicVariant(skillName)
+    if (!basicVariant) {
+        // This is a basic skill (or has no variants), update upgraded skills
+        updateUpgradedSkillsForBasicSkill(skillName)
+    }
+
+    // Remove from results table
+    resultsMap.delete(skillName)
+    selectedSkills.delete(skillName)
+
+    // If adding upgraded skill, also hide basic from results
+    if (basicVariant) {
+        resultsMap.delete(basicVariant)
+        selectedSkills.delete(basicVariant)
+    }
+
+    // Re-render
+    refreshResultsCosts()
+    renderUma()
+    renderSkills()
+    autoSave()
+}
+
+function removeSkillFromUma(skillName: string): void {
+    if (!currentConfig?.uma?.skills) return
+
+    const skillIndex = currentConfig.uma.skills.indexOf(skillName)
+    if (skillIndex === -1) return
+
+    // Refund skill cost
+    const skillCost = getSkillCostWithDiscount(skillName)
+    currentConfig.uma.skills.splice(skillIndex, 1)
+    if (
+        currentConfig.uma.skillPoints !== undefined &&
+        currentConfig.uma.skillPoints !== null
+    ) {
+        currentConfig.uma.skillPoints += skillCost
+    }
+
+    // Return skill to results table (if it has a discount)
+    void returnSkillToResultsTable(skillName)
+
+    // Check if this was a basic skill - if so, restore upgraded skill full stats
+    const upgradedVariant = getUpgradedVariant(skillName)
+    if (upgradedVariant) {
+        // This is a basic skill (has an upgraded variant), restore upgraded skills
+        restoreUpgradedSkillsForBasicSkill(skillName)
+    }
+
+    // If this was an upgraded skill, also show basic skill in results again
+    const basicVariant = getBasicVariant(skillName)
+    if (basicVariant) {
+        void returnSkillToResultsTable(basicVariant)
+    }
+
+    // Refresh costs since Uma skills changed
+    refreshResultsCosts()
+    renderResultsTable()
+    renderUma()
+    renderSkills()
+    autoSave()
 }
 
 async function saveConfig(): Promise<void> {
@@ -2923,6 +3284,54 @@ function updateUpgradedSkillsForBasicSkill(basicSkillName: string): void {
                 if (upgradedResult.cost > 0) {
                     upgradedResult.meanLengthPerCost =
                         upgradedResult.meanLength / upgradedResult.cost
+                }
+            }
+        }
+    }
+}
+
+/**
+ * When a basic skill is removed from Uma, restore upgraded skill stats from cache.
+ * This reverses the incremental stat adjustment made by updateUpgradedSkillsForBasicSkill.
+ */
+function restoreUpgradedSkillsForBasicSkill(basicSkillName: string): void {
+    if (!skillmeta || !skillnames) return
+
+    const basicSkillId = findSkillId(basicSkillName)
+    if (!basicSkillId) return
+
+    const basicMeta = skillmeta[basicSkillId]
+    if (!basicMeta?.groupId) return
+
+    const basicGroupId = basicMeta.groupId
+    const basicOrder = basicMeta.order ?? 0
+
+    // Find upgraded skills (lower order = upgraded) in the same group
+    for (const [upgradedSkillId, upgradedMeta] of Object.entries(skillmeta)) {
+        if (
+            upgradedMeta.groupId === basicGroupId &&
+            (upgradedMeta.order ?? 0) < basicOrder
+        ) {
+            const upgradedSkillNames = skillnames[upgradedSkillId]
+            if (!upgradedSkillNames) continue
+
+            const upgradedSkillName = upgradedSkillNames[0]
+            const upgradedResult = resultsMap.get(upgradedSkillName)
+
+            if (upgradedResult && upgradedResult.status !== 'pending') {
+                // Restore from cache if available
+                const cachedResult = calculatedResultsCache.get(upgradedSkillName)
+                if (cachedResult) {
+                    upgradedResult.meanLength = cachedResult.meanLength
+                    upgradedResult.medianLength = cachedResult.medianLength
+                    upgradedResult.minLength = cachedResult.minLength
+                    upgradedResult.maxLength = cachedResult.maxLength
+                    upgradedResult.ciLower = cachedResult.ciLower
+                    upgradedResult.ciUpper = cachedResult.ciUpper
+                    if (upgradedResult.cost > 0) {
+                        upgradedResult.meanLengthPerCost =
+                            upgradedResult.meanLength / upgradedResult.cost
+                    }
                 }
             }
         }
