@@ -510,11 +510,17 @@ app.get('/api/run', (req, res) => {
 
 app.get('/api/simulate', async (req, res) => {
     const configFile = req.query.configFile as string | undefined
+    const skillsParam = req.query.skills as string | undefined
 
     if (!configFile) {
         res.status(400).json({ error: 'configFile parameter required' })
         return
     }
+
+    // Parse optional skills filter (comma-separated skill names)
+    const skillFilter = skillsParam
+        ? skillsParam.split(',').map((s) => s.trim()).filter(Boolean)
+        : undefined
 
     // Check required static data is loaded
     if (
@@ -590,14 +596,17 @@ app.get('/api/simulate', async (req, res) => {
             workerPath,
         )
 
-        await runner.run((progress) => {
-            if (requestClosed) return
-            try {
-                res.write(`data: ${JSON.stringify(progress)}\n\n`)
-            } catch {
-                requestClosed = true
-            }
-        })
+        await runner.run(
+            (progress) => {
+                if (requestClosed) return
+                try {
+                    res.write(`data: ${JSON.stringify(progress)}\n\n`)
+                } catch {
+                    requestClosed = true
+                }
+            },
+            skillFilter,
+        )
 
         if (!requestClosed) {
             res.end()

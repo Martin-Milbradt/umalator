@@ -3377,8 +3377,116 @@ async function calculatePendingSkills(): Promise<void> {
         (r) => r.status === 'pending',
     )
     if (stillPending.length > 0) {
-        // Auto-run calculations for remaining pending skills (preserve cached results)
-        void runCalculations(false)
+        // Run selective calculation for only the pending skills
+        const pendingSkillNames = stillPending.map((r) => r.skill)
+        void runSelectiveCalculations(pendingSkillNames)
+    }
+}
+
+/**
+ * Run calculations for specific skills only.
+ * More efficient than runCalculations(false) when only a few skills need updating.
+ */
+async function runSelectiveCalculations(skillNames: string[]): Promise<void> {
+    if (!currentConfigFile || skillNames.length === 0) return
+
+    // Save config first (Uma state may have changed)
+    if (saveTimeout) {
+        clearTimeout(saveTimeout)
+    }
+    if (pendingSavePromise) {
+        await pendingSavePromise
+    }
+    await saveConfig()
+
+    try {
+        const skillsParam = encodeURIComponent(skillNames.join(','))
+        const response = await fetch(
+            `/api/simulate?configFile=${encodeURIComponent(currentConfigFile)}&skills=${skillsParam}`,
+            { method: 'GET' },
+        )
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        if (!response.body) {
+            throw new Error('Response body is null')
+        }
+
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+
+        while (true) {
+            let result: ReadableStreamReadResult<Uint8Array>
+            try {
+                result = await reader.read()
+            } catch (readError) {
+                const err = readError as Error
+                console.error('Error reading stream:', readError)
+                showToast({
+                    type: 'error',
+                    message: `Error reading stream: ${err.message}`,
+                })
+                break
+            }
+
+            if (result.done) break
+
+            const chunk = decoder.decode(result.value, { stream: true })
+            const lines = chunk.split('\n')
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    try {
+                        const data = JSON.parse(line.slice(6))
+                        if (data.type === 'result' && data.result) {
+                            calculatedResultsCache.set(
+                                data.result.skill,
+                                data.result,
+                            )
+                            resultsMap.set(data.result.skill, {
+                                ...data.result,
+                                status: 'fresh',
+                            })
+                            renderResultsTable()
+                        } else if (data.type === 'batch' && data.results) {
+                            for (const result of data.results) {
+                                calculatedResultsCache.set(result.skill, result)
+                                resultsMap.set(result.skill, {
+                                    ...result,
+                                    status: 'fresh',
+                                })
+                            }
+                            renderResultsTable()
+                        } else if (data.type === 'error') {
+                            console.error('Selective calculation error:', data.error)
+                            // Mark skills as error state
+                            for (const skillName of skillNames) {
+                                const existing = resultsMap.get(skillName)
+                                if (existing?.status === 'pending') {
+                                    resultsMap.set(skillName, {
+                                        ...existing,
+                                        status: 'error',
+                                        errorMessage: data.error,
+                                    } as SkillResultWithStatus)
+                                }
+                            }
+                            renderResultsTable()
+                        }
+                    } catch {
+                        // Ignore parse errors for keepalive messages
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        const err = error as Error
+        console.error('Selective calculation error:', err)
+        showToast({
+            type: 'error',
+            message: `Calculation failed: ${err.message}`,
+        })
     }
 }
 

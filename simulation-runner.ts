@@ -249,7 +249,15 @@ export class SimulationRunner {
         readonly workerPath: URL,
     ) {}
 
-    async run(onProgress: ProgressCallback): Promise<void> {
+    /**
+     * Run simulations for skills.
+     * @param onProgress Callback for progress updates
+     * @param skillFilter Optional list of skill names to calculate. If provided, only these skills are simulated.
+     */
+    async run(
+        onProgress: ProgressCallback,
+        skillFilter?: string[],
+    ): Promise<void> {
         const { config, staticData, workerPath } = this
         const { skillMeta, skillNames, skillData, courseData, trackNames } =
             staticData
@@ -535,7 +543,16 @@ export class SimulationRunner {
             }
         }
 
-        const availableSkillNames = Object.keys(skillNameToId)
+        let availableSkillNames = Object.keys(skillNameToId)
+
+        // Apply skill filter if provided
+        if (skillFilter && skillFilter.length > 0) {
+            const filterSet = new Set(skillFilter)
+            availableSkillNames = availableSkillNames.filter((name) =>
+                filterSet.has(name),
+            )
+        }
+
         if (availableSkillNames.length === 0) {
             onProgress({
                 type: 'error',
