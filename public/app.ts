@@ -990,28 +990,6 @@ function umaHasUpgradedVersion(skillName: string): boolean {
 }
 
 /**
- * Check if Uma has a basic version of the given skill.
- * Basic skills have higher order numbers in the same groupId.
- */
-function umaHasBasicVersion(skillName: string): boolean {
-    if (!currentConfig?.uma?.skills || !skillmeta) return false
-
-    const groupId = getSkillGroupId(skillName)
-    if (!groupId) return false
-
-    const skillOrder = getSkillOrder(skillName)
-
-    for (const umaSkill of currentConfig.uma.skills) {
-        const umaGroupId = getSkillGroupId(umaSkill)
-        const umaOrder = getSkillOrder(umaSkill)
-        if (umaGroupId === groupId && umaOrder > skillOrder) {
-            return true
-        }
-    }
-    return false
-}
-
-/**
  * Check if a skill is currently on Uma (exact match).
  */
 function isSkillOnUma(skillName: string): boolean {
@@ -2134,14 +2112,16 @@ function renderUma(): void {
                     const existingVariant = getGroupVariantOnUma(newValue)
                     if (existingVariant && existingVariant !== skill) {
                         // Another variant already exists, need to handle that
-                        const existingCost = getSkillCostWithDiscount(existingVariant)
+                        const existingCost =
+                            getSkillCostWithDiscount(existingVariant)
                         if (
                             currentConfig?.uma?.skillPoints !== undefined &&
                             currentConfig?.uma?.skillPoints !== null
                         ) {
                             currentConfig.uma.skillPoints += existingCost
                         }
-                        const existingVariantOrder = getSkillOrder(existingVariant)
+                        const existingVariantOrder =
+                            getSkillOrder(existingVariant)
                         const newSkillOrder = getSkillOrder(newValue)
                         if (existingVariantOrder < newSkillOrder) {
                             void returnSkillToResultsTable(existingVariant)
@@ -2327,7 +2307,8 @@ function renderUma(): void {
 
                 if (existingVariant) {
                     // Refund the existing variant's cost
-                    const existingCost = getSkillCostWithDiscount(existingVariant)
+                    const existingCost =
+                        getSkillCostWithDiscount(existingVariant)
                     if (
                         currentConfig?.uma?.skillPoints !== undefined &&
                         currentConfig?.uma?.skillPoints !== null
@@ -3264,15 +3245,20 @@ function recalculateUpgradedSkillsForBasicChange(basicSkillName: string): void {
 
             // Mark as pending for recalculation - server will return fresh results
             if (resultsMap.has(upgradedSkillName)) {
-                addPendingSkillToResults(upgradedSkillName, skillConfig.discount)
+                addPendingSkillToResults(
+                    upgradedSkillName,
+                    skillConfig.discount,
+                )
             }
         }
     }
 }
 
 // Aliases for clarity at call sites
-const updateUpgradedSkillsForBasicSkill = recalculateUpgradedSkillsForBasicChange
-const restoreUpgradedSkillsForBasicSkill = recalculateUpgradedSkillsForBasicChange
+const updateUpgradedSkillsForBasicSkill =
+    recalculateUpgradedSkillsForBasicChange
+const restoreUpgradedSkillsForBasicSkill =
+    recalculateUpgradedSkillsForBasicChange
 
 /**
  * Add a skill back to the results table when removed from Uma.
@@ -3460,7 +3446,10 @@ async function runSelectiveCalculations(skillNames: string[]): Promise<void> {
                             }
                             renderResultsTable()
                         } else if (data.type === 'error') {
-                            console.error('Selective calculation error:', data.error)
+                            console.error(
+                                'Selective calculation error:',
+                                data.error,
+                            )
                             // Mark skills as error state
                             for (const skillName of skillNames) {
                                 const existing = resultsMap.get(skillName)

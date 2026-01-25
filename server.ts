@@ -519,7 +519,10 @@ app.get('/api/simulate', async (req, res) => {
 
     // Parse optional skills filter (comma-separated skill names)
     const skillFilter = skillsParam
-        ? skillsParam.split(',').map((s) => s.trim()).filter(Boolean)
+        ? skillsParam
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
         : undefined
 
     // Check required static data is loaded
@@ -596,17 +599,14 @@ app.get('/api/simulate', async (req, res) => {
             workerPath,
         )
 
-        await runner.run(
-            (progress) => {
-                if (requestClosed) return
-                try {
-                    res.write(`data: ${JSON.stringify(progress)}\n\n`)
-                } catch {
-                    requestClosed = true
-                }
-            },
-            skillFilter,
-        )
+        await runner.run((progress) => {
+            if (requestClosed) return
+            try {
+                res.write(`data: ${JSON.stringify(progress)}\n\n`)
+            } catch {
+                requestClosed = true
+            }
+        }, skillFilter)
 
         if (!requestClosed) {
             res.end()
