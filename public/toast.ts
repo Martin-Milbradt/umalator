@@ -1,4 +1,4 @@
-type ToastType = 'error' | 'warning' | 'info'
+type ToastType = 'error' | 'warning' | 'info' | 'success'
 
 interface ToastOptions {
     message: string
@@ -8,14 +8,16 @@ interface ToastOptions {
 
 const DEFAULT_DURATIONS: Record<ToastType, number> = {
     error: 6000,
-    warning: 5000,
     info: 4000,
+    success: 3000,
+    warning: 5000,
 }
 
 const TOAST_STYLES: Record<ToastType, string> = {
     error: 'bg-red-600 text-white',
-    warning: 'bg-amber-600 text-white',
     info: 'bg-sky-600 text-white',
+    success: 'bg-green-600 text-white',
+    warning: 'bg-amber-600 text-white',
 }
 
 let toastContainer: HTMLDivElement | null = null

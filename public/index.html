@@ -63,10 +63,43 @@
                     </button>
                 </div>
 
-                <pre
-                    id="terminal-output"
-                    class="flex-1 bg-slate-950 text-slate-300 p-2.5 rounded-md font-mono text-[13px] leading-normal overflow-y-auto whitespace-pre-wrap wrap-break-word border border-slate-700 mb-2.5"
-                ></pre>
+                <div
+                    id="results-container"
+                    class="flex-1 bg-zinc-800 text-zinc-200 p-2.5 rounded-md text-sm leading-normal overflow-y-auto border border-zinc-700 mb-2.5"
+                >
+                    <div
+                        id="results-status"
+                        class="text-zinc-400 mb-2 flex items-center justify-between"
+                    >
+                        <span id="results-count">No results yet</span>
+                        <span id="results-last-run"></span>
+                    </div>
+                    <div id="results-totals" class="hidden mb-2 p-2 bg-zinc-900 rounded border border-teal-700">
+                        <span class="text-teal-400 font-semibold">Selection Total:</span>
+                        <span id="totals-cost" class="ml-2"></span>
+                        <span id="totals-mean" class="ml-4"></span>
+                        <span id="totals-efficiency" class="ml-4"></span>
+                        <span id="totals-minmax" class="ml-4"></span>
+                    </div>
+                    <table id="results-table" class="w-full text-left">
+                        <thead class="text-teal-400 border-b border-zinc-700">
+                            <tr>
+                                <th class="p-1 w-8"><input type="checkbox" id="select-all-checkbox" title="Select all" /></th>
+                                <th class="p-1 w-8"></th>
+                                <th class="p-1 cursor-pointer hover:text-teal-300" data-sort="skill">Skill</th>
+                                <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="cost">Cost</th>
+                                <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="discount">Disc</th>
+                                <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="numSimulations">Sims</th>
+                                <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="meanLength">Mean</th>
+                                <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="medianLength">Median</th>
+                                <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="meanLengthPerCost">Mean/Cost</th>
+                                <th class="p-1 text-right">Min-Max</th>
+                                <th class="p-1 text-right">95% CI</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-tbody"></tbody>
+                    </table>
+                </div>
 
                 <div
                     class="p-2.5 bg-zinc-800 rounded-md border border-zinc-700"
