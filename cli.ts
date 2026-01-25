@@ -35,6 +35,7 @@ import {
     getDistanceType,
     isRandomLocation,
     isRandomValue,
+    isSkillCompatibleWithOrientation,
     parseDistanceCategory,
     parseGroundCondition,
     parseSeason,
@@ -506,6 +507,7 @@ async function main() {
                 : typeof distanceValue === 'number'
                   ? distanceValue % 400 === 0
                   : null,
+        orientation: useMultipleCourses ? null : primaryCourse.turn,
         runningStyle: STRATEGY_TO_RUNNING_STYLE[strategyName] ?? 3,
         season: conditions.season.forFiltering,
         trackId:
@@ -575,6 +577,16 @@ async function main() {
                 if (!canSkillTrigger(restrictions, currentSettings)) {
                     continue
                 }
+            }
+
+            // Skip if skill is incompatible with track orientation (handedness)
+            if (
+                !isSkillCompatibleWithOrientation(
+                    variantSkillName,
+                    currentSettings.orientation,
+                )
+            ) {
+                continue
             }
 
             skillNameToId[variantSkillName] = skillId

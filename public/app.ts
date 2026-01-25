@@ -46,6 +46,7 @@ type CourseData = Record<
         surface?: number
         distance?: number
         raceTrackId?: number | string
+        turn?: number
     }
 >
 
@@ -601,6 +602,36 @@ function getDistanceType(distanceMeters: number): number {
     return 4
 }
 
+function isSkillCompatibleWithOrientation(
+    skillName: string,
+    orientation: number | null,
+): boolean {
+    // If orientation is null (random), allow all skills
+    if (orientation === null) {
+        return true
+    }
+
+    // Straight tracks (orientation === 4) have no handedness restriction
+    if (orientation === 4) {
+        return true
+    }
+
+    const isLeftHandedSkill = skillName.includes('Left-Handed')
+    const isRightHandedSkill = skillName.includes('Right-Handed')
+
+    // Right-handed track (orientation === 1): filter out Left-Handed skills
+    if (orientation === 1 && isLeftHandedSkill) {
+        return false
+    }
+
+    // Left-handed track (orientation === 2): filter out Right-Handed skills
+    if (orientation === 2 && isRightHandedSkill) {
+        return false
+    }
+
+    return true
+}
+
 function isRandomValue(value: string | undefined | null): boolean {
     if (!value) return false
     return value.trim().toLowerCase() === '<random>'
@@ -686,11 +717,21 @@ function getCurrentSettings(): CurrentSettings {
         trackId = TRACK_NAME_TO_ID[track.trackName] ?? null
     }
 
+    // Orientation (track handedness)
+    let orientation: number | null = null
+    if (track?.courseId && courseData) {
+        const course = courseData[track.courseId]
+        if (course?.turn !== undefined) {
+            orientation = course.turn
+        }
+    }
+
     return {
         distanceType,
         groundCondition,
         groundType,
         isBasisDistance,
+        orientation,
         runningStyle,
         season,
         trackId,
@@ -709,6 +750,11 @@ function canSkillTriggerByName(skillName: string): boolean {
 
     const restrictions = extractSkillRestrictions(entry)
     const settings = getCurrentSettings()
+
+    // Check handedness compatibility first
+    if (!isSkillCompatibleWithOrientation(skillName, settings.orientation)) {
+        return false
+    }
 
     return canSkillTrigger(restrictions, settings)
 }

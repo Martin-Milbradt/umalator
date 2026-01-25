@@ -40,6 +40,7 @@ import {
     extractStaticRestrictions,
     canSkillTrigger,
     extractSkillRestrictions,
+    isSkillCompatibleWithOrientation,
     STRATEGY_TO_RUNNING_STYLE,
     TRACK_NAME_TO_ID,
     type SkillResult,
@@ -1183,6 +1184,7 @@ describe('canSkillTrigger', () => {
         const restrictions: SkillRestrictions = {}
         const settings: CurrentSettings = {
             distanceType: 4,
+            orientation: null,
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
@@ -1198,6 +1200,7 @@ describe('canSkillTrigger', () => {
         const restrictions: SkillRestrictions = { distanceTypes: [4] }
         const settings: CurrentSettings = {
             distanceType: 4,
+            orientation: null,
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
@@ -1213,6 +1216,7 @@ describe('canSkillTrigger', () => {
         const restrictions: SkillRestrictions = { distanceTypes: [4] }
         const settings: CurrentSettings = {
             distanceType: 2,
+            orientation: null,
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
@@ -1228,6 +1232,7 @@ describe('canSkillTrigger', () => {
         const restrictions: SkillRestrictions = { distanceTypes: [4] }
         const settings: CurrentSettings = {
             distanceType: null,
+            orientation: null,
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
@@ -1243,6 +1248,7 @@ describe('canSkillTrigger', () => {
         const restrictions: SkillRestrictions = { runningStyles: [1] }
         const settings: CurrentSettings = {
             distanceType: 4,
+            orientation: null,
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
@@ -1258,6 +1264,7 @@ describe('canSkillTrigger', () => {
         const restrictions: SkillRestrictions = { runningStyles: [1, 2, 3] }
         const settings: CurrentSettings = {
             distanceType: 4,
+            orientation: null,
             runningStyle: 2,
             groundType: 1,
             isBasisDistance: null,
@@ -1273,6 +1280,7 @@ describe('canSkillTrigger', () => {
         const restrictions: SkillRestrictions = { trackIds: [10006] }
         const settings: CurrentSettings = {
             distanceType: 4,
+            orientation: null,
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
@@ -1288,6 +1296,7 @@ describe('canSkillTrigger', () => {
         const restrictions: SkillRestrictions = { trackIds: [10006] }
         const settings: CurrentSettings = {
             distanceType: 4,
+            orientation: null,
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
@@ -1303,6 +1312,7 @@ describe('canSkillTrigger', () => {
         const restrictions: SkillRestrictions = { groundConditions: [2, 3, 4] }
         const settings: CurrentSettings = {
             distanceType: 4,
+            orientation: null,
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
@@ -1318,6 +1328,7 @@ describe('canSkillTrigger', () => {
         const restrictions: SkillRestrictions = { groundConditions: [2, 3, 4] }
         const settings: CurrentSettings = {
             distanceType: 4,
+            orientation: null,
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
@@ -1337,6 +1348,7 @@ describe('canSkillTrigger', () => {
         }
         const settings: CurrentSettings = {
             distanceType: 4,
+            orientation: null,
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
@@ -1356,6 +1368,7 @@ describe('canSkillTrigger', () => {
         }
         const settings: CurrentSettings = {
             distanceType: 4,
+            orientation: null,
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
@@ -1537,6 +1550,7 @@ describe('canSkillTrigger with empty restriction arrays', () => {
         const restrictions: SkillRestrictions = { distanceTypes: [] }
         const settings: CurrentSettings = {
             distanceType: 4,
+            orientation: null,
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
@@ -1552,6 +1566,7 @@ describe('canSkillTrigger with empty restriction arrays', () => {
         const restrictions: SkillRestrictions = { runningStyles: [] }
         const settings: CurrentSettings = {
             distanceType: 4,
+            orientation: null,
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
@@ -1567,6 +1582,7 @@ describe('canSkillTrigger with empty restriction arrays', () => {
         const restrictions: SkillRestrictions = { groundTypes: [] }
         const settings: CurrentSettings = {
             distanceType: 4,
+            orientation: null,
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
@@ -1582,6 +1598,7 @@ describe('canSkillTrigger with empty restriction arrays', () => {
         const restrictions: SkillRestrictions = { distanceTypes: [] }
         const settings: CurrentSettings = {
             distanceType: null, // Random distance type
+            orientation: null,
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
@@ -1603,6 +1620,7 @@ describe('canSkillTrigger with empty restriction arrays', () => {
         expect(result.distanceTypes).toEqual([])
         const settings: CurrentSettings = {
             distanceType: 4,
+            orientation: null,
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
@@ -1636,6 +1654,7 @@ describe('skill filtering by distance type', () => {
 
         const settings: CurrentSettings = {
             distanceType: getDistanceType(2000), // 3 (Medium)
+            orientation: null,
             runningStyle: 3,
             groundType: null,
             isBasisDistance: null,
@@ -1657,6 +1676,7 @@ describe('skill filtering by distance type', () => {
 
         const settings: CurrentSettings = {
             distanceType: getDistanceType(2000), // 3 (Medium)
+            orientation: null,
             runningStyle: 3,
             groundType: null,
             isBasisDistance: null,
@@ -1677,6 +1697,7 @@ describe('skill filtering by distance type', () => {
 
         const settings: CurrentSettings = {
             distanceType: getDistanceType(3000), // 4 (Long)
+            orientation: null,
             runningStyle: 3,
             groundType: null,
             isBasisDistance: null,
@@ -1698,6 +1719,7 @@ describe('skill filtering by distance type', () => {
 
         const settings: CurrentSettings = {
             distanceType: getDistanceType(3000), // 4 (Long)
+            orientation: null,
             runningStyle: 3,
             groundType: null,
             isBasisDistance: null,
@@ -1718,6 +1740,7 @@ describe('skill filtering by distance type', () => {
         // 1200m = Sprint
         const sprintSettings: CurrentSettings = {
             distanceType: getDistanceType(1200), // 1 (Sprint)
+            orientation: null,
             runningStyle: 3,
             groundType: null,
             isBasisDistance: null,
@@ -1732,6 +1755,7 @@ describe('skill filtering by distance type', () => {
         // 1600m = Mile
         const mileSettings: CurrentSettings = {
             distanceType: getDistanceType(1600), // 2 (Mile)
+            orientation: null,
             runningStyle: 3,
             groundType: null,
             isBasisDistance: null,
@@ -1753,6 +1777,7 @@ describe('skill filtering by distance type', () => {
         // 1600m = Mile
         const mileSettings: CurrentSettings = {
             distanceType: getDistanceType(1600), // 2 (Mile)
+            orientation: null,
             runningStyle: 3,
             groundType: null,
             isBasisDistance: null,
@@ -1766,6 +1791,7 @@ describe('skill filtering by distance type', () => {
         // 2000m = Medium
         const mediumSettings: CurrentSettings = {
             distanceType: getDistanceType(2000), // 3 (Medium)
+            orientation: null,
             runningStyle: 3,
             groundType: null,
             isBasisDistance: null,
@@ -1784,6 +1810,7 @@ describe('skill filtering by distance type', () => {
 
         const randomSettings: CurrentSettings = {
             distanceType: null, // Random distance (e.g., <Random> or distance category)
+            orientation: null,
             runningStyle: 3,
             groundType: null,
             isBasisDistance: null,
@@ -1827,6 +1854,7 @@ describe('extractSkillRestrictions integration with distance filtering', () => {
         // Long distance, Front Runner - should pass
         const validSettings: CurrentSettings = {
             distanceType: 4,
+            orientation: null,
             runningStyle: 1,
             groundType: null,
             isBasisDistance: null,
@@ -1840,6 +1868,7 @@ describe('extractSkillRestrictions integration with distance filtering', () => {
         // Long distance, Pace Chaser - should fail (wrong running style)
         const wrongStyleSettings: CurrentSettings = {
             distanceType: 4,
+            orientation: null,
             runningStyle: 2,
             groundType: null,
             isBasisDistance: null,
@@ -1853,6 +1882,7 @@ describe('extractSkillRestrictions integration with distance filtering', () => {
         // Medium distance, Front Runner - should fail (wrong distance)
         const wrongDistanceSettings: CurrentSettings = {
             distanceType: 3,
+            orientation: null,
             runningStyle: 1,
             groundType: null,
             isBasisDistance: null,
@@ -1875,6 +1905,7 @@ describe('skill filtering by strategy', () => {
         )
         const settings: CurrentSettings = {
             distanceType: null,
+            orientation: null,
             runningStyle: STRATEGY_TO_RUNNING_STYLE['Front Runner'], // 1
             groundType: null,
             isBasisDistance: null,
@@ -1892,6 +1923,7 @@ describe('skill filtering by strategy', () => {
         )
         const settings: CurrentSettings = {
             distanceType: null,
+            orientation: null,
             runningStyle: STRATEGY_TO_RUNNING_STYLE['Pace Chaser'], // 2
             groundType: null,
             isBasisDistance: null,
@@ -1910,6 +1942,7 @@ describe('skill filtering by strategy', () => {
         )
         const settings: CurrentSettings = {
             distanceType: null,
+            orientation: null,
             runningStyle: STRATEGY_TO_RUNNING_STYLE['Pace Chaser'], // 2
             groundType: null,
             isBasisDistance: null,
@@ -1927,6 +1960,7 @@ describe('skill filtering by strategy', () => {
         )
         const settings: CurrentSettings = {
             distanceType: null,
+            orientation: null,
             runningStyle: STRATEGY_TO_RUNNING_STYLE['Front Runner'], // 1
             groundType: null,
             isBasisDistance: null,
@@ -1945,6 +1979,7 @@ describe('skill filtering by strategy', () => {
         )
         const settings: CurrentSettings = {
             distanceType: null,
+            orientation: null,
             runningStyle: STRATEGY_TO_RUNNING_STYLE['Late Surger'], // 3
             groundType: null,
             isBasisDistance: null,
@@ -1963,6 +1998,7 @@ describe('skill filtering by strategy', () => {
         )
         const settings: CurrentSettings = {
             distanceType: null,
+            orientation: null,
             runningStyle: STRATEGY_TO_RUNNING_STYLE['End Closer'], // 4
             groundType: null,
             isBasisDistance: null,
@@ -1982,6 +2018,7 @@ describe('skill filtering by strategy', () => {
         )
         const settings: CurrentSettings = {
             distanceType: null,
+            orientation: null,
             runningStyle: STRATEGY_TO_RUNNING_STYLE.Runaway, // 5
             groundType: null,
             isBasisDistance: null,
@@ -1999,6 +2036,7 @@ describe('skill filtering by strategy', () => {
         )
         const settings: CurrentSettings = {
             distanceType: null,
+            orientation: null,
             runningStyle: STRATEGY_TO_RUNNING_STYLE.Runaway, // 5
             groundType: null,
             isBasisDistance: null,
@@ -2024,6 +2062,7 @@ describe('A Small Breather filtering', () => {
             groundCondition: 1,
             groundType: 1,
             isBasisDistance: false,
+            orientation: null,
             runningStyle: STRATEGY_TO_RUNNING_STYLE['Pace Chaser'], // 2
             season: 4,
             trackId: 10005,
@@ -2044,6 +2083,7 @@ describe('A Small Breather filtering', () => {
             groundCondition: 1,
             groundType: 1,
             isBasisDistance: false,
+            orientation: null,
             runningStyle: STRATEGY_TO_RUNNING_STYLE['Late Surger'], // 3
             season: 4,
             trackId: 10005,
@@ -2076,6 +2116,7 @@ describe('is_basis_distance filtering', () => {
             groundCondition: 1,
             groundType: 1,
             isBasisDistance: true, // 2400m % 400 == 0
+            orientation: null,
             runningStyle: 3,
             season: 1,
             trackId: 10006,
@@ -2091,6 +2132,7 @@ describe('is_basis_distance filtering', () => {
             groundCondition: 1,
             groundType: 1,
             isBasisDistance: false, // 2500m % 400 != 0
+            orientation: null,
             runningStyle: 3,
             season: 1,
             trackId: 10006,
@@ -2106,6 +2148,7 @@ describe('is_basis_distance filtering', () => {
             groundCondition: 1,
             groundType: 1,
             isBasisDistance: false, // 2500m % 400 != 0
+            orientation: null,
             runningStyle: 3,
             season: 1,
             trackId: 10006,
@@ -2121,6 +2164,7 @@ describe('is_basis_distance filtering', () => {
             groundCondition: 1,
             groundType: 1,
             isBasisDistance: true, // 2000m % 400 == 0
+            orientation: null,
             runningStyle: 3,
             season: 1,
             trackId: 10006,
@@ -2136,6 +2180,7 @@ describe('is_basis_distance filtering', () => {
             groundCondition: null,
             groundType: null,
             isBasisDistance: null, // Random courses
+            orientation: null,
             runningStyle: 3,
             season: null,
             trackId: null,
@@ -2151,6 +2196,8 @@ describe('is_basis_distance filtering', () => {
             groundCondition: 1,
             groundType: 1,
             isBasisDistance: true,
+            orientation: null,
+            orientation: null,
             runningStyle: 3,
             season: 1,
             trackId: 10006,
@@ -2159,3 +2206,80 @@ describe('is_basis_distance filtering', () => {
         expect(canSkillTrigger(restrictions, settings)).toBe(false)
     })
 })
+
+describe('isSkillCompatibleWithOrientation', () => {
+    it('allows all skills when orientation is null (random)', () => {
+        expect(
+            isSkillCompatibleWithOrientation('Left-Handed ○', null),
+        ).toBe(true)
+        expect(
+            isSkillCompatibleWithOrientation('Right-Handed ○', null),
+        ).toBe(true)
+        expect(isSkillCompatibleWithOrientation('Speed Star', null)).toBe(
+            true,
+        )
+    })
+
+    it('allows all skills on straight tracks (orientation 4)', () => {
+        expect(
+            isSkillCompatibleWithOrientation('Left-Handed ○', 4),
+        ).toBe(true)
+        expect(
+            isSkillCompatibleWithOrientation('Right-Handed ○', 4),
+        ).toBe(true)
+        expect(isSkillCompatibleWithOrientation('Speed Star', 4)).toBe(true)
+    })
+
+    it('filters Left-Handed skills on right-handed tracks (orientation 1)', () => {
+        expect(
+            isSkillCompatibleWithOrientation('Left-Handed ○', 1),
+        ).toBe(false)
+        expect(
+            isSkillCompatibleWithOrientation('Left-Handed ◎', 1),
+        ).toBe(false)
+        expect(
+            isSkillCompatibleWithOrientation('Right-Handed ○', 1),
+        ).toBe(true)
+        expect(isSkillCompatibleWithOrientation('Speed Star', 1)).toBe(true)
+    })
+
+    it('filters Right-Handed skills on left-handed tracks (orientation 2)', () => {
+        expect(
+            isSkillCompatibleWithOrientation('Right-Handed ○', 2),
+        ).toBe(false)
+        expect(
+            isSkillCompatibleWithOrientation('Right-Handed ◎', 2),
+        ).toBe(false)
+        expect(
+            isSkillCompatibleWithOrientation('Left-Handed ○', 2),
+        ).toBe(true)
+        expect(isSkillCompatibleWithOrientation('Speed Star', 2)).toBe(true)
+    })
+
+    it('filters skills based on track handedness examples', () => {
+        // Nakayama 2500 Turf - Right-Handed track (turn === 1)
+        expect(
+            isSkillCompatibleWithOrientation('Left-Handed ○', 1),
+        ).toBe(false)
+        expect(
+            isSkillCompatibleWithOrientation('Left-Handed ◎', 1),
+        ).toBe(false)
+
+        // Tokyo 2000 Turf - Left-Handed track (turn === 2)
+        expect(
+            isSkillCompatibleWithOrientation('Right-Handed ○', 2),
+        ).toBe(false)
+        expect(
+            isSkillCompatibleWithOrientation('Right-Handed ◎', 2),
+        ).toBe(false)
+
+        // Niigata 1000 Turf - Straight track (turn === 4)
+        expect(
+            isSkillCompatibleWithOrientation('Left-Handed ○', 4),
+        ).toBe(true)
+        expect(
+            isSkillCompatibleWithOrientation('Right-Handed ○', 4),
+        ).toBe(true)
+    })
+})
+

@@ -740,6 +740,42 @@ export function getDistanceType(distanceMeters: number): number {
 }
 
 /**
+ * Checks if a skill name is compatible with the track orientation (handedness).
+ * @param skillName - The name of the skill to check
+ * @param orientation - Track orientation: 1=Right, 2=Left, 4=Straight, null=Random
+ * @returns true if the skill is compatible with the track orientation
+ */
+export function isSkillCompatibleWithOrientation(
+    skillName: string,
+    orientation: number | null,
+): boolean {
+    // If orientation is null (random), allow all skills
+    if (orientation === null) {
+        return true
+    }
+
+    // Straight tracks (orientation === 4) have no handedness restriction
+    if (orientation === 4) {
+        return true
+    }
+
+    const isLeftHandedSkill = skillName.includes('Left-Handed')
+    const isRightHandedSkill = skillName.includes('Right-Handed')
+
+    // Right-handed track (orientation === 1): filter out Left-Handed skills
+    if (orientation === 1 && isLeftHandedSkill) {
+        return false
+    }
+
+    // Left-handed track (orientation === 2): filter out Right-Handed skills
+    if (orientation === 2 && isRightHandedSkill) {
+        return false
+    }
+
+    return true
+}
+
+/**
  * Represents static restrictions extracted from a skill's condition/precondition.
  * All fields are optional - undefined means no restriction on that field.
  */
@@ -763,6 +799,7 @@ export interface CurrentSettings {
     groundCondition: number | null // null if <Random>
     groundType: number | null // 1=Turf, 2=Dirt, null if random
     isBasisDistance: boolean | null // true if distance % 400 == 0, null if random/category
+    orientation: number | null // 1=Right, 2=Left, 4=Straight, null if <Random>
     runningStyle: number // from uma.strategy (always known)
     season: number | null // null if <Random>
     trackId: number | null // null if <Random> location
