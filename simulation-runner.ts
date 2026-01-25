@@ -1,13 +1,6 @@
 import { cpus } from 'node:os'
 import { Worker } from 'node:worker_threads'
-import {
-    type HorseState,
-    SkillSet,
-} from '../uma-tools/components/HorseDefTypes'
-import type {
-    Mood,
-    RaceParameters,
-} from '../uma-tools/uma-skill-tools/RaceParameters'
+import type { Mood } from '../uma-tools/uma-skill-tools/RaceParameters'
 import type { RawCourseData, SkillMeta } from './types'
 import {
     type CourseData,
@@ -186,8 +179,8 @@ export function parseRaceConditions(
     }
 }
 
-/** Creates a HorseState object for simulation */
-export function createHorseState(props: {
+/** Base uma data for simulation (passed to worker which creates HorseState) */
+interface BaseUmaData {
     speed: number
     stamina: number
     power: number
@@ -197,22 +190,32 @@ export function createHorseState(props: {
     distanceAptitude: string
     surfaceAptitude: string
     strategyAptitude: string
-    skills: Map<string, string>
-}): HorseState {
+    skills: string[] // Skill IDs - worker converts to SkillSet
+}
+
+export function createBaseUmaData(props: {
+    speed: number
+    stamina: number
+    power: number
+    guts: number
+    wisdom: number
+    strategy: string
+    distanceAptitude: string
+    surfaceAptitude: string
+    strategyAptitude: string
+    skills: string[]
+}): BaseUmaData {
     return {
-        outfitId: '',
         speed: props.speed,
         stamina: props.stamina,
         power: props.power,
         guts: props.guts,
         wisdom: props.wisdom,
-        strategy: props.strategy as HorseState['strategy'],
-        distanceAptitude:
-            props.distanceAptitude as HorseState['distanceAptitude'],
-        surfaceAptitude: props.surfaceAptitude as HorseState['surfaceAptitude'],
-        strategyAptitude:
-            props.strategyAptitude as HorseState['strategyAptitude'],
-        skills: props.skills as HorseState['skills'],
+        strategy: props.strategy,
+        distanceAptitude: props.distanceAptitude,
+        surfaceAptitude: props.surfaceAptitude,
+        strategyAptitude: props.strategyAptitude,
+        skills: props.skills,
     }
 }
 
@@ -410,7 +413,7 @@ export class SimulationRunner {
             }
         }
 
-        const baseUma = createHorseState({
+        const baseUma = createBaseUmaData({
             speed: umaConfig.speed ?? 1200,
             stamina: umaConfig.stamina ?? 1200,
             power: umaConfig.power ?? 800,
@@ -420,7 +423,7 @@ export class SimulationRunner {
             distanceAptitude: umaConfig.distanceAptitude ?? 'A',
             surfaceAptitude: umaConfig.surfaceAptitude ?? 'A',
             strategyAptitude: umaConfig.styleAptitude ?? 'A',
-            skills: SkillSet(umaSkillIds),
+            skills: umaSkillIds,
         })
 
         const deterministic = config.deterministic ?? false
@@ -558,10 +561,7 @@ export class SimulationRunner {
                         skillName,
                         courses: courses.map((c) => c.course),
                         racedef,
-                        baseUma: {
-                            ...baseUma,
-                            skills: Object.fromEntries(baseUma.skills),
-                        },
+                        baseUma,
                         simOptions,
                         numSimulations,
                         useRandomMood: conditions.mood.isRandom,

@@ -3,10 +3,12 @@ import { cpus } from 'node:os'
 import { resolve } from 'node:path'
 import { Worker } from 'node:worker_threads'
 import { Command } from 'commander'
-import { SkillSet } from '../uma-tools/components/HorseDefTypes'
+import {
+    type HorseState,
+    SkillSet,
+} from '../uma-tools/components/HorseDefTypes'
 import type { RaceParameters } from '../uma-tools/uma-skill-tools/RaceParameters'
 import {
-    createHorseState,
     parseRaceConditions,
     processWithConcurrency,
 } from './simulation-runner'
@@ -41,6 +43,36 @@ import {
     Time,
     TRACK_NAME_TO_ID,
 } from './utils'
+
+/** Creates a HorseState object for simulation (CLI-only, uses SkillSet from uma-tools) */
+function createHorseState(props: {
+    speed: number
+    stamina: number
+    power: number
+    guts: number
+    wisdom: number
+    strategy: string
+    distanceAptitude: string
+    surfaceAptitude: string
+    strategyAptitude: string
+    skills: Map<string, string>
+}): HorseState {
+    return {
+        outfitId: '',
+        speed: props.speed,
+        stamina: props.stamina,
+        power: props.power,
+        guts: props.guts,
+        wisdom: props.wisdom,
+        strategy: props.strategy as HorseState['strategy'],
+        distanceAptitude:
+            props.distanceAptitude as HorseState['distanceAptitude'],
+        surfaceAptitude: props.surfaceAptitude as HorseState['surfaceAptitude'],
+        strategyAptitude:
+            props.strategyAptitude as HorseState['strategyAptitude'],
+        skills: props.skills as HorseState['skills'],
+    }
+}
 
 interface Config {
     skills?: Record<
