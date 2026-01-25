@@ -644,6 +644,7 @@ function getCurrentSettings(): CurrentSettings {
             groundCondition: null,
             groundType: null,
             isBasisDistance: null,
+            orientation: null,
             runningStyle: 3,
             season: null,
             trackId: null,
