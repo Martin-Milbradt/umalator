@@ -1871,6 +1871,21 @@ function renderTrack(): void {
                 renderSkills()
             }
 
+            // Clear simulation cache when track settings change (affects results)
+            const simulationAffectingFields: (keyof Track)[] = [
+                'courseId',
+                'trackName',
+                'surface',
+                'distance',
+                'groundCondition',
+                'weather',
+                'season',
+                'numUmas',
+            ]
+            if (simulationAffectingFields.includes(field.key)) {
+                calculatedResultsCache.clear()
+            }
+
             autoSave()
         })
         wrapper.appendChild(input)
@@ -2028,6 +2043,23 @@ function renderUma(): void {
             // Re-render skills when strategy changes (affects running style filtering)
             if (field.key === 'strategy') {
                 renderSkills()
+            }
+
+            // Clear simulation cache when uma settings that affect results change
+            const simulationAffectingFields = [
+                'speed',
+                'stamina',
+                'power',
+                'guts',
+                'wisdom',
+                'strategy',
+                'distanceAptitude',
+                'surfaceAptitude',
+                'styleAptitude',
+                'mood',
+            ]
+            if (simulationAffectingFields.includes(field.key)) {
+                calculatedResultsCache.clear()
             }
 
             autoSave()
@@ -3262,6 +3294,10 @@ function recalculateUpgradedSkillsForBasicChange(basicSkillName: string): void {
 }
 
 // Aliases for clarity at call sites
+// Semantic aliases for the same operation: both add and remove of a basic skill
+// require recalculating upgraded variants. When basic skill is added, upgraded skills
+// show incremental benefit; when removed, they show full standalone benefit.
+// The recalculation logic is identical - mark upgraded skills as pending for re-simulation.
 const updateUpgradedSkillsForBasicSkill =
     recalculateUpgradedSkillsForBasicChange
 const restoreUpgradedSkillsForBasicSkill =

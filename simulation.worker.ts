@@ -71,7 +71,10 @@ function runSkillSimulation(task: SimulationTask) {
         task.useRandomCondition
 
     if (usePerSimulationMode) {
-        // Build all unique combinations of variable parameters
+        // Build all unique combinations of variable parameters.
+        // NOTE: When combinations exceed requested simulations, each combination gets at least
+        // 1 simulation for full coverage. This ensures representative sampling across all
+        // conditions but may result in more simulations than requested.
         const moods: Mood[] = task.useRandomMood
             ? [-2, -1, 0, 1, 2]
             : [task.baseUma.mood as Mood]

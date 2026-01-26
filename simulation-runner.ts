@@ -603,6 +603,17 @@ export class SimulationRunner {
                     },
                 })
 
+                // Timeout after 5 minutes to prevent hung workers
+                const WORKER_TIMEOUT_MS = 5 * 60 * 1000
+                const timeoutId = setTimeout(() => {
+                    worker.terminate()
+                    reject(
+                        new Error(
+                            `Worker timeout after ${WORKER_TIMEOUT_MS / 1000}s for skill: ${skillName}`,
+                        ),
+                    )
+                }, WORKER_TIMEOUT_MS)
+
                 worker.on(
                     'message',
                     (message: {
@@ -610,6 +621,7 @@ export class SimulationRunner {
                         result?: { skillName: string; rawResults?: number[] }
                         error?: string
                     }) => {
+                        clearTimeout(timeoutId)
                         if (message.success && message.result) {
                             resolve(message.result)
                         } else {
@@ -620,6 +632,7 @@ export class SimulationRunner {
                 )
 
                 worker.on('error', (error) => {
+                    clearTimeout(timeoutId)
                     reject(error)
                     worker.terminate()
                 })

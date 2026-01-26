@@ -46,7 +46,7 @@ The web interface provides:
 - **Skills Editor**: Edit skill availability and discounts with checkboxes and dropdowns
 - **Track Editor**: Configure all track parameters (location, surface, distance, ground condition, weather, season, etc.)
 - **Uma Editor**: Configure uma stats, strategy, aptitudes, mood, unique skill, and active skills
-- **Real-time Output**: View terminal output as calculations run
+- **Interactive Results**: View and sort skill results in a table with multi-select and skill points tracking
 - **Auto-save**: Changes are automatically saved to the config file
 
 ### Config File Format
