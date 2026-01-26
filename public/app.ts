@@ -1101,6 +1101,10 @@ const SKILLS_TO_IGNORE = [
  * Calculate skill cost including prerequisite costs.
  * For upgraded skills (◎), this adds the cost of prerequisite skills (○)
  * that Uma doesn't already have.
+ *
+ * NOTE: This logic is intentionally duplicated from utils.ts:calculateSkillCost
+ * to avoid complex build steps for sharing server-side code with the frontend.
+ * Keep both implementations in sync when modifying cost calculation logic.
  */
 function getSkillCostWithDiscount(skillName: string): number {
     const baseCost = getSkillBaseCost(skillName)
@@ -2915,7 +2919,10 @@ async function runCalculations(clearExisting = true): Promise<void> {
                             })
                         }
                     } catch {
-                        // Ignore SSE parse errors (typically incomplete chunks)
+                        // Ignore keepalive messages, log unexpected parse errors
+                        if (!line.includes('keepalive')) {
+                            console.warn('SSE parse error:', line)
+                        }
                     }
                 }
             }
@@ -3321,6 +3328,7 @@ function addPendingSkillToResults(skillName: string, discount: number): void {
 
 // Debounced auto-calculation for pending skills
 let autoCalculationTimeout: ReturnType<typeof setTimeout> | null = null
+let autoCalculationInProgress = false
 
 function scheduleAutoCalculation(): void {
     if (autoCalculationTimeout) {
@@ -3333,39 +3341,54 @@ function scheduleAutoCalculation(): void {
 }
 
 async function calculatePendingSkills(): Promise<void> {
-    // Check if there are any pending skills
-    const pendingSkills = Array.from(resultsMap.values()).filter(
-        (r) => r.status === 'pending',
-    )
-    if (pendingSkills.length === 0) return
+    // Prevent overlapping calculations
+    if (autoCalculationInProgress) return
+    autoCalculationInProgress = true
 
-    // For each pending skill, check frontend cache first
-    for (const pending of pendingSkills) {
-        const cachedResult = calculatedResultsCache.get(pending.skill)
-        if (cachedResult) {
-            const cost = getSkillCostWithDiscount(pending.skill)
-            resultsMap.set(pending.skill, {
-                ...cachedResult,
-                skill: pending.skill,
-                cost,
-                discount: pending.discount,
-                meanLengthPerCost:
-                    cost > 0 ? cachedResult.meanLength / cost : 0,
-                status: 'cached',
-            })
+    try {
+        // Check if there are any pending skills
+        const pendingSkills = Array.from(resultsMap.values()).filter(
+            (r) => r.status === 'pending',
+        )
+        if (pendingSkills.length === 0) return
+
+        // For each pending skill, check frontend cache first
+        for (const pending of pendingSkills) {
+            const cachedResult = calculatedResultsCache.get(pending.skill)
+            if (cachedResult) {
+                const cost = getSkillCostWithDiscount(pending.skill)
+                resultsMap.set(pending.skill, {
+                    ...cachedResult,
+                    skill: pending.skill,
+                    cost,
+                    discount: pending.discount,
+                    meanLengthPerCost:
+                        cost > 0 ? cachedResult.meanLength / cost : 0,
+                    status: 'cached',
+                })
+            }
         }
-    }
 
-    renderResultsTable()
+        renderResultsTable()
 
-    // If still have pending skills after cache check, they need full calculation
-    const stillPending = Array.from(resultsMap.values()).filter(
-        (r) => r.status === 'pending',
-    )
-    if (stillPending.length > 0) {
-        // Run selective calculation for only the pending skills
-        const pendingSkillNames = stillPending.map((r) => r.skill)
-        void runSelectiveCalculations(pendingSkillNames)
+        // If still have pending skills after cache check, they need full calculation
+        const stillPending = Array.from(resultsMap.values()).filter(
+            (r) => r.status === 'pending',
+        )
+        if (stillPending.length > 0) {
+            // Run selective calculation for only the pending skills
+            const pendingSkillNames = stillPending.map((r) => r.skill)
+            await runSelectiveCalculations(pendingSkillNames)
+        }
+    } finally {
+        autoCalculationInProgress = false
+        // Check if more skills became pending while we were calculating
+        const newPending = Array.from(resultsMap.values()).filter(
+            (r) => r.status === 'pending',
+        )
+        if (newPending.length > 0) {
+            scheduleAutoCalculation()
+        }
     }
 }
 
@@ -3464,7 +3487,10 @@ async function runSelectiveCalculations(skillNames: string[]): Promise<void> {
                             renderResultsTable()
                         }
                     } catch {
-                        // Ignore parse errors for keepalive messages
+                        // Ignore keepalive messages, log unexpected parse errors
+                        if (!line.includes('keepalive')) {
+                            console.warn('SSE parse error:', line)
+                        }
                     }
                 }
             }

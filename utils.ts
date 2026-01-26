@@ -1320,31 +1320,3 @@ export function formatTable(
 
     return [header, separator, ...rows].join('\n')
 }
-
-import { createHash } from 'node:crypto'
-import type { SimulationConfigForHash } from './types'
-
-/**
- * Compute a hash of simulation-affecting configuration settings.
- * This hash is used as a cache key - if it changes, cached results are invalidated.
- */
-export function computeConfigHash(config: SimulationConfigForHash): string {
-    const normalized = {
-        courseIds: [...config.courseIds].sort(),
-        deterministic: config.deterministic,
-        distanceAptitude: config.distanceAptitude,
-        groundCondition: config.groundCondition,
-        mood: config.mood,
-        numUmas: config.numUmas,
-        season: config.season,
-        strategy: config.strategy,
-        styleAptitude: config.styleAptitude,
-        surfaceAptitude: config.surfaceAptitude,
-        umaSkillIds: [...config.umaSkillIds].sort(),
-        umaStats: config.umaStats,
-        uniqueSkillId: config.uniqueSkillId,
-        weather: config.weather,
-    }
-    const str = JSON.stringify(normalized)
-    return createHash('sha256').update(str).digest('hex').slice(0, 16)
-}

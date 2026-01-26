@@ -8,14 +8,9 @@ import {
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import express from 'express'
-import type { RawCourseData, SimulationCacheEntry, SkillMeta } from './types'
+import type { RawCourseData, SkillMeta } from './types'
 import type { SkillDataEntry } from './utils'
-import {
-    buildSkillNameLookup,
-    calculateStatsFromRawResults,
-    normalizeConfigSkillNames,
-    type SkillResult,
-} from './utils'
+import { buildSkillNameLookup, normalizeConfigSkillNames } from './utils'
 import {
     SimulationRunner,
     type SimulationRunnerConfig,
@@ -45,10 +40,6 @@ let cachedTracknames: Record<string, string[]> | null = null
 
 // Case-insensitive skill name lookup map (built once after skillnames loads)
 let skillNameLookup: Map<string, string> | null = null
-
-// Simulation results cache: Map<skillId, CacheEntry>
-const simulationCache = new Map<string, SimulationCacheEntry>()
-let currentConfigHash: string | null = null
 
 function loadStaticData(): void {
     try {
@@ -234,62 +225,6 @@ process.on('exit', () => {
         }
     }
     configWatchers.clear()
-})
-
-// Cache endpoints
-app.get('/api/cache/check', (req, res) => {
-    const skillIdsParam = req.query.skillIds as string | undefined
-    if (!skillIdsParam) {
-        res.status(400).json({ error: 'skillIds parameter required' })
-        return
-    }
-    const skillIds = skillIdsParam.split(',').filter((id) => id.trim())
-    const cached: string[] = []
-    const missing: string[] = []
-    for (const skillId of skillIds) {
-        if (simulationCache.has(skillId)) {
-            cached.push(skillId)
-        } else {
-            missing.push(skillId)
-        }
-    }
-    res.json({ cached, missing, configHash: currentConfigHash })
-})
-
-app.get('/api/cache/results', (req, res) => {
-    const skillIdsParam = req.query.skillIds as string | undefined
-    const discount = parseInt(req.query.discount as string, 10) || 0
-    const confidenceInterval =
-        parseInt(req.query.confidenceInterval as string, 10) || 95
-    if (!skillIdsParam) {
-        res.status(400).json({ error: 'skillIds parameter required' })
-        return
-    }
-    const skillIds = skillIdsParam.split(',').filter((id) => id.trim())
-    const results: SkillResult[] = []
-    for (const skillId of skillIds) {
-        const entry = simulationCache.get(skillId)
-        if (entry) {
-            const skillMeta = cachedSkillmeta?.[skillId]
-            const baseCost = skillMeta?.baseCost ?? 200
-            const cost = Math.ceil(baseCost * (1 - discount / 100))
-            const result = calculateStatsFromRawResults(
-                entry.rawResults,
-                cost,
-                discount,
-                entry.skillName,
-                confidenceInterval,
-            )
-            results.push(result)
-        }
-    }
-    res.json({ results, configHash: currentConfigHash })
-})
-
-app.delete('/api/cache', (_req, res) => {
-    simulationCache.clear()
-    currentConfigHash = null
-    res.json({ success: true, message: 'Cache cleared' })
 })
 
 app.get('/api/simulate', async (req, res) => {
