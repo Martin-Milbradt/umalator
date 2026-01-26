@@ -731,9 +731,21 @@ describe('calculateSkillCost', () => {
         expect(result).toBe(180)
     })
 
-    it('rounds up after discount', () => {
+    it('rounds after discount (exact result)', () => {
+        // 200 * 0.85 = 170 (no rounding needed)
         const result = calculateSkillCost('skill001', { discount: 15 }, context)
         expect(result).toBe(170)
+    })
+
+    it('rounds to nearest integer after discount', () => {
+        // 150 * 0.93 = 139.5 → round to 140 (not ceil to 140)
+        // 150 * 0.97 = 145.5 → round to 146
+        const skillMeta2 = { skill: { baseCost: 150 } }
+        const result1 = calculateSkillCost('skill', { discount: 7 }, { skillMeta: skillMeta2 })
+        expect(result1).toBe(140) // round(139.5) = 140
+
+        const result2 = calculateSkillCost('skill', { discount: 3 }, { skillMeta: skillMeta2 })
+        expect(result2).toBe(146) // round(145.5) = 146
     })
 
     it('uses default cost of 200 for unknown skill', () => {
@@ -753,9 +765,9 @@ describe('calculateSkillCost', () => {
     it('calculates cost for Professor of Curvature with multi-skill discounts', () => {
         // Professor of Curvature is a multi-skill that includes Corner Adept ○
         // Professor of Curvature: baseCost 170, 10% discount
-        // Corner Adept ○: baseCost 170, 10% discount (higher order in same group)
+        // Corner Adept ○: baseCost 170, 10% discount (higher order = prerequisite)
         // Expected cost: 306
-        // Calculation: ceil(170 * 0.9) for first skill + round(170 * 0.9) for additional = 153 + 153 = 306
+        // Calculation: round(170 * 0.9) + round(170 * 0.9) = 153 + 153 = 306
         const skillMeta: Record<
             string,
             { baseCost: number; groupId?: string; order?: number }
@@ -801,12 +813,13 @@ describe('calculateSkillCost', () => {
         // Right-Handed ◎: baseCost 110, no discount
         // Expected cost: 110
         // Only the target skill cost is calculated; owned prerequisites are excluded
+        // Note: higher order = more basic skill (prerequisite)
         const skillMeta: Record<
             string,
             { baseCost: number; groupId?: string; order?: number }
         > = {
-            rightHandedNormal: { baseCost: 100, groupId: 'rightHanded', order: 1 },
-            rightHandedRare: { baseCost: 110, groupId: 'rightHanded', order: 2 },
+            rightHandedRare: { baseCost: 110, groupId: 'rightHanded', order: 1 },
+            rightHandedNormal: { baseCost: 100, groupId: 'rightHanded', order: 2 },
         }
         const skillNames: Record<string, string[]> = {
             rightHandedNormal: ['Right-Handed ○'],

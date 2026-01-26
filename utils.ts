@@ -461,7 +461,7 @@ export function calculateSkillCost(
     const currentSkill = skillMeta[skillId]
     const baseCost = currentSkill?.baseCost ?? 200
     const discount = skillConfig.discount ?? 0
-    let totalCost = Math.ceil(baseCost * (1 - discount / 100))
+    let totalCost = Math.round(baseCost * (1 - discount / 100))
 
     const skillsToIgnore = [
         '99 Problems',
