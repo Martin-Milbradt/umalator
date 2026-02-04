@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Web interface for evaluating skills in umalator-global. Calculates mean length gains for skills and outputs results sorted by efficiency (mean length / cost).
+Web interface for Uma Musume skill efficiency calculations. Calculates mean length gains for skills and outputs results sorted by efficiency (mean length / cost).
 
 ## Commands
 

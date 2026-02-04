@@ -1,8 +1,0 @@
----
-alwaysApply: true
----
-# Umalator Global CLI
-
-In this project, you are developing a CLI tool for evaluating skills. It is in `/umalator-global-cli`. Use the already implemented tools in this repository, but try to limit the amount of changes you make to them.
-
-If looking at code, limit yourself to the files in `/umalator-global-cli` as well, unless you are stuck or specifically asked to look at other files.

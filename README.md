@@ -1,6 +1,6 @@
-# umalator-global-cli
+# Umalator
 
-Web interface for evaluating skills in umalator-global. It calculates mean length gains for skills and outputs a table sorted by efficiency (mean length / cost).
+Web interface for Uma Musume skill efficiency calculations. It calculates mean length gains for skills and outputs a table sorted by efficiency (mean length / cost).
 
 Note: The results are different from the browser version, as all optional options are turned on in `simOptions` (unless `deterministic` is set to `true`).
 

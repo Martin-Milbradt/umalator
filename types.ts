@@ -1,5 +1,5 @@
 /**
- * Type definitions for umalator-global-cli.
+ * Type definitions for umalator.
  * These types replace `any` usages for better type safety.
  */
 
