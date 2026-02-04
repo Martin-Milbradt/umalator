@@ -1355,6 +1355,21 @@ describe('extractStaticRestrictions', () => {
         expect(result.seasons).toEqual([2])
     })
 
+    it('extracts rotation restriction (clockwise)', () => {
+        const result = extractStaticRestrictions('rotation==1')
+        expect(result.rotations).toEqual([1])
+    })
+
+    it('extracts rotation restriction (counterclockwise)', () => {
+        const result = extractStaticRestrictions('rotation==2')
+        expect(result.rotations).toEqual([2])
+    })
+
+    it('merges OR alternatives for rotation', () => {
+        const result = extractStaticRestrictions('rotation==1@rotation==2')
+        expect(result.rotations).toEqual([1, 2])
+    })
+
     it('merges OR alternatives for same field', () => {
         const result = extractStaticRestrictions(
             'ground_condition==2@ground_condition==3@ground_condition==4',
@@ -1416,6 +1431,7 @@ describe('canSkillTrigger', () => {
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: 1,
             weather: 1,
             season: 1,
@@ -1431,6 +1447,7 @@ describe('canSkillTrigger', () => {
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: 1,
             weather: 1,
             season: 1,
@@ -1446,6 +1463,7 @@ describe('canSkillTrigger', () => {
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: 1,
             weather: 1,
             season: 1,
@@ -1461,6 +1479,7 @@ describe('canSkillTrigger', () => {
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: 1,
             weather: 1,
             season: 1,
@@ -1476,6 +1495,7 @@ describe('canSkillTrigger', () => {
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: 1,
             weather: 1,
             season: 1,
@@ -1491,6 +1511,7 @@ describe('canSkillTrigger', () => {
             runningStyle: 2,
             groundType: 1,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: 1,
             weather: 1,
             season: 1,
@@ -1506,6 +1527,7 @@ describe('canSkillTrigger', () => {
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: 1,
             weather: 1,
             season: 1,
@@ -1521,6 +1543,7 @@ describe('canSkillTrigger', () => {
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: 1,
             weather: 1,
             season: 1,
@@ -1536,6 +1559,7 @@ describe('canSkillTrigger', () => {
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: 1,
             weather: 1,
             season: 1,
@@ -1551,6 +1575,7 @@ describe('canSkillTrigger', () => {
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: null,
             weather: 1,
             season: 1,
@@ -1570,6 +1595,7 @@ describe('canSkillTrigger', () => {
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: 1,
             weather: 1,
             season: 1,
@@ -1589,6 +1615,7 @@ describe('canSkillTrigger', () => {
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: 1,
             weather: 1,
             season: 1,
@@ -1770,6 +1797,7 @@ describe('canSkillTrigger with empty restriction arrays', () => {
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: 1,
             weather: 1,
             season: 1,
@@ -1785,6 +1813,7 @@ describe('canSkillTrigger with empty restriction arrays', () => {
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: 1,
             weather: 1,
             season: 1,
@@ -1800,6 +1829,7 @@ describe('canSkillTrigger with empty restriction arrays', () => {
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: 1,
             weather: 1,
             season: 1,
@@ -1815,6 +1845,7 @@ describe('canSkillTrigger with empty restriction arrays', () => {
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: 1,
             weather: 1,
             season: 1,
@@ -1836,6 +1867,7 @@ describe('canSkillTrigger with empty restriction arrays', () => {
             runningStyle: 3,
             groundType: 1,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: 1,
             weather: 1,
             season: 1,
@@ -1869,6 +1901,7 @@ describe('skill filtering by distance type', () => {
             runningStyle: 3,
             groundType: null,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: null,
             weather: null,
             season: null,
@@ -1890,6 +1923,7 @@ describe('skill filtering by distance type', () => {
             runningStyle: 3,
             groundType: null,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: null,
             weather: null,
             season: null,
@@ -1910,6 +1944,7 @@ describe('skill filtering by distance type', () => {
             runningStyle: 3,
             groundType: null,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: null,
             weather: null,
             season: null,
@@ -1931,6 +1966,7 @@ describe('skill filtering by distance type', () => {
             runningStyle: 3,
             groundType: null,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: null,
             weather: null,
             season: null,
@@ -1951,6 +1987,7 @@ describe('skill filtering by distance type', () => {
             runningStyle: 3,
             groundType: null,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: null,
             weather: null,
             season: null,
@@ -1965,6 +2002,7 @@ describe('skill filtering by distance type', () => {
             runningStyle: 3,
             groundType: null,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: null,
             weather: null,
             season: null,
@@ -1986,6 +2024,7 @@ describe('skill filtering by distance type', () => {
             runningStyle: 3,
             groundType: null,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: null,
             weather: null,
             season: null,
@@ -1999,6 +2038,7 @@ describe('skill filtering by distance type', () => {
             runningStyle: 3,
             groundType: null,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: null,
             weather: null,
             season: null,
@@ -2017,6 +2057,7 @@ describe('skill filtering by distance type', () => {
             runningStyle: 3,
             groundType: null,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: null,
             weather: null,
             season: null,
@@ -2060,6 +2101,7 @@ describe('extractSkillRestrictions integration with distance filtering', () => {
             runningStyle: 1,
             groundType: null,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: null,
             weather: null,
             season: null,
@@ -2073,6 +2115,7 @@ describe('extractSkillRestrictions integration with distance filtering', () => {
             runningStyle: 2,
             groundType: null,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: null,
             weather: null,
             season: null,
@@ -2086,6 +2129,7 @@ describe('extractSkillRestrictions integration with distance filtering', () => {
             runningStyle: 1,
             groundType: null,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: null,
             weather: null,
             season: null,
@@ -2108,6 +2152,7 @@ describe('skill filtering by strategy', () => {
             runningStyle: STRATEGY_TO_RUNNING_STYLE['Front Runner'], // 1
             groundType: null,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: null,
             weather: null,
             season: null,
@@ -2125,6 +2170,7 @@ describe('skill filtering by strategy', () => {
             runningStyle: STRATEGY_TO_RUNNING_STYLE['Pace Chaser'], // 2
             groundType: null,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: null,
             weather: null,
             season: null,
@@ -2143,6 +2189,7 @@ describe('skill filtering by strategy', () => {
             runningStyle: STRATEGY_TO_RUNNING_STYLE['Pace Chaser'], // 2
             groundType: null,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: null,
             weather: null,
             season: null,
@@ -2160,6 +2207,7 @@ describe('skill filtering by strategy', () => {
             runningStyle: STRATEGY_TO_RUNNING_STYLE['Front Runner'], // 1
             groundType: null,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: null,
             weather: null,
             season: null,
@@ -2178,6 +2226,7 @@ describe('skill filtering by strategy', () => {
             runningStyle: STRATEGY_TO_RUNNING_STYLE['Late Surger'], // 3
             groundType: null,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: null,
             weather: null,
             season: null,
@@ -2196,6 +2245,7 @@ describe('skill filtering by strategy', () => {
             runningStyle: STRATEGY_TO_RUNNING_STYLE['End Closer'], // 4
             groundType: null,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: null,
             weather: null,
             season: null,
@@ -2215,6 +2265,7 @@ describe('skill filtering by strategy', () => {
             runningStyle: STRATEGY_TO_RUNNING_STYLE.Runaway, // 5
             groundType: null,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: null,
             weather: null,
             season: null,
@@ -2232,6 +2283,7 @@ describe('skill filtering by strategy', () => {
             runningStyle: STRATEGY_TO_RUNNING_STYLE.Runaway, // 5
             groundType: null,
             isBasisDistance: null,
+            rotation: null,
             groundCondition: null,
             weather: null,
             season: null,
@@ -2254,6 +2306,7 @@ describe('A Small Breather filtering', () => {
             groundCondition: 1,
             groundType: 1,
             isBasisDistance: false,
+            rotation: null,
             runningStyle: STRATEGY_TO_RUNNING_STYLE['Pace Chaser'], // 2
             season: 4,
             trackId: 10005,
@@ -2274,6 +2327,7 @@ describe('A Small Breather filtering', () => {
             groundCondition: 1,
             groundType: 1,
             isBasisDistance: false,
+            rotation: null,
             runningStyle: STRATEGY_TO_RUNNING_STYLE['Late Surger'], // 3
             season: 4,
             trackId: 10005,
@@ -2306,6 +2360,7 @@ describe('is_basis_distance filtering', () => {
             groundCondition: 1,
             groundType: 1,
             isBasisDistance: true, // 2400m % 400 == 0
+            rotation: null,
             runningStyle: 3,
             season: 1,
             trackId: 10006,
@@ -2321,6 +2376,7 @@ describe('is_basis_distance filtering', () => {
             groundCondition: 1,
             groundType: 1,
             isBasisDistance: false, // 2500m % 400 != 0
+            rotation: null,
             runningStyle: 3,
             season: 1,
             trackId: 10006,
@@ -2336,6 +2392,7 @@ describe('is_basis_distance filtering', () => {
             groundCondition: 1,
             groundType: 1,
             isBasisDistance: false, // 2500m % 400 != 0
+            rotation: null,
             runningStyle: 3,
             season: 1,
             trackId: 10006,
@@ -2351,6 +2408,7 @@ describe('is_basis_distance filtering', () => {
             groundCondition: 1,
             groundType: 1,
             isBasisDistance: true, // 2000m % 400 == 0
+            rotation: null,
             runningStyle: 3,
             season: 1,
             trackId: 10006,
@@ -2366,6 +2424,7 @@ describe('is_basis_distance filtering', () => {
             groundCondition: null,
             groundType: null,
             isBasisDistance: null, // Random courses
+            rotation: null,
             runningStyle: 3,
             season: null,
             trackId: null,
@@ -2381,6 +2440,71 @@ describe('is_basis_distance filtering', () => {
             groundCondition: 1,
             groundType: 1,
             isBasisDistance: true,
+            rotation: null,
+            runningStyle: 3,
+            season: 1,
+            trackId: 10006,
+            weather: 1,
+        }
+        expect(canSkillTrigger(restrictions, settings)).toBe(false)
+    })
+
+    it('returns true when rotation matches (clockwise skill on clockwise track)', () => {
+        const restrictions: SkillRestrictions = { rotations: [1] } // Clockwise
+        const settings: CurrentSettings = {
+            distanceType: 4,
+            groundCondition: 1,
+            groundType: 1,
+            isBasisDistance: null,
+            rotation: 1, // Clockwise
+            runningStyle: 3,
+            season: 1,
+            trackId: 10006,
+            weather: 1,
+        }
+        expect(canSkillTrigger(restrictions, settings)).toBe(true)
+    })
+
+    it('returns false when rotation does not match (clockwise skill on counterclockwise track)', () => {
+        const restrictions: SkillRestrictions = { rotations: [1] } // Clockwise
+        const settings: CurrentSettings = {
+            distanceType: 4,
+            groundCondition: 1,
+            groundType: 1,
+            isBasisDistance: null,
+            rotation: 2, // Counterclockwise
+            runningStyle: 3,
+            season: 1,
+            trackId: 10006,
+            weather: 1,
+        }
+        expect(canSkillTrigger(restrictions, settings)).toBe(false)
+    })
+
+    it('returns true when rotation is null (random course)', () => {
+        const restrictions: SkillRestrictions = { rotations: [1] } // Clockwise
+        const settings: CurrentSettings = {
+            distanceType: 4,
+            groundCondition: 1,
+            groundType: 1,
+            isBasisDistance: null,
+            rotation: null, // Random course - unknown rotation
+            runningStyle: 3,
+            season: 1,
+            trackId: 10006,
+            weather: 1,
+        }
+        expect(canSkillTrigger(restrictions, settings)).toBe(true)
+    })
+
+    it('returns false for empty rotation array (impossible condition)', () => {
+        const restrictions: SkillRestrictions = { rotations: [] }
+        const settings: CurrentSettings = {
+            distanceType: 4,
+            groundCondition: 1,
+            groundType: 1,
+            isBasisDistance: null,
+            rotation: 1,
             runningStyle: 3,
             season: 1,
             trackId: 10006,
