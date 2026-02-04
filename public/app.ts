@@ -945,7 +945,7 @@ async function loadConfigFiles(): Promise<void> {
         let lastUsedConfig: string | null = null
         try {
             lastUsedConfig = localStorage.getItem(LAST_USED_CONFIG_KEY)
-        } catch (e) {
+        } catch (e: unknown) {
             // localStorage might be unavailable (private browsing, disabled, etc.)
             console.warn('Failed to read from localStorage:', e)
         }
@@ -971,7 +971,7 @@ async function loadConfig(filename: string): Promise<void> {
     // Save the last used config to localStorage
     try {
         localStorage.setItem(LAST_USED_CONFIG_KEY, filename)
-    } catch (e) {
+    } catch (e: unknown) {
         // localStorage might be unavailable (private browsing, quota exceeded, etc.)
         console.warn('Failed to save to localStorage:', e)
     }
