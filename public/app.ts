@@ -71,6 +71,7 @@ type CourseData = Record<
         surface?: number
         distance?: number
         raceTrackId?: number | string
+        turn?: number
     }
 >
 
@@ -96,6 +97,7 @@ interface SkillRestrictions {
     groundConditions?: number[]
     groundTypes?: number[]
     isBasisDistance?: number[]
+    rotations?: number[]
     runningStyles?: number[]
     seasons?: number[]
     trackIds?: number[]
@@ -107,6 +109,7 @@ interface CurrentSettings {
     groundCondition: number | null
     groundType: number | null
     isBasisDistance: boolean | null
+    rotation: number | null
     runningStyle: number
     season: number | null
     trackId: number | null
@@ -243,6 +246,7 @@ const STATIC_FIELDS = [
     'ground_condition',
     'ground_type',
     'is_basis_distance',
+    'rotation',
     'running_style',
     'season',
     'track_id',
@@ -257,6 +261,7 @@ const FIELD_MAX_VALUES: Partial<Record<StaticField, number>> = {
     ground_condition: 4, // Good=1, Yielding=2, Soft=3, Heavy=4
     ground_type: 2, // Turf=1, Dirt=2
     is_basis_distance: 1, // 0=non-standard, 1=standard (divisible by 400)
+    rotation: 4, // Clockwise=1, Counterclockwise=2, UnusedOrientation=3, NoTurns=4
     running_style: 5, // Runaway=1, Front Runner=2, Pace Chaser=3, Late Surger=4, End Closer=5
     season: 5, // Spring=1, Summer=2, Autumn=3, Winter=4, Sakura=5
     weather: 4, // Sunny=1, Cloudy=2, Rainy=3, Snowy=4
@@ -344,6 +349,9 @@ function parseAndBranch(branch: string): SkillRestrictions {
             case 'is_basis_distance':
                 restrictions.isBasisDistance = parsed.values
                 break
+            case 'rotation':
+                restrictions.rotations = parsed.values
+                break
             case 'running_style':
                 restrictions.runningStyles = parsed.values
                 break
@@ -372,6 +380,7 @@ function mergeRestrictions(
         'groundConditions',
         'groundTypes',
         'isBasisDistance',
+        'rotations',
         'runningStyles',
         'seasons',
         'trackIds',
@@ -399,6 +408,7 @@ function intersectRestrictions(
         'groundConditions',
         'groundTypes',
         'isBasisDistance',
+        'rotations',
         'runningStyles',
         'seasons',
         'trackIds',
@@ -575,6 +585,18 @@ function canSkillTrigger(
         }
     }
 
+    // Rotation (track orientation)
+    if (restrictions.rotations) {
+        if (restrictions.rotations.length === 0) {
+            return false // Impossible condition from intersection
+        }
+        if (settings.rotation !== null) {
+            if (!restrictions.rotations.includes(settings.rotation)) {
+                return false
+            }
+        }
+    }
+
     // Ground condition
     if (restrictions.groundConditions) {
         if (restrictions.groundConditions.length === 0) {
@@ -649,6 +671,7 @@ function getCurrentSettings(): CurrentSettings {
             groundCondition: null,
             groundType: null,
             isBasisDistance: null,
+            rotation: null,
             runningStyle: 3,
             season: null,
             trackId: null,
@@ -662,8 +685,10 @@ function getCurrentSettings(): CurrentSettings {
     // Distance type and basis distance
     let distanceType: number | null = null
     let isBasisDistance: boolean | null = null
+    let parsedDistance: number | null = null
     if (track?.distance) {
         if (typeof track.distance === 'number') {
+            parsedDistance = track.distance
             distanceType = getDistanceType(track.distance)
             isBasisDistance = track.distance % 400 === 0
         } else if (
@@ -673,6 +698,7 @@ function getCurrentSettings(): CurrentSettings {
         ) {
             const parsed = parseInt(track.distance, 10)
             if (!Number.isNaN(parsed)) {
+                parsedDistance = parsed
                 distanceType = getDistanceType(parsed)
                 isBasisDistance = parsed % 400 === 0
             }
@@ -722,11 +748,36 @@ function getCurrentSettings(): CurrentSettings {
         trackId = TRACK_NAME_TO_ID[track.trackName] ?? null
     }
 
+    // Rotation (track orientation) - requires looking up the course
+    let rotation: number | null = null
+    if (
+        courseData &&
+        trackId !== null &&
+        parsedDistance !== null &&
+        groundType !== null
+    ) {
+        // Find the matching course by trackId, distance, and surface
+        for (const [, rawCourse] of Object.entries(courseData)) {
+            if (!rawCourse || typeof rawCourse !== 'object') continue
+            const courseTrackId = rawCourse.raceTrackId
+            if (courseTrackId == null) continue
+            if (
+                Number(courseTrackId) === trackId &&
+                rawCourse.distance === parsedDistance &&
+                rawCourse.surface === groundType
+            ) {
+                rotation = rawCourse.turn ?? null
+                break
+            }
+        }
+    }
+
     return {
         distanceType,
         groundCondition,
         groundType,
         isBasisDistance,
+        rotation,
         runningStyle,
         season,
         trackId,

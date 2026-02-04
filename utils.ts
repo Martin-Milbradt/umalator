@@ -749,6 +749,7 @@ export interface SkillRestrictions {
     groundConditions?: number[] // e.g., [3,4] for Soft or Heavy
     groundTypes?: number[] // e.g., [2] for Dirt only
     isBasisDistance?: number[] // [1] for standard (divisible by 400), [0] for non-standard
+    rotations?: number[] // e.g., [1] for Clockwise, [2] for Counterclockwise
     runningStyles?: number[] // e.g., [3] for Pace Chaser only
     seasons?: number[] // e.g., [1] for Spring only
     trackIds?: number[] // e.g., [10001, 10005] for specific tracks
@@ -764,6 +765,7 @@ export interface CurrentSettings {
     groundCondition: number | null // null if <Random>
     groundType: number | null // 1=Turf, 2=Dirt, null if random
     isBasisDistance: boolean | null // true if distance % 400 == 0, null if random/category
+    rotation: number | null // 1=Clockwise, 2=Counterclockwise, 3=Unused, 4=NoTurns, null if random
     runningStyle: number // from uma.strategy (always known)
     season: number | null // null if <Random>
     trackId: number | null // null if <Random> location
@@ -776,6 +778,7 @@ const STATIC_FIELDS = [
     'ground_condition',
     'ground_type',
     'is_basis_distance',
+    'rotation',
     'running_style',
     'season',
     'track_id',
@@ -790,6 +793,7 @@ const FIELD_MAX_VALUES: Partial<Record<StaticField, number>> = {
     ground_condition: 4, // Good=1, Yielding=2, Soft=3, Heavy=4
     ground_type: 2, // Turf=1, Dirt=2
     is_basis_distance: 1, // 0=non-standard, 1=standard (divisible by 400)
+    rotation: 4, // Clockwise=1, Counterclockwise=2, UnusedOrientation=3, NoTurns=4
     running_style: 5, // Runaway=1, Front Runner=2, Pace Chaser=3, Late Surger=4, End Closer=5
     season: 5, // Spring=1, Summer=2, Autumn=3, Winter=4, Sakura=5
     weather: 4, // Sunny=1, Cloudy=2, Rainy=3, Snowy=4
@@ -895,6 +899,9 @@ function parseAndBranch(branch: string): SkillRestrictions {
             case 'is_basis_distance':
                 restrictions.isBasisDistance = parsed.values
                 break
+            case 'rotation':
+                restrictions.rotations = parsed.values
+                break
             case 'running_style':
                 restrictions.runningStyles = parsed.values
                 break
@@ -932,6 +939,7 @@ function mergeRestrictions(
         'groundConditions',
         'groundTypes',
         'isBasisDistance',
+        'rotations',
         'runningStyles',
         'seasons',
         'trackIds',
@@ -968,6 +976,7 @@ function intersectRestrictions(
         'groundConditions',
         'groundTypes',
         'isBasisDistance',
+        'rotations',
         'runningStyles',
         'seasons',
         'trackIds',
@@ -1127,6 +1136,18 @@ export function canSkillTrigger(
         if (settings.isBasisDistance !== null) {
             const basisValue = settings.isBasisDistance ? 1 : 0
             if (!restrictions.isBasisDistance.includes(basisValue)) {
+                return false
+            }
+        }
+    }
+
+    // Rotation (track orientation)
+    if (restrictions.rotations) {
+        if (restrictions.rotations.length === 0) {
+            return false // Impossible condition from intersection
+        }
+        if (settings.rotation !== null) {
+            if (!restrictions.rotations.includes(settings.rotation)) {
                 return false
             }
         }

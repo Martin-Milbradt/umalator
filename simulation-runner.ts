@@ -476,6 +476,7 @@ export class SimulationRunner {
                     : typeof distanceValue === 'number'
                       ? distanceValue % 400 === 0
                       : null,
+            rotation: useMultipleCourses ? null : (courses[0]?.course.turn ?? null),
             runningStyle: STRATEGY_TO_RUNNING_STYLE[strategyName] ?? 3,
             season: conditions.season.forFiltering,
             trackId:
