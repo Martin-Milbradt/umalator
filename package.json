@@ -1,5 +1,6 @@
 {
-  "name": "umalator-global-cli",
+  "name": "umalator",
+  "description": "Web interface for Uma Musume skill efficiency calculations",
   "version": "1.0.0",
   "type": "module",
   "scripts": {

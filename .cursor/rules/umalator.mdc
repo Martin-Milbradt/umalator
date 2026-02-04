@@ -1,0 +1,8 @@
+---
+alwaysApply: true
+---
+# Umalator
+
+In this project, you are developing a web interface for Uma Musume skill efficiency calculations. It is in `/umalator`. Use the already implemented tools in this repository, but try to limit the amount of changes you make to them.
+
+If looking at code, limit yourself to the files in `/umalator` as well, unless you are stuck or specifically asked to look at other files.
