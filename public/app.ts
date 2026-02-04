@@ -116,6 +116,9 @@ interface CurrentSettings {
     weather: number | null
 }
 
+// localStorage key for persisting last used config
+const LAST_USED_CONFIG_KEY = 'lastUsedConfig'
+
 // Mapping constants for skill trigger checking
 // NOTE: Keep in sync with utils.ts STRATEGY_TO_RUNNING_STYLE
 // Running style values verified from skill_data.json:
@@ -1227,7 +1230,20 @@ async function loadConfigFiles(): Promise<void> {
     })
     await waitForCourseData()
     if (files.length > 0) {
-        await loadConfig(files[0])
+        // Check if there's a saved config in localStorage
+        let lastUsedConfig: string | null = null
+        try {
+            lastUsedConfig = localStorage.getItem(LAST_USED_CONFIG_KEY)
+        } catch (e: unknown) {
+            // localStorage might be unavailable (private browsing, disabled, etc.)
+            console.warn('Failed to read from localStorage:', e)
+        }
+        // If the saved config exists in the list, load it; otherwise load the first one
+        const configToLoad =
+            lastUsedConfig && files.includes(lastUsedConfig)
+                ? lastUsedConfig
+                : files[0]
+        await loadConfig(configToLoad)
     }
 }
 
@@ -1239,6 +1255,14 @@ async function loadConfig(filename: string): Promise<void> {
     const select = document.getElementById('config-select') as HTMLSelectElement
     if (select) {
         select.value = filename
+    }
+
+    // Save the last used config to localStorage
+    try {
+        localStorage.setItem(LAST_USED_CONFIG_KEY, filename)
+    } catch (e: unknown) {
+        // localStorage might be unavailable (private browsing, quota exceeded, etc.)
+        console.warn('Failed to save to localStorage:', e)
     }
 
     renderSkills()
