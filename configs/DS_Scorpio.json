@@ -1,0 +1,253 @@
+{
+  "deterministic": false,
+  "confidenceInterval": 90,
+  "skills": {
+    "Breath of Fresh Air": {
+      "discount": 0,
+      "default": 0
+    },
+    "Professor of Curvature": {
+      "discount": 10,
+      "default": 10
+    },
+    "Corner Adept ○": {
+      "discount": 0,
+      "default": 0
+    },
+    "Levelheaded": {
+      "discount": null
+    },
+    "Intense Gaze": {
+      "discount": null
+    },
+    "Corner Recovery": {
+      "discount": null
+    },
+    "Highlander": {
+      "discount": 10
+    },
+    "Uma Stan": {
+      "discount": null
+    },
+    "Ramp Up": {
+      "discount": 0,
+      "default": 0
+    },
+    "Slipstream": {
+      "discount": null
+    },
+    "Ignited Spirit SPD": {
+      "discount": 30,
+      "default": 30
+    },
+    "Swinging Maestro": {
+      "discount": null
+    },
+    "Rushing Gale!": {
+      "discount": 10,
+      "default": 10
+    },
+    "Straightaway Acceleration": {
+      "discount": 0,
+      "default": 0
+    },
+    "Straightaway Recovery": {
+      "discount": 0,
+      "default": 0
+    },
+    "It's On!": {
+      "discount": 10,
+      "default": 10
+    },
+    "No Stopping Me!": {
+      "discount": 10,
+      "default": 10
+    },
+    "Nimble Navigator": {
+      "discount": 0,
+      "default": 0
+    },
+    "Burning Spirit SPD": {
+      "discount": null
+    },
+    "Lay Low": {
+      "discount": null
+    },
+    "The Duty of Dignity Calls": {
+      "discount": null
+    },
+    "Competitive Spirit": {
+      "discount": null
+    },
+    "Competitive Spirit ◎": {
+      "discount": null
+    },
+    "Competitive Spirit ○": {
+      "discount": null
+    },
+    "This Dance Is for Vittoria!": {
+      "discount": null
+    },
+    "Lone Wolf": {
+      "discount": null
+    },
+    "Homestretch Haste": {
+      "discount": 10
+    },
+    "Straightaway Adept": {
+      "discount": null
+    },
+    "Focus": {
+      "discount": null
+    },
+    "Early Start": {
+      "discount": null
+    },
+    "The View from the Lead Is Mine!": {
+      "discount": 20,
+      "default": 20
+    },
+    "Angling and Scheming": {
+      "discount": null
+    },
+    "Standard Distance ◎": {
+      "discount": 30
+    },
+    "Standard Distance ○": {
+      "discount": 30
+    },
+    "Wet Conditions ◎": {
+      "discount": null
+    },
+    "Wet Conditions ○": {
+      "discount": null
+    },
+    "Taking the Lead": {
+      "discount": 10,
+      "default": 10
+    },
+    "Early Lead": {
+      "discount": 0,
+      "default": 0
+    },
+    "Fast-Paced": {
+      "discount": 10,
+      "default": 10
+    },
+    "Final Push": {
+      "discount": null
+    },
+    "Killer Tunes": {
+      "discount": null,
+      "default": 20
+    },
+    "Up-Tempo": {
+      "discount": null,
+      "default": 0
+    },
+    "Steadfast": {
+      "discount": null
+    },
+    "Medium Straightaways ◎": {
+      "discount": null
+    },
+    "Medium Straightaways ○": {
+      "discount": null
+    },
+    "Medium Corners ◎": {
+      "discount": null
+    },
+    "Medium Corners ○": {
+      "discount": null
+    },
+    "Leader's Pride": {
+      "discount": 0,
+      "default": 0
+    },
+    "Moxie": {
+      "discount": null
+    },
+    "Second Wind": {
+      "discount": null
+    },
+    "Groundwork": {
+      "discount": null
+    },
+    "Right-Handed ◎": {
+      "discount": 35
+    },
+    "Right-Handed ○": {
+      "discount": 35
+    },
+    "Triumphant Pulse": {
+      "discount": 20,
+      "default": 20
+    },
+    "Prepared to Pass": {
+      "discount": 0,
+      "default": 0
+    },
+    "Productive Plan": {
+      "discount": 30
+    },
+    "Shifting Gears": {
+      "discount": 30
+    },
+    "Pace Chaser Straightaways ◎": {
+      "discount": 20
+    },
+    "Pace Chaser Straightaways ○": {
+      "discount": 20
+    },
+    "Pace Chaser Corners ◎": {
+      "discount": 10
+    },
+    "Pace Chaser Corners ○": {
+      "discount": 10
+    },
+    "Pace Chaser Savvy ◎": {
+      "discount": 20
+    },
+    "Pace Chaser Savvy ○": {
+      "discount": 20
+    },
+    "Head-On": {
+      "discount": 20
+    }
+  },
+  "track": {
+    "courseId": "",
+    "distance": "<Mile>",
+    "groundCondition": "<Random>",
+    "numUmas": 12,
+    "season": "<Random>",
+    "trackName": "<Random>",
+    "weather": "<Random>",
+    "surface": "Turf"
+  },
+  "uma": {
+    "distanceAptitude": "A",
+    "guts": 397,
+    "power": 766,
+    "mood": null,
+    "skills": [
+      "No Stopping Me!",
+      "Right-Handed ○",
+      "Triumphant Pulse",
+      "Pace Chaser Savvy ○",
+      "Pace Chaser Corners ○",
+      "Pace Chaser Straightaways ○",
+      "Productive Plan",
+      "Shifting Gears",
+      "Professor of Curvature",
+      "Ignited Spirit SPD"
+    ],
+    "speed": 1200,
+    "stamina": 732,
+    "strategy": "Pace Chaser",
+    "styleAptitude": "A",
+    "surfaceAptitude": "A",
+    "unique": "Resplendent Red Ace",
+    "wisdom": 857
+  }
+}

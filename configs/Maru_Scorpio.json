@@ -1,0 +1,252 @@
+{
+  "deterministic": false,
+  "confidenceInterval": 90,
+  "skills": {
+    "Nemesis": {
+      "discount": null
+    },
+    "Professor of Curvature": {
+      "discount": 10,
+      "default": 10
+    },
+    "Corner Adept ○": {
+      "discount": 0,
+      "default": 0
+    },
+    "Corner Recovery": {
+      "discount": null
+    },
+    "Highlander": {
+      "discount": null
+    },
+    "Ramp Up": {
+      "discount": 0,
+      "default": 0
+    },
+    "Slipstream": {
+      "discount": null
+    },
+    "Ignited Spirit SPD": {
+      "discount": 0,
+      "default": 10
+    },
+    "Swinging Maestro": {
+      "discount": null
+    },
+    "Rushing Gale!": {
+      "discount": 10,
+      "default": 10
+    },
+    "Straightaway Acceleration": {
+      "discount": 0,
+      "default": 0
+    },
+    "Straightaway Recovery": {
+      "discount": 40,
+      "default": 0
+    },
+    "It's On!": {
+      "discount": 10,
+      "default": 10
+    },
+    "No Stopping Me!": {
+      "discount": 10,
+      "default": 10
+    },
+    "Nimble Navigator": {
+      "discount": 0,
+      "default": 0
+    },
+    "End Closer Savvy": {
+      "discount": null
+    },
+    "Burning Spirit SPD": {
+      "discount": 10
+    },
+    "End Closer Savvy ◎": {
+      "discount": null
+    },
+    "End Closer Savvy ○": {
+      "discount": null
+    },
+    "Lay Low": {
+      "discount": null
+    },
+    "The Duty of Dignity Calls": {
+      "discount": null
+    },
+    "Competitive Spirit": {
+      "discount": null
+    },
+    "Competitive Spirit ◎": {
+      "discount": null
+    },
+    "Competitive Spirit ○": {
+      "discount": null
+    },
+    "This Dance Is for Vittoria!": {
+      "discount": null
+    },
+    "Lone Wolf": {
+      "discount": null
+    },
+    "Homestretch Haste": {
+      "discount": null
+    },
+    "Straightaway Adept": {
+      "discount": 0,
+      "default": 0
+    },
+    "Focus": {
+      "discount": 0,
+      "default": 0
+    },
+    "The View from the Lead Is Mine!": {
+      "discount": 20,
+      "default": 20
+    },
+    "Angling and Scheming": {
+      "discount": 10,
+      "default": 10
+    },
+    "Standard Distance ◎": {
+      "discount": null
+    },
+    "Standard Distance ○": {
+      "discount": null
+    },
+    "Left-Handed ◎": {
+      "discount": null
+    },
+    "Left-Handed ○": {
+      "discount": null
+    },
+    "Wet Conditions ◎": {
+      "discount": null
+    },
+    "Wet Conditions ○": {
+      "discount": null
+    },
+    "Taking the Lead": {
+      "discount": 10,
+      "default": 10
+    },
+    "Early Lead": {
+      "discount": 0,
+      "default": 0
+    },
+    "Fast-Paced": {
+      "discount": 20,
+      "default": 10
+    },
+    "Final Push": {
+      "discount": null
+    },
+    "Killer Tunes": {
+      "discount": null,
+      "default": 20
+    },
+    "Up-Tempo": {
+      "discount": null,
+      "default": 0
+    },
+    "Front Runner Straightaways ◎": {
+      "discount": 35
+    },
+    "Front Runner Straightaways ○": {
+      "discount": 35
+    },
+    "Front Runner Corners ◎": {
+      "discount": 20
+    },
+    "Front Runner Corners ○": {
+      "discount": 20
+    },
+    "Medium Straightaways ◎": {
+      "discount": null
+    },
+    "Medium Straightaways ○": {
+      "discount": null
+    },
+    "Medium Corners ◎": {
+      "discount": null
+    },
+    "Medium Corners ○": {
+      "discount": null
+    },
+    "Leader's Pride": {
+      "discount": 20,
+      "default": 0
+    },
+    "Moxie": {
+      "discount": null
+    },
+    "Second Wind": {
+      "discount": 40
+    },
+    "Groundwork": {
+      "discount": 10,
+      "default": 10
+    },
+    "Sunny Days": {
+      "discount": 10
+    },
+    "Sunny Days ◎": {
+      "discount": 10
+    },
+    "Sunny Days ○": {
+      "discount": 10
+    },
+    "Productive Plan": {
+      "discount": 20
+    },
+    "Changing Gears": {
+      "discount": 0,
+      "default": 0
+    },
+    "Shifting Gears": {
+      "discount": 0
+    },
+    "Acceleration": {
+      "discount": 0,
+      "default": 0
+    },
+    "Unyielding Spirit": {
+      "discount": 20
+    }
+  },
+  "track": {
+    "courseId": "",
+    "distance": "<Mile>",
+    "groundCondition": "<Random>",
+    "numUmas": 12,
+    "season": "<Random>",
+    "trackName": "<Random>",
+    "weather": "<Random>",
+    "surface": "Turf"
+  },
+  "uma": {
+    "distanceAptitude": "S",
+    "guts": 396,
+    "power": 897,
+    "mood": null,
+    "skills": [
+      "Angling and Scheming",
+      "No Stopping Me!",
+      "Taking the Lead",
+      "Fast-Paced",
+      "Front Runner Straightaways ○",
+      "Front Runner Corners ○",
+      "Unyielding Spirit",
+      "Leader's Pride",
+      "Focus"
+    ],
+    "speed": 1118,
+    "stamina": 754,
+    "strategy": "Front Runner",
+    "styleAptitude": "A",
+    "surfaceAptitude": "A",
+    "unique": "Red Shift/LP1211-M",
+    "wisdom": 812
+  }
+}

@@ -1,0 +1,475 @@
+{
+    "deterministic": false,
+    "confidenceInterval": 90,
+    "skills": {
+        "Triumphant Pulse": {
+            "discount": null
+        },
+        "Shadow Break": {
+            "discount": null
+        },
+        "Behold Thine Emperor's Divine Might": {
+            "discount": null
+        },
+        "Let's Pump Some Iron!": {
+            "discount": null
+        },
+        "Standing By": {
+            "discount": null
+        },
+        "Professor of Curvature": {
+            "discount": 30,
+            "default": 10
+        },
+        "Corner Adept ○": {
+            "discount": 0,
+            "default": 0
+        },
+        "Long Corners": {
+            "discount": null
+        },
+        "Passing Pro": {
+            "discount": null
+        },
+        "Pressure": {
+            "discount": null
+        },
+        "Go-Home Specialist": {
+            "discount": null
+        },
+        "After-School Stroll": {
+            "discount": null
+        },
+        "Levelheaded": {
+            "discount": null
+        },
+        "Intense Gaze": {
+            "discount": null
+        },
+        "Highlander": {
+            "discount": null
+        },
+        "Uma Stan": {
+            "discount": null
+        },
+        "Non-Standard Distance": {
+            "discount": null
+        },
+        "Ramp Up": {
+            "discount": 0,
+            "default": 0
+        },
+        "Right-Handed": {
+            "discount": null
+        },
+        "Slipstream": {
+            "discount": null
+        },
+        "End Closer Corners": {
+            "discount": null
+        },
+        "Ignited Spirit SPD": {
+            "discount": 30,
+            "default": 30
+        },
+        "Stamina Eater": {
+            "discount": null
+        },
+        "Swinging Maestro": {
+            "discount": null
+        },
+        "Rushing Gale!": {
+            "discount": null
+        },
+        "Straightaway Acceleration": {
+            "discount": 10,
+            "default": 10
+        },
+        "Straightaway Recovery": {
+            "discount": null
+        },
+        "It's On!": {
+            "discount": 10,
+            "default": 10
+        },
+        "No Stopping Me!": {
+            "discount": 10,
+            "default": 10
+        },
+        "Nimble Navigator": {
+            "discount": 0,
+            "default": 0
+        },
+        "Deep Breaths": {
+            "discount": null
+        },
+        "Firm Conditions": {
+            "discount": null
+        },
+        "Extra Tank": {
+            "discount": null
+        },
+        "End Closer Savvy": {
+            "discount": null
+        },
+        "Burning Spirit SPD": {
+            "discount": null
+        },
+        "Long Corners ◎": {
+            "discount": null
+        },
+        "Long Corners ○": {
+            "discount": null
+        },
+        "Non-Standard Distance ◎": {
+            "discount": null
+        },
+        "Non-Standard Distance ○": {
+            "discount": null
+        },
+        "Right-Handed ◎": {
+            "discount": null
+        },
+        "Right-Handed ○": {
+            "discount": null
+        },
+        "End Closer Corners ◎": {
+            "discount": null
+        },
+        "End Closer Corners ○": {
+            "discount": null
+        },
+        "Firm Conditions ◎": {
+            "discount": null
+        },
+        "Firm Conditions ○": {
+            "discount": null
+        },
+        "End Closer Savvy ◎": {
+            "discount": null
+        },
+        "End Closer Savvy ○": {
+            "discount": null
+        },
+        "Lay Low": {
+            "discount": null
+        },
+        "End Closer Straightaways": {
+            "discount": null
+        },
+        "End Closer Straightaways ◎": {
+            "discount": null
+        },
+        "End Closer Straightaways ○": {
+            "discount": null
+        },
+        "The Duty of Dignity Calls": {
+            "discount": null
+        },
+        "Straightaway Spurt": {
+            "discount": null
+        },
+        "This Dance Is for Vittoria!": {
+            "discount": null
+        },
+        "Sleeping Lion": {
+            "discount": null
+        },
+        "Encroaching Shadow": {
+            "discount": null
+        },
+        "Lone Wolf": {
+            "discount": null
+        },
+        "Homestretch Haste": {
+            "discount": null
+        },
+        "Inside Scoop": {
+            "discount": null
+        },
+        "Anchors Aweigh!": {
+            "discount": null
+        },
+        "Straightaway Adept": {
+            "discount": 30
+        },
+        "Focus": {
+            "discount": null
+        },
+        "Early Start": {
+            "discount": null
+        },
+        "Breath of Fresh Air": {
+            "discount": null
+        },
+        "Flashy☆Landing": {
+            "discount": null
+        },
+        "Corner Recovery ○": {
+            "discount": null
+        },
+        "SPARKLY☆STARDOM": {
+            "discount": null
+        },
+        "Standard Distance": {
+            "discount": null
+        },
+        "Standard Distance ◎": {
+            "discount": null
+        },
+        "Standard Distance ○": {
+            "discount": null
+        },
+        "Corner Connoisseur": {
+            "discount": null
+        },
+        "Corner Acceleration ○": {
+            "discount": null
+        },
+        "Productive Plan": {
+            "discount": null
+        },
+        "Updrafters": {
+            "discount": null
+        },
+        "Acceleration": {
+            "discount": null
+        },
+        "Late Surger Corners": {
+            "discount": null
+        },
+        "Late Surger Corners ◎": {
+            "discount": null
+        },
+        "Late Surger Corners ○": {
+            "discount": null
+        },
+        "Playtime's Over!": {
+            "discount": null
+        },
+        "Ignited Spirit PWR": {
+            "discount": null
+        },
+        "U=ma2": {
+            "discount": null
+        },
+        "Left-Handed": {
+            "discount": null
+        },
+        "Left-Handed ◎": {
+            "discount": null
+        },
+        "Left-Handed ○": {
+            "discount": null
+        },
+        "Wet Conditions": {
+            "discount": null
+        },
+        "Wet Conditions ◎": {
+            "discount": null
+        },
+        "Wet Conditions ○": {
+            "discount": null
+        },
+        "Sprint Corners": {
+            "discount": null
+        },
+        "Sprint Corners ◎": {
+            "discount": null
+        },
+        "Sprint Corners ○": {
+            "discount": null
+        },
+        "Mile Corners": {
+            "discount": null
+        },
+        "Mile Corners ◎": {
+            "discount": null
+        },
+        "Mile Corners ○": {
+            "discount": null
+        },
+        "Medium Corners": {
+            "discount": null
+        },
+        "Medium Corners ◎": {
+            "discount": null
+        },
+        "Medium Corners ○": {
+            "discount": null
+        },
+        "Front Runner Corners": {
+            "discount": null
+        },
+        "Front Runner Corners ◎": {
+            "discount": null
+        },
+        "Front Runner Corners ○": {
+            "discount": null
+        },
+        "Pace Chaser Corners": {
+            "discount": null
+        },
+        "Pace Chaser Corners ◎": {
+            "discount": null
+        },
+        "Pace Chaser Corners ○": {
+            "discount": null
+        },
+        "Front Runner Straightaways": {
+            "discount": null
+        },
+        "Front Runner Straightaways ◎": {
+            "discount": null
+        },
+        "Front Runner Straightaways ○": {
+            "discount": null
+        },
+        "Pace Chaser Straightaways": {
+            "discount": 0
+        },
+        "Pace Chaser Straightaways ◎": {
+            "discount": 0,
+            "default": 0
+        },
+        "Pace Chaser Straightaways ○": {
+            "discount": 0,
+            "default": 0
+        },
+        "Front Runner Savvy": {
+            "discount": null
+        },
+        "Front Runner Savvy ◎": {
+            "discount": null
+        },
+        "Front Runner Savvy ○": {
+            "discount": null
+        },
+        "Pace Chaser Savvy": {
+            "discount": null
+        },
+        "Pace Chaser Savvy ◎": {
+            "discount": null
+        },
+        "Pace Chaser Savvy ○": {
+            "discount": null
+        },
+        "Late Surger Savvy": {
+            "discount": null
+        },
+        "Late Surger Savvy ◎": {
+            "discount": null
+        },
+        "Late Surger Savvy ○": {
+            "discount": null
+        },
+        "Late Surger Straightaways": {
+            "discount": null
+        },
+        "Late Surger Straightaways ◎": {
+            "discount": null
+        },
+        "Late Surger Straightaways ○": {
+            "discount": null
+        },
+        "Give Mummy a Hug ♡": {
+            "discount": 20,
+            "default": 20
+        },
+        "Slick Surge": {
+            "discount": null
+        },
+        "Sprinting Gear": {
+            "discount": 0,
+            "default": 0
+        },
+        "Turbo Sprint": {
+            "discount": 10,
+            "default": 10
+        },
+        "Gap Closer": {
+            "discount": null
+        },
+        "Sprint Straightaways": {
+            "discount": null
+        },
+        "Sprint Straightaways ◎": {
+            "discount": null
+        },
+        "Sprint Straightaways ○": {
+            "discount": null
+        },
+        "Countermeasure": {
+            "discount": null
+        },
+        "Straight Descent": {
+            "discount": null
+        },
+        "Tactical Tweak": {
+            "discount": null
+        },
+        "Fighter": {
+            "discount": null
+        },
+        "Genius x Bakushin = Victory": {
+            "discount": 20,
+            "default": 20
+        },
+        "Shooting for Victory!": {
+            "discount": 10
+        },
+        "Meticulous Measures": {
+            "discount": 20
+        },
+        "Competitive Spirit": {
+            "discount": 30
+        },
+        "Competitive Spirit ◎": {
+            "discount": 30
+        },
+        "Competitive Spirit ○": {
+            "discount": 30
+        },
+        "Prepared to Pass": {
+            "discount": 10
+        }
+    },
+    "track": {
+        "courseId": "",
+        "distance": 1200,
+        "groundCondition": "Soft",
+        "numUmas": 9,
+        "season": "Winter",
+        "trackName": "Chukyo",
+        "weather": "Snowy",
+        "surface": "Turf"
+    },
+    "uma": {
+        "distanceAptitude": "S",
+        "guts": 321,
+        "power": 951,
+        "mood": null,
+        "skills": [
+            "Straightaway Acceleration",
+            "Give Mummy a Hug ♡",
+            "Ignited Spirit SPD",
+            "Competitive Spirit ○",
+            "Professor of Curvature",
+            "Genius x Bakushin = Victory",
+            "Pace Chaser Straightaways ○",
+            "Turbo Sprint",
+            "Meticulous Measures",
+            "Nimble Navigator",
+            "Straightaway Adept",
+            "Prepared to Pass"
+        ],
+        "speed": 1092,
+        "stamina": 372,
+        "strategy": "Pace Chaser",
+        "styleAptitude": "S",
+        "surfaceAptitude": "A",
+        "unique": "Victoria por plancha ☆",
+        "wisdom": 1088,
+        "skillPoints": 10
+    }
+}

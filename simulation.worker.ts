@@ -71,10 +71,8 @@ function runSkillSimulation(task: SimulationTask) {
         task.useRandomCondition
 
     if (usePerSimulationMode) {
-        // Build all unique combinations of variable parameters.
-        // NOTE: When combinations exceed requested simulations, each combination gets at least
-        // 1 simulation for full coverage. This ensures representative sampling across all
-        // conditions but may result in more simulations than requested.
+        // Build weighted arrays for each random dimension, then randomly sample
+        // exactly numSimulations combinations (avoiding Cartesian product explosion).
         const moods: Mood[] = task.useRandomMood
             ? [-2, -1, 0, 1, 2]
             : [task.baseUma.mood as Mood]
@@ -88,55 +86,48 @@ function runSkillSimulation(task: SimulationTask) {
             ? (task.weightedConditions ?? [task.racedef.groundCondition])
             : [task.racedef.groundCondition]
 
-        // Generate all combinations
-        interface Combination {
-            course: (typeof courses)[0]
+        // Randomly sample exactly numSimulations combinations, respecting weighted distributions.
+        // Group identical combos so runComparison can batch them with nsamples > 1.
+        interface GroupedCombo {
+            courseIndex: number
             mood: Mood
             season: number
             weather: number
             condition: number
+            count: number
         }
-        const combinations: Combination[] = []
-        for (const course of courses) {
-            for (const mood of moods) {
-                for (const season of seasons) {
-                    for (const weather of weathers) {
-                        for (const condition of conditions) {
-                            combinations.push({
-                                course,
-                                mood,
-                                season,
-                                weather,
-                                condition,
-                            })
-                        }
-                    }
-                }
+        const grouped = new Map<string, GroupedCombo>()
+
+        for (let i = 0; i < task.numSimulations; i++) {
+            const courseIndex = Math.floor(Math.random() * numCourses)
+            const mood = moods[Math.floor(Math.random() * moods.length)]
+            const season = seasons[Math.floor(Math.random() * seasons.length)]
+            const weather =
+                weathers[Math.floor(Math.random() * weathers.length)]
+            const condition =
+                conditions[Math.floor(Math.random() * conditions.length)]
+
+            const key = `${courseIndex}|${mood}|${season}|${weather}|${condition}`
+            const existing = grouped.get(key)
+            if (existing) {
+                existing.count++
+            } else {
+                grouped.set(key, {
+                    courseIndex,
+                    mood,
+                    season,
+                    weather,
+                    condition,
+                    count: 1,
+                })
             }
         }
-
-        // Distribute simulations across combinations
-        // Each combination gets at least 1 simulation, with extras distributed evenly
-        const numCombinations = combinations.length
-        const baseSimsPerCombo = Math.max(
-            1,
-            Math.floor(task.numSimulations / numCombinations),
-        )
-        let remainingExtras = Math.max(
-            0,
-            task.numSimulations - baseSimsPerCombo * numCombinations,
-        )
 
         const baseUma = createHorseState(task.baseUma, baseSkillIds)
         const umaWithSkill = createHorseState(task.baseUma, filteredSkillIds)
         let seedOffset = 0
 
-        for (const combo of combinations) {
-            // Give one extra simulation to early combinations if we have remainders
-            const simsForThisCombo =
-                baseSimsPerCombo + (remainingExtras > 0 ? 1 : 0)
-            if (remainingExtras > 0) remainingExtras--
-
+        for (const combo of grouped.values()) {
             const racedefForSim = {
                 ...task.racedef,
                 mood: combo.mood,
@@ -152,11 +143,11 @@ function runSkillSimulation(task: SimulationTask) {
             ) {
                 comboSimOptions.seed = comboSimOptions.seed + seedOffset
             }
-            seedOffset += simsForThisCombo
+            seedOffset += combo.count
 
             const { results: comboResults } = runComparison(
-                simsForThisCombo,
-                combo.course,
+                combo.count,
+                courses[combo.courseIndex],
                 racedefForSim,
                 baseUma,
                 umaWithSkill,

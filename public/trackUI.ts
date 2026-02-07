@@ -1,7 +1,11 @@
 import { autoSave } from './configManager'
 import { DISTANCE_CATEGORIES, RANDOM_LOCATION, tracknames } from './constants'
 import { callRenderSkills } from './renderCallbacks'
-import { getCalculatedResultsCache, getCourseData, getCurrentConfig } from './state'
+import {
+    getCalculatedResultsCache,
+    getCourseData,
+    getCurrentConfig,
+} from './state'
 import type { Track } from './types'
 
 function calculateDropdownWidth(options: string[]): number {
@@ -20,7 +24,9 @@ function calculateDropdownWidth(options: string[]): number {
     return Math.max(maxWidth + 30, 60)
 }
 
-export function isRandomLocation(trackName: string | undefined | null): boolean {
+export function isRandomLocation(
+    trackName: string | undefined | null,
+): boolean {
     return (
         trackName !== undefined &&
         trackName !== null &&

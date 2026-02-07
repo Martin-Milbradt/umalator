@@ -10,7 +10,11 @@ import {
     setupResultsTableSorting,
     setupSelectAllCheckbox,
 } from './resultsUI'
-import { buildSkillNameLookup, buildVariantCache, getCanonicalSkillName } from './skillHelpers'
+import {
+    buildSkillNameLookup,
+    buildVariantCache,
+    getCanonicalSkillName,
+} from './skillHelpers'
 import { renderSkills, setupSkillsContainerDelegation } from './skillsUI'
 import {
     getCalculatedResultsCache,

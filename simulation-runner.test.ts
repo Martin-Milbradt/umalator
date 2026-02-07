@@ -8,6 +8,9 @@ import {
 } from './simulation-runner'
 import {
     calculateStatsFromRawResults,
+    createWeightedConditionArray,
+    createWeightedSeasonArray,
+    createWeightedWeatherArray,
     processCourseData,
     type CourseData,
 } from './utils'
@@ -492,4 +495,92 @@ describe('simulation worker integration', () => {
         )
         expect(overallDiff).toBeLessThan(0.5)
     }, 60000)
+
+    it('all-random scenario should complete without combinatorial explosion', async () => {
+        // Use two courses to also randomize course selection
+        const suzuka2000 = processCourseData(courseData['10905'])
+
+        const task: SimulationTask = {
+            skillId: '200492', // Nimble Navigator
+            skillName: 'Nimble Navigator',
+            courses: [nakayama2500, suzuka2000],
+            racedef: {
+                mood: 2,
+                groundCondition: 2,
+                weather: 1,
+                season: 1,
+                time: 0,
+                grade: 100,
+                popularity: 1,
+                skillId: '',
+                numUmas: 18,
+            },
+            baseUma: {
+                speed: 1200,
+                stamina: 600,
+                power: 1000,
+                guts: 450,
+                wisdom: 550,
+                strategy: 'Nige',
+                distanceAptitude: 'A',
+                surfaceAptitude: 'A',
+                strategyAptitude: 'A',
+                skills: [],
+            },
+            simOptions: {
+                seed: 99999,
+                useEnhancedSpurt: true,
+                accuracyMode: true,
+                pacemakerCount: 1,
+                allowRushedUma1: true,
+                allowRushedUma2: true,
+                allowDownhillUma1: true,
+                allowDownhillUma2: true,
+                allowSectionModifierUma1: true,
+                allowSectionModifierUma2: true,
+                skillCheckChanceUma1: false,
+                skillCheckChanceUma2: false,
+            },
+            numSimulations: 100,
+            useRandomMood: true,
+            useRandomSeason: true,
+            useRandomWeather: true,
+            useRandomCondition: true,
+            weightedSeasons: createWeightedSeasonArray(),
+            weightedWeathers: createWeightedWeatherArray(),
+            weightedConditions: createWeightedConditionArray(),
+            returnRawResults: true,
+        }
+
+        const result = await new Promise<number[]>((resolve, reject) => {
+            const worker = new Worker(workerPath, { workerData: task })
+            worker.on(
+                'message',
+                (message: {
+                    success: boolean
+                    result?: { rawResults: number[] }
+                    error?: string
+                }) => {
+                    if (message.success && message.result?.rawResults) {
+                        resolve(message.result.rawResults)
+                    } else {
+                        reject(new Error(message.error || 'Unknown error'))
+                    }
+                    worker.terminate()
+                },
+            )
+            worker.on('error', (error) => {
+                reject(error)
+                worker.terminate()
+            })
+        })
+
+        // Should have exactly numSimulations results, not millions
+        expect(result).toHaveLength(100)
+
+        const mean = result.reduce((a, b) => a + b, 0) / result.length
+        console.log(
+            `All-random 100 sims: mean=${mean.toFixed(2)}, min=${Math.min(...result).toFixed(2)}, max=${Math.max(...result).toFixed(2)}`,
+        )
+    }, 30000)
 })

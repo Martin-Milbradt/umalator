@@ -111,7 +111,9 @@ export function getCalculatedResultsCache(): Map<string, SkillResult> {
     return calculatedResultsCache
 }
 
-export function getAutoCalculationTimeout(): ReturnType<typeof setTimeout> | null {
+export function getAutoCalculationTimeout(): ReturnType<
+    typeof setTimeout
+> | null {
     return autoCalculationTimeout
 }
 

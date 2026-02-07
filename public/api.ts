@@ -153,7 +153,9 @@ export async function runCalculations(clearExisting = true): Promise<void> {
  * Run calculations for specific skills only.
  * More efficient than runCalculations(false) when only a few skills need updating.
  */
-export async function runSelectiveCalculations(skillNames: string[]): Promise<void> {
+export async function runSelectiveCalculations(
+    skillNames: string[],
+): Promise<void> {
     const currentConfigFile = getCurrentConfigFile()
     const resultsMap = getResultsMap()
     const calculatedResultsCache = getCalculatedResultsCache()

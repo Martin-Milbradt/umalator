@@ -31,9 +31,13 @@ import {
 import type { SkillResult, SkillResultWithStatus } from './types'
 
 // Forward declaration to avoid circular import - will be set by api.ts
-let runSelectiveCalculationsImpl: ((skillNames: string[]) => Promise<void>) | null = null
+let runSelectiveCalculationsImpl:
+    | ((skillNames: string[]) => Promise<void>)
+    | null = null
 
-export function setRunSelectiveCalculations(fn: (skillNames: string[]) => Promise<void>): void {
+export function setRunSelectiveCalculations(
+    fn: (skillNames: string[]) => Promise<void>,
+): void {
     runSelectiveCalculationsImpl = fn
 }
 
@@ -466,7 +470,9 @@ export function refreshResultsCosts(): void {
  * The server-side cache IS keyed by config hash (including Uma skills) and will return
  * fresh results for the new Uma state.
  */
-export function recalculateUpgradedSkillsForBasicChange(basicSkillName: string): void {
+export function recalculateUpgradedSkillsForBasicChange(
+    basicSkillName: string,
+): void {
     const skillmeta = getSkillmeta()
     const skillnames = getSkillnames()
     const currentConfig = getCurrentConfig()
@@ -533,7 +539,9 @@ export const restoreUpgradedSkillsForBasicSkill =
  * Checks frontend cache first, then server cache; otherwise adds as pending.
  * Only adds if the skill has a discount set.
  */
-export async function returnSkillToResultsTable(skillName: string): Promise<void> {
+export async function returnSkillToResultsTable(
+    skillName: string,
+): Promise<void> {
     const currentConfig = getCurrentConfig()
     const calculatedResultsCache = getCalculatedResultsCache()
     const resultsMap = getResultsMap()
@@ -570,7 +578,10 @@ export async function returnSkillToResultsTable(skillName: string): Promise<void
     addPendingSkillToResults(skillName, skillConfig.discount)
 }
 
-export function addPendingSkillToResults(skillName: string, discount: number): void {
+export function addPendingSkillToResults(
+    skillName: string,
+    discount: number,
+): void {
     const resultsMap = getResultsMap()
     const cost = getSkillCostWithDiscount(skillName)
     resultsMap.set(skillName, {
