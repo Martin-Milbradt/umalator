@@ -152,15 +152,6 @@ export function renderResultsTable(): void {
             result.discount > 0 ? `${result.discount}%` : '-'
         row.appendChild(discountCell)
 
-        // Sims
-        const simsCell = document.createElement('td')
-        simsCell.className = 'p-1 text-right'
-        simsCell.textContent =
-            result.status === 'pending'
-                ? '...'
-                : result.numSimulations.toString()
-        row.appendChild(simsCell)
-
         // Mean
         const meanCell = document.createElement('td')
         meanCell.className = 'p-1 text-right'
@@ -588,7 +579,6 @@ export function addPendingSkillToResults(
         skill: skillName,
         cost,
         discount,
-        numSimulations: 0,
         meanLength: 0,
         medianLength: 0,
         meanLengthPerCost: 0,

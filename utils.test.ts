@@ -658,7 +658,6 @@ describe('calculateStatsFromRawResults', () => {
         expect(result.skill).toBe('Test Skill')
         expect(result.cost).toBe(100)
         expect(result.discount).toBe(10)
-        expect(result.numSimulations).toBe(5)
         expect(result.meanLength).toBe(3)
         expect(result.medianLength).toBe(3)
         expect(result.minLength).toBe(1)
@@ -753,10 +752,6 @@ describe('calculateStatsFromRawResults', () => {
             'Test',
             95,
         )
-
-        // Verify accumulation count is correct
-        expect(result500.numSimulations).toBe(500)
-        expect(result100.numSimulations).toBe(100)
 
         // Verify mean calculation is mathematically correct
         const expectedMean = accumulated.reduce((a, b) => a + b, 0) / 500
@@ -988,7 +983,6 @@ describe('formatTable', () => {
                 skill: 'Skill A',
                 cost: 100,
                 discount: 10,
-                numSimulations: 500,
                 meanLength: 5.5,
                 medianLength: 5.0,
                 meanLengthPerCost: 0.055,
@@ -1016,7 +1010,6 @@ describe('formatTable', () => {
                 skill: 'Test',
                 cost: 100,
                 discount: 0,
-                numSimulations: 100,
                 meanLength: 5.0,
                 medianLength: 5.0,
                 meanLengthPerCost: 0.05,
@@ -1037,7 +1030,6 @@ describe('formatTable', () => {
                 skill: 'Skill A',
                 cost: 100,
                 discount: 10,
-                numSimulations: 500,
                 meanLength: 5.5,
                 medianLength: 5.0,
                 meanLengthPerCost: 0.055,
@@ -1050,7 +1042,6 @@ describe('formatTable', () => {
                 skill: 'Longer Skill Name',
                 cost: 200,
                 discount: 0,
-                numSimulations: 300,
                 meanLength: 3.0,
                 medianLength: 2.5,
                 meanLengthPerCost: 0.015,

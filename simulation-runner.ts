@@ -9,7 +9,6 @@ import {
     type CourseData,
     type CurrentSettings,
     calculateSkillCost,
-    calculateStatsFromRawResults,
     canSkillTrigger,
     createWeightedConditionArray,
     createWeightedSeasonArray,
@@ -109,13 +108,6 @@ interface StaticData {
     skillData: Record<string, SkillDataEntry>
     courseData: Record<string, RawCourseData>
     trackNames: Record<string, string[]>
-}
-
-interface SkillRawResults {
-    skillName: string
-    rawResults: number[]
-    cost: number
-    discount: number
 }
 
 function parseRaceCondition<T>(
@@ -572,11 +564,21 @@ export class SimulationRunner {
         const confidenceInterval = config.confidenceInterval ?? 95
         const concurrency = Math.min(availableSkillNames.length, cpus().length)
 
+        interface WorkerStats {
+            skillName: string
+            mean: number
+            median: number
+            min: number
+            max: number
+            ciLower: number
+            ciUpper: number
+        }
+
+        const numSimulations = 500
+
         const runSimulationInWorker = (
             skillName: string,
-            numSimulations: number,
-            returnRawResults: boolean,
-        ): Promise<{ skillName: string; rawResults?: number[] }> => {
+        ): Promise<WorkerStats> => {
             return new Promise((resolve, reject) => {
                 const skillId = skillNameToId[skillName]
                 // Generate unique seed for this worker invocation
@@ -602,7 +604,7 @@ export class SimulationRunner {
                         weightedWeathers: conditions.weather.weighted,
                         weightedConditions: conditions.groundCondition.weighted,
                         confidenceInterval,
-                        returnRawResults,
+                        returnRawResults: false,
                     },
                 })
 
@@ -621,7 +623,7 @@ export class SimulationRunner {
                     'message',
                     (message: {
                         success: boolean
-                        result?: { skillName: string; rawResults?: number[] }
+                        result?: WorkerStats
                         error?: string
                     }) => {
                         clearTimeout(timeoutId)
@@ -642,8 +644,6 @@ export class SimulationRunner {
             })
         }
 
-        const skillRawResultsMap: Map<string, SkillRawResults> = new Map()
-
         const skillCostContext: SkillCostContext = {
             skillMeta,
             baseUmaSkillIds: umaSkillIds,
@@ -653,139 +653,50 @@ export class SimulationRunner {
             skillNameToConfigKey,
         }
 
-        for (const skillName of availableSkillNames) {
-            const skillId = skillNameToId[skillName]
-            const configKey = skillNameToConfigKey[skillName] || skillName
+        // Run 500 simulations for all skills in a single pass
+        onProgress({
+            type: 'phase',
+            phase: `Running ${numSimulations} simulations for all ${availableSkillNames.length} skills...`,
+        })
+
+        const factories = availableSkillNames.map(
+            (skillName) => () => runSimulationInWorker(skillName),
+        )
+        const workerResults = await processWithConcurrency(
+            factories,
+            concurrency,
+        )
+
+        const allResults: SkillResult[] = []
+        for (const stats of workerResults) {
+            const skillId = skillNameToId[stats.skillName]
+            const configKey =
+                skillNameToConfigKey[stats.skillName] || stats.skillName
             const skillConfig = configSkills[configKey]
             const cost = calculateSkillCost(
                 skillId,
                 skillConfig,
                 skillCostContext,
             )
-            skillRawResultsMap.set(skillName, {
-                skillName,
-                rawResults: [],
+            const discount = skillConfig.discount ?? 0
+
+            const skillResult: SkillResult = {
+                skill: stats.skillName,
                 cost,
-                discount: skillConfig.discount ?? 0,
-            })
-        }
-
-        const calculateCurrentResults = (): SkillResult[] => {
-            const results: SkillResult[] = []
-            for (const skillData of skillRawResultsMap.values()) {
-                if (skillData.rawResults.length > 0) {
-                    results.push(
-                        calculateStatsFromRawResults(
-                            skillData.rawResults,
-                            skillData.cost,
-                            skillData.discount,
-                            skillData.skillName,
-                            confidenceInterval,
-                        ),
-                    )
-                }
+                discount,
+                meanLength: stats.mean,
+                medianLength: stats.median,
+                meanLengthPerCost: cost > 0 ? stats.mean / cost : 0,
+                minLength: stats.min,
+                maxLength: stats.max,
+                ciLower: stats.ciLower,
+                ciUpper: stats.ciUpper,
             }
-            results.sort((a, b) => b.meanLengthPerCost - a.meanLengthPerCost)
-            return results
+            allResults.push(skillResult)
+            onProgress({ type: 'result', result: skillResult })
         }
 
-        // First pass: 100 simulations for all skills
-        onProgress({
-            type: 'phase',
-            phase: `Running 100 simulations for all ${availableSkillNames.length} skills...`,
-        })
-
-        const firstPassFactories = availableSkillNames.map(
-            (skillName) => () => runSimulationInWorker(skillName, 100, true),
-        )
-        const firstPassResults = await processWithConcurrency(
-            firstPassFactories,
-            concurrency,
-        )
-
-        for (const result of firstPassResults) {
-            if (result.rawResults) {
-                const skillData = skillRawResultsMap.get(result.skillName)
-                if (skillData) {
-                    skillData.rawResults.push(...result.rawResults)
-                    // Emit individual result as it completes
-                    const skillResult = calculateStatsFromRawResults(
-                        skillData.rawResults,
-                        skillData.cost,
-                        skillData.discount,
-                        skillData.skillName,
-                        confidenceInterval,
-                    )
-                    onProgress({ type: 'result', result: skillResult })
-                }
-            }
-        }
-
-        let currentResults = calculateCurrentResults()
-
-        const runAdditionalSimulations = async (
-            skillNames: string[],
-            passName: string,
-        ) => {
-            if (skillNames.length === 0) return
-            onProgress({
-                type: 'phase',
-                phase: `Running 100 simulations for ${passName} (${skillNames.length} skills)...`,
-            })
-
-            const factories = skillNames.map(
-                (skillName) => () =>
-                    runSimulationInWorker(skillName, 100, true),
-            )
-            const passResults = await processWithConcurrency(
-                factories,
-                concurrency,
-            )
-
-            for (const result of passResults) {
-                if (result.rawResults) {
-                    const skillData = skillRawResultsMap.get(result.skillName)
-                    if (skillData) {
-                        skillData.rawResults.push(...result.rawResults)
-                        // Emit updated result
-                        const skillResult = calculateStatsFromRawResults(
-                            skillData.rawResults,
-                            skillData.cost,
-                            skillData.discount,
-                            skillData.skillName,
-                            confidenceInterval,
-                        )
-                        onProgress({ type: 'result', result: skillResult })
-                    }
-                }
-            }
-            currentResults = calculateCurrentResults()
-        }
-
-        // Tiered simulation passes
-        const topHalfCount = Math.ceil(currentResults.length / 2)
-        const topHalfSkills = currentResults
-            .slice(0, topHalfCount)
-            .map((r) => r.skill)
-        await runAdditionalSimulations(topHalfSkills, 'top half')
-
-        const top10Skills = currentResults
-            .slice(0, Math.min(10, currentResults.length))
-            .map((r) => r.skill)
-        await runAdditionalSimulations(top10Skills, 'top 10')
-
-        const top25PercentCount = Math.ceil(currentResults.length * 0.25)
-        const top25PercentSkills = currentResults
-            .slice(0, top25PercentCount)
-            .map((r) => r.skill)
-        await runAdditionalSimulations(top25PercentSkills, 'top 25%')
-
-        const top5Skills = currentResults
-            .slice(0, Math.min(5, currentResults.length))
-            .map((r) => r.skill)
-        await runAdditionalSimulations(top5Skills, 'top 5')
-
-        const finalResults = calculateCurrentResults()
-        onProgress({ type: 'complete', results: finalResults })
+        allResults.sort((a, b) => b.meanLengthPerCost - a.meanLengthPerCost)
+        onProgress({ type: 'complete', results: allResults })
     }
 }

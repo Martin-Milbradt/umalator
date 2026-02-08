@@ -41,7 +41,6 @@ export interface SkillResult {
     skill: string
     cost: number
     discount: number
-    numSimulations: number
     meanLength: number
     medianLength: number
     meanLengthPerCost: number

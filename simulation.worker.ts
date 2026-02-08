@@ -127,6 +127,13 @@ function runSkillSimulation(task: SimulationTask) {
         const umaWithSkill = createHorseState(task.baseUma, filteredSkillIds)
         let seedOffset = 0
 
+        // Ensure nsamples > 1 per runComparison call to preserve internal
+        // variance from trigger position sampling. With nsamples=1, skills
+        // with low activation rates (e.g. phase-1-only triggers) frequently
+        // produce all-zero results because the single trigger position may
+        // not land in the skill's activation region.
+        const MIN_SAMPLES_PER_COMBO = 2
+
         for (const combo of grouped.values()) {
             const racedefForSim = {
                 ...task.racedef,
@@ -136,6 +143,7 @@ function runSkillSimulation(task: SimulationTask) {
                 groundCondition: combo.condition,
             }
 
+            const effectiveSamples = Math.max(combo.count, MIN_SAMPLES_PER_COMBO)
             const comboSimOptions = { ...task.simOptions }
             if (
                 comboSimOptions.seed !== undefined &&
@@ -143,10 +151,10 @@ function runSkillSimulation(task: SimulationTask) {
             ) {
                 comboSimOptions.seed = comboSimOptions.seed + seedOffset
             }
-            seedOffset += combo.count
+            seedOffset += effectiveSamples
 
             const { results: comboResults } = runComparison(
-                combo.count,
+                effectiveSamples,
                 courses[combo.courseIndex],
                 racedefForSim,
                 baseUma,

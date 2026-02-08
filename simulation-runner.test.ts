@@ -342,159 +342,40 @@ describe('simulation worker integration', () => {
         expect(relativeDiff).toBeLessThan(0.5)
     }, 30000)
 
-    it('100 vs 500 simulations should produce similar means', async () => {
+    it('500 simulations should produce stable statistics', async () => {
         const skillName = 'Nimble Navigator'
         const cost = 150
         const discount = 0
         const ciPercent = 90
 
-        // Simulate the tiered accumulation from simulation-runner.ts:
-        // - skillRawResultsMap starts with empty rawResults[]
-        // - Each pass pushes new results: skillData.rawResults.push(...result.rawResults)
-        // - Stats are calculated via calculateStatsFromRawResults(skillData.rawResults, ...)
-
-        // Pass 1: 100 sims (all skills get this)
-        const pass1Results = await runWorkerSimulationWithConfig(
+        // Run 500 simulations in a single pass (matching the new flat approach)
+        const results = await runWorkerSimulationWithConfig(
             '200492',
             skillName,
             nakayama2500,
-            100,
+            500,
             44444,
         )
 
-        // Accumulate like simulation-runner does
-        const rawResults: number[] = []
-        rawResults.push(...pass1Results)
-
-        const stats100 = calculateStatsFromRawResults(
-            rawResults,
+        const stats = calculateStatsFromRawResults(
+            results,
             cost,
             discount,
             skillName,
             ciPercent,
         )
+
         console.log(
-            `After 100 sims: mean=${stats100.meanLength.toFixed(2)}, median=${stats100.medianLength.toFixed(2)}, min=${stats100.minLength.toFixed(2)}, max=${stats100.maxLength.toFixed(2)}`,
+            `500 sims: mean=${stats.meanLength.toFixed(2)}, median=${stats.medianLength.toFixed(2)}, min=${stats.minLength.toFixed(2)}, max=${stats.maxLength.toFixed(2)}`,
         )
 
-        // Pass 2: 100 more sims (top half)
-        const pass2Results = await runWorkerSimulationWithConfig(
-            '200492',
-            skillName,
-            nakayama2500,
-            100,
-            55555,
-        )
-        rawResults.push(...pass2Results)
-
-        const stats200 = calculateStatsFromRawResults(
-            rawResults,
-            cost,
-            discount,
-            skillName,
-            ciPercent,
-        )
-        console.log(
-            `After 200 sims: mean=${stats200.meanLength.toFixed(2)}, median=${stats200.medianLength.toFixed(2)}, min=${stats200.minLength.toFixed(2)}, max=${stats200.maxLength.toFixed(2)}`,
-        )
-
-        // Pass 3: 100 more sims (top 10)
-        const pass3Results = await runWorkerSimulationWithConfig(
-            '200492',
-            skillName,
-            nakayama2500,
-            100,
-            66666,
-        )
-        rawResults.push(...pass3Results)
-
-        const stats300 = calculateStatsFromRawResults(
-            rawResults,
-            cost,
-            discount,
-            skillName,
-            ciPercent,
-        )
-        console.log(
-            `After 300 sims: mean=${stats300.meanLength.toFixed(2)}, median=${stats300.medianLength.toFixed(2)}, min=${stats300.minLength.toFixed(2)}, max=${stats300.maxLength.toFixed(2)}`,
-        )
-
-        // Pass 4: 100 more sims (top 25%)
-        const pass4Results = await runWorkerSimulationWithConfig(
-            '200492',
-            skillName,
-            nakayama2500,
-            100,
-            77777,
-        )
-        rawResults.push(...pass4Results)
-
-        const stats400 = calculateStatsFromRawResults(
-            rawResults,
-            cost,
-            discount,
-            skillName,
-            ciPercent,
-        )
-        console.log(
-            `After 400 sims: mean=${stats400.meanLength.toFixed(2)}, median=${stats400.medianLength.toFixed(2)}, min=${stats400.minLength.toFixed(2)}, max=${stats400.maxLength.toFixed(2)}`,
-        )
-
-        // Pass 5: 100 more sims (top 5)
-        const pass5Results = await runWorkerSimulationWithConfig(
-            '200492',
-            skillName,
-            nakayama2500,
-            100,
-            88888,
-        )
-        rawResults.push(...pass5Results)
-
-        const stats500 = calculateStatsFromRawResults(
-            rawResults,
-            cost,
-            discount,
-            skillName,
-            ciPercent,
-        )
-        console.log(
-            `After 500 sims: mean=${stats500.meanLength.toFixed(2)}, median=${stats500.medianLength.toFixed(2)}, min=${stats500.minLength.toFixed(2)}, max=${stats500.maxLength.toFixed(2)}`,
-        )
-
-        // Verify accumulation is correct
-        expect(stats100.numSimulations).toBe(100)
-        expect(stats200.numSimulations).toBe(200)
-        expect(stats300.numSimulations).toBe(300)
-        expect(stats400.numSimulations).toBe(400)
-        expect(stats500.numSimulations).toBe(500)
-
-        // Means should converge - each step shouldn't jump dramatically
-        // Check that adjacent means don't differ by more than 50%
-        const checkJump = (a: number, b: number, label: string) => {
-            if (Math.max(a, b) === 0) return // Skip if both are zero
-            const diff = Math.abs(a - b) / Math.max(Math.abs(a), Math.abs(b))
-            console.log(`${label}: ${(diff * 100).toFixed(1)}% change`)
-            expect(diff).toBeLessThan(0.5)
-        }
-
-        checkJump(stats100.meanLength, stats200.meanLength, '100→200')
-        checkJump(stats200.meanLength, stats300.meanLength, '200→300')
-        checkJump(stats300.meanLength, stats400.meanLength, '300→400')
-        checkJump(stats400.meanLength, stats500.meanLength, '400→500')
-
-        // Overall: 100 vs 500 should be within 50%
-        // (wider tolerance because skill has many 0-value results, high variance with small samples)
-        const overallDiff =
-            Math.abs(stats100.meanLength - stats500.meanLength) /
-            Math.max(
-                Math.abs(stats100.meanLength),
-                Math.abs(stats500.meanLength),
-            )
-        console.log(
-            `Overall 100→500: ${(overallDiff * 100).toFixed(1)}% change`,
-        )
-        expect(overallDiff).toBeLessThan(0.5)
-    }, 60000)
+        // With 500 sims, stats should be reasonable
+        expect(results).toHaveLength(500)
+        expect(stats.meanLength).toBeGreaterThan(0)
+        expect(stats.minLength).toBeLessThanOrEqual(stats.meanLength)
+        expect(stats.maxLength).toBeGreaterThanOrEqual(stats.meanLength)
+        expect(stats.ciLower).toBeLessThanOrEqual(stats.ciUpper)
+    }, 30000)
 
     it('all-random scenario should complete without combinatorial explosion', async () => {
         // Use two courses to also randomize course selection
@@ -575,8 +456,11 @@ describe('simulation worker integration', () => {
             })
         })
 
-        // Should have exactly numSimulations results, not millions
-        expect(result).toHaveLength(100)
+        // Should have approximately numSimulations results, not millions.
+        // With MIN_SAMPLES_PER_COMBO=2, combos with count=1 produce 2 results,
+        // so total may exceed requested count by up to numCombos.
+        expect(result.length).toBeGreaterThanOrEqual(100)
+        expect(result.length).toBeLessThanOrEqual(200)
 
         const mean = result.reduce((a, b) => a + b, 0) / result.length
         console.log(
