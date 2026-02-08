@@ -71,90 +71,132 @@ function runSkillSimulation(task: SimulationTask) {
         task.useRandomCondition
 
     if (usePerSimulationMode) {
-        // Build weighted arrays for each random dimension, then randomly sample
-        // exactly numSimulations combinations (avoiding Cartesian product explosion).
-        const moods: Mood[] = task.useRandomMood
+        const budget = task.numSimulations
+        const MIN_NSAMPLES = 25
+
+        // Step 1: All tracks (no cap)
+        const numTracks = numCourses
+
+        // Step 2: Sims per track
+        const simsPerTrack = Math.max(
+            Math.floor(budget / numTracks),
+            MIN_NSAMPLES,
+        )
+
+        // Step 3: Combos per track
+        const distinctPerDim = [
+            task.useRandomMood ? 5 : 1,
+            task.useRandomSeason ? 4 : 1,
+            task.useRandomWeather ? 4 : 1,
+            task.useRandomCondition ? 4 : 1,
+        ]
+        const distinctCombos = distinctPerDim.reduce((a, b) => a * b, 1)
+        const hasRandomConditions = distinctCombos > 1
+        const combosPerTrack = hasRandomConditions
+            ? Math.min(
+                  distinctCombos,
+                  Math.max(Math.floor(simsPerTrack / MIN_NSAMPLES), 1),
+              )
+            : 1
+        const nsamplesPerCombo = Math.floor(
+            simsPerTrack / Math.max(combosPerTrack, 1),
+        )
+
+        // Step 4: Generate representative values globally
+        const totalCombos = numTracks * combosPerTrack
+        const moodPool: Mood[] = task.useRandomMood
             ? [-2, -1, 0, 1, 2]
-            : [task.baseUma.mood as Mood]
-        const seasons = task.useRandomSeason
+            : [task.racedef.mood as Mood]
+        const seasonPool = task.useRandomSeason
             ? (task.weightedSeasons ?? [task.racedef.season])
             : [task.racedef.season]
-        const weathers = task.useRandomWeather
+        const weatherPool = task.useRandomWeather
             ? (task.weightedWeathers ?? [task.racedef.weather])
             : [task.racedef.weather]
-        const conditions = task.useRandomCondition
+        const conditionPool = task.useRandomCondition
             ? (task.weightedConditions ?? [task.racedef.groundCondition])
             : [task.racedef.groundCondition]
 
-        // Randomly sample exactly numSimulations combinations, respecting weighted distributions.
-        // Group identical combos so runComparison can batch them with nsamples > 1.
-        interface GroupedCombo {
-            courseIndex: number
-            mood: Mood
-            season: number
-            weather: number
-            condition: number
-            count: number
-        }
-        const grouped = new Map<string, GroupedCombo>()
+        const globalMoods = generateRepresentative(totalCombos, moodPool)
+        const globalSeasons = generateRepresentative(totalCombos, seasonPool)
+        const globalWeathers = generateRepresentative(
+            totalCombos,
+            weatherPool,
+        )
+        const globalConditions = generateRepresentative(
+            totalCombos,
+            conditionPool,
+        )
+        shuffleInPlace(globalMoods)
+        shuffleInPlace(globalSeasons)
+        shuffleInPlace(globalWeathers)
+        shuffleInPlace(globalConditions)
 
-        for (let i = 0; i < task.numSimulations; i++) {
-            const courseIndex = Math.floor(Math.random() * numCourses)
-            const mood = moods[Math.floor(Math.random() * moods.length)]
-            const season = seasons[Math.floor(Math.random() * seasons.length)]
-            const weather =
-                weathers[Math.floor(Math.random() * weathers.length)]
-            const condition =
-                conditions[Math.floor(Math.random() * conditions.length)]
-
-            const key = `${courseIndex}|${mood}|${season}|${weather}|${condition}`
-            const existing = grouped.get(key)
-            if (existing) {
-                existing.count++
-            } else {
-                grouped.set(key, {
-                    courseIndex,
-                    mood,
-                    season,
-                    weather,
-                    condition,
-                    count: 1,
-                })
-            }
-        }
+        // Step 5: Compute probability maps for weighting
+        const moodProbs = computeProbs(moodPool)
+        const seasonProbs = computeProbs(seasonPool)
+        const weatherProbs = computeProbs(weatherPool)
+        const conditionProbs = computeProbs(conditionPool)
 
         const baseUma = createHorseState(task.baseUma, baseSkillIds)
         const umaWithSkill = createHorseState(task.baseUma, filteredSkillIds)
         let seedOffset = 0
 
-        for (const combo of grouped.values()) {
-            const racedefForSim = {
-                ...task.racedef,
-                mood: combo.mood,
-                season: combo.season,
-                weather: combo.weather,
-                groundCondition: combo.condition,
-            }
+        // Step 6: Run combos with global rotation
+        const weightedResults: { value: number; weight: number }[] = []
+        let comboIdx = 0
+        for (let t = 0; t < numTracks; t++) {
+            for (let c = 0; c < combosPerTrack; c++) {
+                const mood = globalMoods[comboIdx] as Mood
+                const season = globalSeasons[comboIdx]
+                const weather = globalWeathers[comboIdx]
+                const condition = globalConditions[comboIdx]
+                comboIdx++
 
-            const comboSimOptions = { ...task.simOptions }
-            if (
-                comboSimOptions.seed !== undefined &&
-                comboSimOptions.seed !== null
-            ) {
-                comboSimOptions.seed = comboSimOptions.seed + seedOffset
-            }
-            seedOffset += combo.count
+                const comboWeight =
+                    (1 / numTracks) *
+                    (task.useRandomMood
+                        ? (moodProbs.get(mood) ?? 0.2)
+                        : 1) *
+                    (task.useRandomSeason
+                        ? (seasonProbs.get(season) ?? 0.25)
+                        : 1) *
+                    (task.useRandomWeather
+                        ? (weatherProbs.get(weather) ?? 0.25)
+                        : 1) *
+                    (task.useRandomCondition
+                        ? (conditionProbs.get(condition) ?? 0.25)
+                        : 1)
 
-            const { results: comboResults } = runComparison(
-                combo.count,
-                courses[combo.courseIndex],
-                racedefForSim,
-                baseUma,
-                umaWithSkill,
-                comboSimOptions,
-            )
-            results.push(...comboResults)
+                const racedefForSim = {
+                    ...task.racedef,
+                    mood,
+                    season,
+                    weather,
+                    groundCondition: condition,
+                }
+                const comboSimOptions = { ...task.simOptions }
+                if (comboSimOptions.seed != null) {
+                    comboSimOptions.seed = comboSimOptions.seed + seedOffset
+                }
+                seedOffset += nsamplesPerCombo
+
+                const { results: comboResults } = runComparison(
+                    nsamplesPerCombo,
+                    courses[t],
+                    racedefForSim,
+                    baseUma,
+                    umaWithSkill,
+                    comboSimOptions,
+                )
+                for (const v of comboResults) {
+                    weightedResults.push({ value: v, weight: comboWeight })
+                }
+            }
         }
+
+        // Step 7: Weighted statistics
+        return computeWeightedStats(weightedResults, task)
     } else {
         const baseUma = createHorseState(task.baseUma, baseSkillIds)
         const umaWithSkill = createHorseState(task.baseUma, filteredSkillIds)
@@ -206,6 +248,108 @@ function runSkillSimulation(task: SimulationTask) {
         ciLower,
         ciUpper,
     }
+}
+
+/**
+ * Generate n values representative of the weighted distribution.
+ * Guarantees at least 1 of each distinct value when n >= distinctCount.
+ */
+function generateRepresentative<T>(n: number, weightedPool: T[]): T[] {
+    if (n <= 0) return []
+    const counts = new Map<T, number>()
+    for (const v of weightedPool) counts.set(v, (counts.get(v) ?? 0) + 1)
+    const total = weightedPool.length
+    const entries = [...counts.entries()]
+    if (n >= entries.length) {
+        // Ensure at least 1 of each, distribute rest by weight
+        const result: T[] = entries.map(([val]) => val)
+        const remaining = n - entries.length
+        const allocations = entries.map(([val, count]) => ({
+            val,
+            ideal: (count / total) * remaining,
+            floor: Math.floor((count / total) * remaining),
+        }))
+        for (const a of allocations) {
+            for (let i = 0; i < a.floor; i++) result.push(a.val)
+        }
+        let leftover = n - result.length
+        allocations.sort((a, b) => b.ideal - b.floor - (a.ideal - a.floor))
+        for (let i = 0; i < leftover; i++) result.push(allocations[i].val)
+        return result
+    }
+    // n < distinct values: pick the n most probable
+    entries.sort((a, b) => b[1] - a[1])
+    return entries.slice(0, n).map(([val]) => val)
+}
+
+/** Fisher-Yates shuffle in place. */
+function shuffleInPlace<T>(arr: T[]): void {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        ;[arr[i], arr[j]] = [arr[j], arr[i]]
+    }
+}
+
+/** Compute probability map from a weighted pool. */
+function computeProbs<T>(pool: T[]): Map<T, number> {
+    const counts = new Map<T, number>()
+    for (const v of pool) counts.set(v, (counts.get(v) ?? 0) + 1)
+    const probs = new Map<T, number>()
+    for (const [k, c] of counts) probs.set(k, c / pool.length)
+    return probs
+}
+
+/** Compute weighted statistics from (value, weight) pairs. */
+function computeWeightedStats(
+    weightedResults: { value: number; weight: number }[],
+    task: SimulationTask,
+) {
+    const totalWeight = weightedResults.reduce((a, r) => a + r.weight, 0)
+    const mean =
+        weightedResults.reduce((a, r) => a + r.value * r.weight, 0) /
+        totalWeight
+
+    // Sort by value for percentile calculations
+    weightedResults.sort((a, b) => a.value - b.value)
+
+    // Weighted median: value where cumulative weight reaches 50%
+    let cumWeight = 0
+    let median = weightedResults[0]?.value ?? 0
+    for (const r of weightedResults) {
+        cumWeight += r.weight
+        if (cumWeight >= totalWeight * 0.5) {
+            median = r.value
+            break
+        }
+    }
+
+    const min = weightedResults[0]?.value ?? 0
+    const max = weightedResults[weightedResults.length - 1]?.value ?? 0
+
+    // Weighted confidence interval
+    const ciPercent = task.confidenceInterval ?? 95
+    const lowerP = (100 - ciPercent) / 200
+    const upperP = 1 - lowerP
+    let ciLower = min
+    let ciUpper = max
+    cumWeight = 0
+    for (const r of weightedResults) {
+        cumWeight += r.weight
+        if (ciLower === min && cumWeight >= totalWeight * lowerP)
+            ciLower = r.value
+        if (cumWeight >= totalWeight * upperP) {
+            ciUpper = r.value
+            break
+        }
+    }
+
+    if (task.returnRawResults) {
+        return {
+            skillName: task.skillName,
+            rawResults: weightedResults.map((r) => r.value),
+        }
+    }
+    return { skillName: task.skillName, mean, median, min, max, ciLower, ciUpper }
 }
 
 if (parentPort && workerData) {

@@ -575,8 +575,10 @@ describe('simulation worker integration', () => {
             })
         })
 
-        // Should have exactly numSimulations results, not millions
-        expect(result).toHaveLength(100)
+        // Should have a reasonable number of results (not millions from Cartesian explosion)
+        // With budget-aware allocation: 2 tracks × combosPerTrack × nsamplesPerCombo
+        expect(result.length).toBeGreaterThanOrEqual(50)
+        expect(result.length).toBeLessThanOrEqual(200)
 
         const mean = result.reduce((a, b) => a + b, 0) / result.length
         console.log(
