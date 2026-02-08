@@ -288,7 +288,7 @@
         "distanceAptitude": "S",
         "guts": 416,
         "power": 781,
-        "mood": null,
+        "mood": 0,
         "skills": [
             "Corner Recovery ○",
             "Straightaway Recovery",

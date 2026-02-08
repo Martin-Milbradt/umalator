@@ -220,30 +220,36 @@
         },
         "Non-Standard Distance ○": {
             "discount": null
+        },
+        "Hard Worker": {
+            "discount": 0
+        },
+        "New Skill": {
+            "discount": 0
         }
     },
     "track": {
         "courseId": "",
-        "distance": 2500,
-        "groundCondition": "Firm",
-        "numUmas": 9,
-        "season": "Winter",
-        "trackName": "Nakayama",
-        "weather": "Sunny",
-        "surface": "Turf"
+        "distance": "<Mile>",
+        "groundCondition": "<Random>",
+        "numUmas": 12,
+        "season": "<Random>",
+        "trackName": "<Random>",
+        "weather": "<Random>",
+        "surface": "Dirt"
     },
     "uma": {
-        "distanceAptitude": "S",
+        "distanceAptitude": "A",
         "guts": 413,
         "power": 1024,
-        "mood": null,
+        "mood": 0,
         "skills": [],
         "speed": 1200,
         "stamina": 1000,
-        "strategy": "Late Surger",
+        "strategy": "End Closer",
         "styleAptitude": "A",
         "surfaceAptitude": "A",
-        "unique": "U=ma2",
+        "unique": "114th Time's the Charm",
         "wisdom": 828
     }
 }

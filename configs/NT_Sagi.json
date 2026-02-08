@@ -246,7 +246,7 @@
     "distanceAptitude": "A",
     "guts": 624,
     "power": 1010,
-    "mood": null,
+    "mood": 0,
     "skills": [
       "Encroaching Shadow",
       "Sleeping Lion",

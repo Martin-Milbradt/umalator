@@ -260,7 +260,7 @@
         "distanceAptitude": "S",
         "guts": 366,
         "power": 1023,
-        "mood": null,
+        "mood": 0,
         "skills": [
             "Angling and Scheming",
             "No Stopping Me!",

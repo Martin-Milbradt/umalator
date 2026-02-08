@@ -251,7 +251,7 @@
         "distanceAptitude": "A",
         "guts": 455,
         "power": 925,
-        "mood": null,
+        "mood": 0,
         "skills": [
             "Playtime's Over!",
             "Ignited Spirit SPD",

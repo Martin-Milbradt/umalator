@@ -227,7 +227,7 @@
         "distanceAptitude": "S",
         "guts": 413,
         "power": 1024,
-        "mood": null,
+        "mood": 0,
         "skills": [],
         "speed": 1200,
         "stamina": 300,

@@ -233,7 +233,7 @@
     "distanceAptitude": "S",
     "guts": 500,
     "power": 900,
-    "mood": null,
+    "mood": 0,
     "skills": ["Hydrate", "Triple 7s", "Preferred Position"],
     "speed": 1200,
     "stamina": 700,

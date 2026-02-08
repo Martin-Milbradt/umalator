@@ -294,7 +294,7 @@
         "distanceAptitude": "S",
         "guts": 469,
         "power": 768,
-        "mood": null,
+        "mood": 0,
         "skills": [
             "Angling and Scheming",
             "Runaway",
