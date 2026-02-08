@@ -134,7 +134,6 @@ export interface SkillResult {
     skill: string
     cost: number
     discount: number
-    numSimulations: number
     meanLength: number
     medianLength: number
     meanLengthPerCost: number
@@ -423,7 +422,6 @@ export function calculateStatsFromRawResults(
         skill: skillName,
         cost,
         discount,
-        numSimulations: rawResults.length,
         meanLength: mean,
         medianLength: median,
         meanLengthPerCost,
@@ -1270,10 +1268,6 @@ export function formatTable(
         ...results.map((r) => (r.discount > 0 ? `${r.discount}%` : '-').length),
         'Discount'.length,
     )
-    const maxSimulationsLen = Math.max(
-        ...results.map((r) => r.numSimulations.toString().length),
-        'Sims'.length,
-    )
     const maxMeanLen = Math.max(
         ...results.map((r) => r.meanLength.toFixed(2).length),
         'Mean'.length,
@@ -1302,9 +1296,7 @@ export function formatTable(
 
     const header = `Skill${' '.repeat(maxSkillLen - 'Skill'.length + 2)}Cost${' '.repeat(
         maxCostLen - 'Cost'.length + 2,
-    )}Discount${' '.repeat(maxDiscountLen - 'Discount'.length + 2)}Sims${' '.repeat(
-        maxSimulationsLen - 'Sims'.length + 2,
-    )}Mean${' '.repeat(maxMeanLen - 'Mean'.length + 2)}Median${' '.repeat(
+    )}Discount${' '.repeat(maxDiscountLen - 'Discount'.length + 2)}Mean${' '.repeat(maxMeanLen - 'Mean'.length + 2)}Median${' '.repeat(
         maxMedianLen - 'Median'.length + 2,
     )}Mean/Cost${' '.repeat(maxRatioLen - 'Mean/Cost'.length + 2)}Min-Max${' '.repeat(
         maxMinMaxLen - 'Min-Max'.length + 2,
@@ -1316,9 +1308,6 @@ export function formatTable(
         const costPad = ' '.repeat(maxCostLen - r.cost.toString().length + 2)
         const discountStr = r.discount > 0 ? `${r.discount}%` : '-'
         const discountPad = ' '.repeat(maxDiscountLen - discountStr.length + 2)
-        const simulationsPad = ' '.repeat(
-            maxSimulationsLen - r.numSimulations.toString().length + 2,
-        )
         const meanPad = ' '.repeat(
             maxMeanLen - r.meanLength.toFixed(2).length + 2,
         )
@@ -1332,9 +1321,7 @@ export function formatTable(
         const minMaxPad = ' '.repeat(maxMinMaxLen - minMaxStr.length + 2)
         const ciStr = `${r.ciLower.toFixed(2)}-${r.ciUpper.toFixed(2)}`
         const ciPad = ' '.repeat(maxCILen - ciStr.length)
-        return `${r.skill}${skillPad}${r.cost}${costPad}${discountStr}${discountPad}${
-            r.numSimulations
-        }${simulationsPad}${r.meanLength.toFixed(2)}${meanPad}${r.medianLength.toFixed(2)}${medianPad}${(
+        return `${r.skill}${skillPad}${r.cost}${costPad}${discountStr}${discountPad}${r.meanLength.toFixed(2)}${meanPad}${r.medianLength.toFixed(2)}${medianPad}${(
             r.meanLengthPerCost * 1000
         ).toFixed(2)}${ratioPad}${minMaxStr}${minMaxPad}${ciStr}${ciPad}`
     })

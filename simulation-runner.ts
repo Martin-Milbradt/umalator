@@ -689,26 +689,21 @@ export class SimulationRunner {
             return results
         }
 
-        // First pass: 100 simulations for all skills
         onProgress({
             type: 'phase',
-            phase: `Running 100 simulations for all ${availableSkillNames.length} skills...`,
+            phase: `Running 500 simulations for ${availableSkillNames.length} skills...`,
         })
 
-        const firstPassFactories = availableSkillNames.map(
-            (skillName) => () => runSimulationInWorker(skillName, 100, true),
+        const factories = availableSkillNames.map(
+            (skillName) => () => runSimulationInWorker(skillName, 500, true),
         )
-        const firstPassResults = await processWithConcurrency(
-            firstPassFactories,
-            concurrency,
-        )
+        const results = await processWithConcurrency(factories, concurrency)
 
-        for (const result of firstPassResults) {
+        for (const result of results) {
             if (result.rawResults) {
                 const skillData = skillRawResultsMap.get(result.skillName)
                 if (skillData) {
                     skillData.rawResults.push(...result.rawResults)
-                    // Emit individual result as it completes
                     const skillResult = calculateStatsFromRawResults(
                         skillData.rawResults,
                         skillData.cost,
@@ -720,70 +715,6 @@ export class SimulationRunner {
                 }
             }
         }
-
-        let currentResults = calculateCurrentResults()
-
-        const runAdditionalSimulations = async (
-            skillNames: string[],
-            passName: string,
-        ) => {
-            if (skillNames.length === 0) return
-            onProgress({
-                type: 'phase',
-                phase: `Running 100 simulations for ${passName} (${skillNames.length} skills)...`,
-            })
-
-            const factories = skillNames.map(
-                (skillName) => () =>
-                    runSimulationInWorker(skillName, 100, true),
-            )
-            const passResults = await processWithConcurrency(
-                factories,
-                concurrency,
-            )
-
-            for (const result of passResults) {
-                if (result.rawResults) {
-                    const skillData = skillRawResultsMap.get(result.skillName)
-                    if (skillData) {
-                        skillData.rawResults.push(...result.rawResults)
-                        // Emit updated result
-                        const skillResult = calculateStatsFromRawResults(
-                            skillData.rawResults,
-                            skillData.cost,
-                            skillData.discount,
-                            skillData.skillName,
-                            confidenceInterval,
-                        )
-                        onProgress({ type: 'result', result: skillResult })
-                    }
-                }
-            }
-            currentResults = calculateCurrentResults()
-        }
-
-        // Tiered simulation passes
-        const topHalfCount = Math.ceil(currentResults.length / 2)
-        const topHalfSkills = currentResults
-            .slice(0, topHalfCount)
-            .map((r) => r.skill)
-        await runAdditionalSimulations(topHalfSkills, 'top half')
-
-        const top10Skills = currentResults
-            .slice(0, Math.min(10, currentResults.length))
-            .map((r) => r.skill)
-        await runAdditionalSimulations(top10Skills, 'top 10')
-
-        const top25PercentCount = Math.ceil(currentResults.length * 0.25)
-        const top25PercentSkills = currentResults
-            .slice(0, top25PercentCount)
-            .map((r) => r.skill)
-        await runAdditionalSimulations(top25PercentSkills, 'top 25%')
-
-        const top5Skills = currentResults
-            .slice(0, Math.min(5, currentResults.length))
-            .map((r) => r.skill)
-        await runAdditionalSimulations(top5Skills, 'top 5')
 
         const finalResults = calculateCurrentResults()
         onProgress({ type: 'complete', results: finalResults })
