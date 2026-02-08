@@ -2513,3 +2513,78 @@ describe('is_basis_distance filtering', () => {
         expect(canSkillTrigger(restrictions, settings)).toBe(false)
     })
 })
+
+describe('distance category filtering', () => {
+    const baseSettings: CurrentSettings = {
+        distanceType: null,
+        groundCondition: null,
+        groundType: null,
+        isBasisDistance: null,
+        rotation: null,
+        runningStyle: 4,
+        season: null,
+        trackId: null,
+        weather: null,
+    }
+
+    it('parseDistanceCategory provides distanceType for filtering', () => {
+        // The bug: when distance was "<Mile>", distanceType was left null,
+        // so skills for other distances (Medium, Sprint, Long) were not filtered out
+        const mileCategory = parseDistanceCategory('<Mile>')
+        expect(mileCategory).toBe(2)
+
+        const settings: CurrentSettings = {
+            ...baseSettings,
+            distanceType: mileCategory,
+        }
+
+        // "Medium Corners" has distance_type==3 (Medium only)
+        const mediumRestrictions: SkillRestrictions = { distanceTypes: [3] }
+        expect(canSkillTrigger(mediumRestrictions, settings)).toBe(false)
+
+        // "Mile Corners" has distance_type==2 (Mile only)
+        const mileRestrictions: SkillRestrictions = { distanceTypes: [2] }
+        expect(canSkillTrigger(mileRestrictions, settings)).toBe(true)
+
+        // Sprint-only skill should be filtered out
+        const sprintRestrictions: SkillRestrictions = { distanceTypes: [1] }
+        expect(canSkillTrigger(sprintRestrictions, settings)).toBe(false)
+    })
+
+    it('filters correctly for all distance categories', () => {
+        for (const [category, expected] of [
+            ['<Sprint>', 1],
+            ['<Mile>', 2],
+            ['<Medium>', 3],
+            ['<Long>', 4],
+        ] as const) {
+            const dt = parseDistanceCategory(category)
+            expect(dt).toBe(expected)
+
+            const settings: CurrentSettings = {
+                ...baseSettings,
+                distanceType: dt,
+            }
+
+            // Skill matching the category should pass
+            expect(
+                canSkillTrigger({ distanceTypes: [expected] }, settings),
+            ).toBe(true)
+
+            // Skill for a different distance should fail
+            const otherDistance = expected === 4 ? 1 : expected + 1
+            expect(
+                canSkillTrigger({ distanceTypes: [otherDistance] }, settings),
+            ).toBe(false)
+        }
+    })
+
+    it('unrestricted skills still pass with distance category', () => {
+        const settings: CurrentSettings = {
+            ...baseSettings,
+            distanceType: parseDistanceCategory('<Mile>'),
+        }
+        // Skills without distance restriction should still show
+        expect(canSkillTrigger({}, settings)).toBe(true)
+    })
+})

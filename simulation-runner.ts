@@ -463,15 +463,15 @@ export class SimulationRunner {
         // Build current settings for skill filtering
         const currentSettings: CurrentSettings = {
             distanceType:
-                distanceCategory !== null || useMultipleCourses
-                    ? null
+                distanceCategory !== null
+                    ? distanceCategory
                     : typeof distanceValue === 'number'
                       ? getDistanceType(distanceValue)
                       : null,
             groundCondition: conditions.groundCondition.forFiltering,
             groundType: parseSurface(config.track.surface),
             isBasisDistance:
-                distanceCategory !== null || useMultipleCourses
+                distanceCategory !== null
                     ? null
                     : typeof distanceValue === 'number'
                       ? distanceValue % 400 === 0

@@ -425,6 +425,25 @@ export function isDistanceCategory(
     return ['<sprint>', '<mile>', '<medium>', '<long>'].includes(normalized)
 }
 
+export function parseDistanceCategory(
+    distance: string | number | undefined,
+): number | null {
+    if (typeof distance === 'number' || !distance) return null
+    const normalized = distance.toLowerCase().trim()
+    switch (normalized) {
+        case '<sprint>':
+            return 1
+        case '<mile>':
+            return 2
+        case '<medium>':
+            return 3
+        case '<long>':
+            return 4
+        default:
+            return null
+    }
+}
+
 export function getCurrentSettings(): CurrentSettings {
     const currentConfig = getCurrentConfig()
     const courseData = getCourseData()
@@ -457,7 +476,11 @@ export function getCurrentSettings(): CurrentSettings {
             isBasisDistance = track.distance % 400 === 0
         } else if (
             typeof track.distance === 'string' &&
-            !isDistanceCategory(track.distance) &&
+            isDistanceCategory(track.distance)
+        ) {
+            distanceType = parseDistanceCategory(track.distance)
+        } else if (
+            typeof track.distance === 'string' &&
             !isRandomValue(track.distance)
         ) {
             const parsed = parseInt(track.distance, 10)
@@ -467,7 +490,6 @@ export function getCurrentSettings(): CurrentSettings {
                 isBasisDistance = parsed % 400 === 0
             }
         }
-        // If distance category or random, distanceType and isBasisDistance stay null
     }
 
     // Running style - always required, defaults to Pace Chaser (3)
