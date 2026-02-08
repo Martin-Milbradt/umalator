@@ -3,14 +3,14 @@
     "confidenceInterval": 90,
     "skills": {
         "Breath of Fresh Air": {
-            "discount": 0
+            "discount": null
         },
         "Professor of Curvature": {
-            "discount": 10,
+            "discount": null,
             "default": 10
         },
         "Corner Adept ○": {
-            "discount": 20,
+            "discount": null,
             "default": 0
         },
         "Intense Gaze": {
@@ -33,33 +33,33 @@
             "discount": null
         },
         "Ignited Spirit SPD": {
-            "discount": 30,
+            "discount": null,
             "default": 30
         },
         "Swinging Maestro": {
             "discount": null
         },
         "Rushing Gale!": {
-            "discount": 10,
+            "discount": null,
             "default": 10
         },
         "Straightaway Acceleration": {
-            "discount": 0,
+            "discount": null,
             "default": 0
         },
         "Straightaway Recovery": {
-            "discount": 0
+            "discount": null
         },
         "It's On!": {
             "discount": 10,
             "default": 10
         },
         "No Stopping Me!": {
-            "discount": 10,
+            "discount": null,
             "default": 10
         },
         "Nimble Navigator": {
-            "discount": 0,
+            "discount": null,
             "default": 0
         },
         "Burning Spirit SPD": {
@@ -87,7 +87,7 @@
             "discount": null
         },
         "Homestretch Haste": {
-            "discount": 10,
+            "discount": null,
             "default": 10
         },
         "Straightaway Adept": {
@@ -127,12 +127,10 @@
             "discount": null
         },
         "Medium Straightaways ◎": {
-            "discount": 0,
-            "default": 0
+            "discount": null
         },
         "Medium Straightaways ○": {
-            "discount": 0,
-            "default": 0
+            "discount": null
         },
         "Medium Corners ◎": {
             "discount": null
@@ -144,13 +142,13 @@
             "discount": null
         },
         "Right-Handed ◎": {
-            "discount": 0
+            "discount": null
         },
         "Right-Handed ○": {
-            "discount": 0
+            "discount": null
         },
         "Triumphant Pulse": {
-            "discount": 20,
+            "discount": null,
             "default": 20
         },
         "Prepared to Pass": {
@@ -182,11 +180,11 @@
             "discount": null
         },
         "Schwarzes Schwert": {
-            "discount": 20,
+            "discount": null,
             "default": 20
         },
         "Let's Pump Some Iron!": {
-            "discount": 20,
+            "discount": null,
             "default": 20
         },
         "Stamina to Spare": {
@@ -197,7 +195,7 @@
             "default": 0
         },
         "Soft Step": {
-            "discount": 0,
+            "discount": null,
             "default": 0
         },
         "Shrewd Step": {
@@ -210,7 +208,7 @@
             "discount": null
         },
         "Shifting Gears": {
-            "discount": 0
+            "discount": null
         },
         "Non-Standard Distance": {
             "discount": null
@@ -224,12 +222,12 @@
     },
     "track": {
         "courseId": "",
-        "distance": 2500,
+        "distance": 2400,
         "groundCondition": "Firm",
         "numUmas": 9,
-        "season": "Winter",
-        "trackName": "Nakayama",
-        "weather": "Sunny",
+        "season": "<Random>",
+        "trackName": "Tokyo",
+        "weather": "<Random>",
         "surface": "Turf"
     },
     "uma": {
