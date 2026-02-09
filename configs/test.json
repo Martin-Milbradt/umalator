@@ -1,45 +1,34 @@
 {
-  "deterministic": false,
-  "confidenceInterval": 90,
-  "skills": {
-    "Moxie": {
-      "discount": 0
+    "deterministic": false,
+    "confidenceInterval": 90,
+    "skills": {
+        "It's On!": {
+            "discount": 0,
+            "default": 0
+        }
+    },
+    "track": {
+        "courseId": "",
+        "distance": 3600,
+        "groundCondition": "<Random>",
+        "numUmas": 12,
+        "season": "<Random>",
+        "trackName": "Nakayama",
+        "weather": "<Random>",
+        "surface": "Turf"
+    },
+    "uma": {
+        "distanceAptitude": "A",
+        "guts": 1200,
+        "power": 778,
+        "mood": 0,
+        "skills": [],
+        "speed": 1200,
+        "stamina": 1200,
+        "strategy": "Pace Chaser",
+        "styleAptitude": "A",
+        "surfaceAptitude": "A",
+        "unique": "Genius x Bakushin = Victory",
+        "wisdom": 1163
     }
-  },
-  "track": {
-    "courseId": "",
-    "distance": 1000,
-    "groundCondition": "<Random>",
-    "numUmas": 12,
-    "season": "<Random>",
-    "trackName": "Niigata",
-    "weather": "<Random>",
-    "surface": "Turf"
-  },
-  "uma": {
-    "distanceAptitude": "A",
-    "guts": 391,
-    "power": 778,
-    "mood": 0,
-    "skills": [
-      "Corner Adept ○",
-      "Right-Handed ○",
-      "Corner Recovery ○",
-      "Taking the Lead",
-      "Fast-Paced",
-      "Turbo Sprint",
-      "Sprint Straightaways ○",
-      "Plan X",
-      "Front Runner Savvy ○",
-      "Tail Held High",
-      "Ignited Spirit SPD"
-    ],
-    "speed": 1200,
-    "stamina": 512,
-    "strategy": "Front Runner",
-    "styleAptitude": "A",
-    "surfaceAptitude": "A",
-    "unique": "Genius x Bakushin = Victory",
-    "wisdom": 1163
-  }
 }

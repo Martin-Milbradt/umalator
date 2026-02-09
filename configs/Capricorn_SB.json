@@ -15,11 +15,11 @@
             "discount": null
         },
         "Professor of Curvature": {
-            "discount": null,
+            "discount": 30,
             "default": 10
         },
         "Corner Adept ○": {
-            "discount": null,
+            "discount": 0,
             "default": 0
         },
         "Long Corners": {
@@ -66,7 +66,7 @@
             "discount": null
         },
         "Ignited Spirit SPD": {
-            "discount": 10,
+            "discount": 30,
             "default": 30
         },
         "Stamina Eater": {
@@ -189,7 +189,7 @@
             "discount": null
         },
         "Straightaway Adept": {
-            "discount": null
+            "discount": 30
         },
         "Focus": {
             "discount": null
@@ -246,7 +246,7 @@
             "discount": null
         },
         "Ignited Spirit PWR": {
-            "discount": 10
+            "discount": null
         },
         "U=ma2": {
             "discount": null
@@ -324,14 +324,14 @@
             "discount": null
         },
         "Pace Chaser Straightaways": {
-            "discount": null
+            "discount": 10
         },
         "Pace Chaser Straightaways ◎": {
-            "discount": 0,
+            "discount": 10,
             "default": 0
         },
         "Pace Chaser Straightaways ○": {
-            "discount": 0,
+            "discount": 10,
             "default": 0
         },
         "Front Runner Savvy": {
@@ -386,7 +386,7 @@
             "default": 0
         },
         "Gap Closer": {
-            "discount": null
+            "discount": 20
         },
         "Sprint Straightaways": {
             "discount": null
@@ -398,10 +398,10 @@
             "discount": null
         },
         "Countermeasure": {
-            "discount": 30
+            "discount": 20
         },
         "Straight Descent": {
-            "discount": 10
+            "discount": 40
         },
         "Fighter": {
             "discount": null
@@ -410,7 +410,7 @@
             "discount": null
         },
         "Meticulous Measures": {
-            "discount": 20
+            "discount": null
         },
         "Competitive Spirit": {
             "discount": 30
@@ -432,10 +432,10 @@
             "discount": null
         },
         "Shrewd Step": {
-            "discount": 20
+            "discount": null
         },
         "Tactical Tweak": {
-            "discount": 40
+            "discount": 10
         }
     },
     "track": {
@@ -449,29 +449,28 @@
         "surface": "Turf"
     },
     "uma": {
-        "distanceAptitude": "S",
-        "guts": 335,
-        "power": 993,
+        "distanceAptitude": "A",
+        "guts": 376,
+        "power": 931,
         "mood": 0,
         "skills": [
             "Victoria por plancha ☆",
             "Give Mummy a Hug ♡",
-            "Turbo Sprint",
-            "Rushing Gale!",
-            "Ignited Spirit PWR",
-            "Pace Chaser Straightaways ○",
             "Ignited Spirit SPD",
-            "It's On!",
+            "Rushing Gale!",
+            "Turbo Sprint",
             "Competitive Spirit ○",
-            "Meticulous Measures"
+            "Professor of Curvature",
+            "It's On!",
+            "Pace Chaser Straightaways ○"
         ],
         "speed": 1200,
-        "stamina": 275,
+        "stamina": 271,
         "strategy": "Pace Chaser",
-        "styleAptitude": "S",
-        "surfaceAptitude": "A",
+        "styleAptitude": "A",
+        "surfaceAptitude": "S",
         "unique": "Genius x Bakushin = Victory",
-        "wisdom": 962,
-        "skillPoints": -1608
+        "wisdom": 1130,
+        "skillPoints": 75
     }
 }
