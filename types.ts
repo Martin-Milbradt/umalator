@@ -3,7 +3,7 @@
  * These types replace `any` usages for better type safety.
  */
 
-import type { Mood } from '../uma-tools/uma-skill-tools/RaceParameters'
+import type { Mood } from './uma-tools/uma-skill-tools/RaceParameters'
 import type { CourseData } from './utils'
 
 /**
@@ -53,7 +53,7 @@ export interface SimulationTask {
     skillId: string
     skillName: string
     courses: CourseData[]
-    racedef: import('../uma-tools/uma-skill-tools/RaceParameters').RaceParameters
+    racedef: import('./uma-tools/uma-skill-tools/RaceParameters').RaceParameters
     baseUma: HorseStateData
     simOptions: SimulationOptions
     numSimulations: number
@@ -113,7 +113,7 @@ export interface RawCourseData {
     course: number
     finishTimeMax: number
     finishTimeMin: number
-    courseSetStatus: readonly import('../uma-tools/uma-skill-tools/CourseData').ThresholdStat[]
+    courseSetStatus: readonly import('./uma-tools/uma-skill-tools/CourseData').ThresholdStat[]
     corners: Array<{ start: number; length: number }>
     straights: readonly { start: number; end: number; frontType: number }[]
     slopes: readonly { start: number; length: number; slope: number }[]

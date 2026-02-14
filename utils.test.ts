@@ -4,7 +4,7 @@ import {
     Orientation,
     Surface,
     type ThresholdStat,
-} from '../uma-tools/uma-skill-tools/CourseData'
+} from './uma-tools/uma-skill-tools/CourseData'
 import {
     buildSkillNameLookup,
     type CurrentSettings,

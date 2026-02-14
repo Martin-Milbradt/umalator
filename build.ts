@@ -2,7 +2,7 @@ import * as esbuild from 'esbuild'
 import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
 import * as path from 'node:path'
 
-const root = path.join(import.meta.dirname, '..', 'uma-tools')
+const root = path.join(import.meta.dirname, 'uma-tools')
 const nodeModulesPath = path.join(import.meta.dirname, 'node_modules')
 
 const resolveNodeModules: esbuild.Plugin = {

@@ -5,7 +5,7 @@
 import type {
     Mood,
     RaceParameters,
-} from '../../uma-tools/uma-skill-tools/RaceParameters'
+} from '../uma-tools/uma-skill-tools/RaceParameters'
 import type { RawCourseData, SkillMeta, SimulationTask, WorkerMessage } from '../types'
 import {
     type CourseData,

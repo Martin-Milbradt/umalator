@@ -1,0 +1,3 @@
+[submodule "uma-tools"]
+	path = uma-tools
+	url = https://github.com/alpha123/uma-tools.git

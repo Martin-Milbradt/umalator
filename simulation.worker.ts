@@ -1,11 +1,11 @@
 import { parentPort, workerData } from 'node:worker_threads'
-import type { Mood } from '../uma-tools/uma-skill-tools/RaceParameters'
+import type { Mood } from './uma-tools/uma-skill-tools/RaceParameters'
 import {
     type HorseState,
     SkillSet,
-} from '../uma-tools/components/HorseDefTypes'
-import { runComparison } from '../uma-tools/umalator/compare'
-import skillmeta from '../uma-tools/skill_meta.json'
+} from './uma-tools/components/HorseDefTypes'
+import { runComparison } from './uma-tools/umalator/compare'
+import skillmeta from './uma-tools/skill_meta.json'
 import type { SimulationTask, HorseStateData } from './types'
 
 /**

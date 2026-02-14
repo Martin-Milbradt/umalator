@@ -1,5 +1,5 @@
 // Local constants mirroring const enum values (const enums aren't exported at runtime)
-// Values must match ../uma-tools/uma-skill-tools/RaceParameters.ts
+// Values must match ./uma-tools/uma-skill-tools/RaceParameters.ts
 export const Grade = {
     Daily: 999,
     Debut: 900,
@@ -41,7 +41,7 @@ import type {
     Orientation,
     Surface,
     ThresholdStat,
-} from '../uma-tools/uma-skill-tools/CourseData'
+} from './uma-tools/uma-skill-tools/CourseData'
 
 // Mapping constants for parsing functions
 const CONDITION_MAP: Record<string, GroundCondition> = {

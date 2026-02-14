@@ -113,7 +113,6 @@ describe('parseRaceConditions', () => {
 describe('simulation worker integration', () => {
     const umaToolsDir = resolve(
         import.meta.dirname,
-        '..',
         'uma-tools',
         'umalator-global',
     )

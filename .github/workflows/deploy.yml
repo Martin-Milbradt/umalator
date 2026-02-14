@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main, feature/static-hosting]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -19,11 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/checkout@v4
         with:
-          repository: ${{ github.repository_owner }}/uma-tools
-          path: ../uma-tools
+          submodules: recursive
+
+      - name: Update uma-skill-tools to latest
+        run: cd uma-tools/uma-skill-tools && git fetch origin && git checkout origin/master
 
       - uses: actions/setup-node@v4
         with:

@@ -15,7 +15,6 @@ import type { RawCourseData, SimulationTask } from './types'
 describe('random weather consistency', () => {
     const umaToolsDir = resolve(
         import.meta.dirname,
-        '..',
         'uma-tools',
         'umalator-global',
     )

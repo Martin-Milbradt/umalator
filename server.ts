@@ -31,7 +31,7 @@ const configWatchers = new Map<string, ReturnType<typeof watch>>()
 const fileChangeListeners: Set<express.Response> = new Set()
 
 // Cached data for static JSON files (loaded once at startup)
-const umaToolsDir = resolve(__dirname, '..', 'uma-tools', 'umalator-global')
+const umaToolsDir = resolve(__dirname, 'uma-tools', 'umalator-global')
 let cachedSkillnames: Record<string, string[]> | null = null
 let cachedSkillmeta: Record<string, SkillMeta> | null = null
 let cachedCourseData: Record<string, RawCourseData> | null = null

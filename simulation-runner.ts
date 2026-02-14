@@ -3,7 +3,7 @@ import { Worker } from 'node:worker_threads'
 import type {
     Mood,
     RaceParameters,
-} from '../uma-tools/uma-skill-tools/RaceParameters'
+} from './uma-tools/uma-skill-tools/RaceParameters'
 import type { RawCourseData, SkillMeta } from './types'
 import {
     type CourseData,
