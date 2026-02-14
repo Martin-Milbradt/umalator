@@ -6,17 +6,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Web interface for Uma Musume skill efficiency calculations. Calculates mean length gains for skills and outputs results sorted by efficiency (mean length / cost).
 
+Fully client-side static site deployed to GitHub Pages. Simulations run in browser Web Workers, configs persist in IndexedDB.
+
 ## Commands
 
 ```bash
-# Build worker (required before running)
+# Build workers (required before running)
 npm run build
 
-# Start web server (builds frontend first)
-npm run web
-
-# Development mode (Vite dev server + Express concurrently)
+# Development mode (Vite dev server on port 5173)
 npm run dev
+
+# Full production build + preview
+npm run preview
 
 # Build frontend only
 npm run build:frontend
@@ -29,43 +31,56 @@ npx vitest run utils.test.ts
 
 ## Architecture
 
-**Web application** with Express backend and vanilla TypeScript frontend sharing the same simulation engine.
+**Static site** with vanilla TypeScript frontend (no framework). Simulations run in browser Web Workers. A legacy Express server (`server.ts`) is available via `npm run dev:server`.
 
 ### Core Files
 
+- `simulation.worker.ts` - Simulation logic using uma-tools comparison engine (shared by Node and browser builds)
+- `simulation.browser-worker.ts` - Thin Web Worker entry point for browser builds
+- `simulation-runner.ts` - Server-side worker orchestration (legacy, used by `server.ts`)
+- `build.ts` - esbuild config: bundles Node worker + browser worker, copies data files to `static/data/`
 - `utils.ts` - Pure utility functions for parsing, formatting, statistics, and skill resolution
-- `server.ts` - Express server (port 3000) serving the web UI and REST API endpoints
-- `simulation.worker.ts` - Worker thread that runs skill simulations using `uma-tools` comparison engine
-- `simulation-runner.ts` - Orchestrates parallel simulations across worker threads
-- `build.ts` - esbuild configuration for bundling the worker
 - `types.ts` - Shared type definitions (worker messages, simulation tasks, skill metadata)
 
-### Frontend (public/)
+### Frontend (`public/`)
 
-- `app.ts` - Vanilla TypeScript frontend (no framework), handles config editing and real-time output streaming
+- `app.ts` - Main entry point: data loading, event handlers, config management UI
+- `simulationRunner.ts` - Browser Web Worker orchestration (parallel simulation via `navigator.hardwareConcurrency`)
+- `configStore.ts` - IndexedDB CRUD for config persistence
+- `configManager.ts` - Config loading, auto-save (500ms debounce), UI sync
+- `api.ts` - Creates `BrowserSimulationRunner`, handles progress callbacks
 - `index.html` - Tailwind CSS dark theme UI
-- Dev server runs on port 5173 with API proxy to Express backend
 
 ### Configuration
 
-- Config files stored in `configs/` directory as JSON
+- Configs stored in IndexedDB (per-browser, not synced across devices)
+- Export/import buttons for config portability (JSON files)
 - Each config defines `skills`, `track`, and `uma` settings
 - See `configs/config.example.json` for format reference
 - Special values: `<Random>` for location/weather/season/condition, `<Sprint>/<Mile>/<Medium>/<Long>` for distance categories
 
 ### External Dependencies
 
-- Imports from `./uma-tools` package for simulation logic
+- `./uma-tools` is a git submodule (clone with `--recursive`)
 - `./uma-tools/uma-skill-tools/` is derived from <https://github.com/alpha123/uma-skill-tools> - understanding this code helps when working on simulation logic, but **never modify it**; pull latest from upstream instead
 - Ignore type checking errors from `./uma-tools` package
 
+### Build Pipeline
+
+- `npm run build` runs `tsx build.ts` which:
+  1. Copies 5 JSON data files from `uma-tools/umalator-global/` to `static/data/`
+  2. Builds Node worker (`simulation.worker.js` in repo root)
+  3. Builds browser worker (`static/simulation.browser-worker.js`)
+- `npm run build:frontend` runs `vite build` which bundles `public/` into `dist/`
+- `static/` is Vite's publicDir - files are copied as-is to `dist/`
+- GitHub Pages deploy sets `VITE_BASE=/umalator/` so asset paths resolve correctly
+
 ## Key Patterns
 
-- **Worker Threads**: Simulations run in parallel via `simulation.worker.ts`, concurrency = min(skills, CPU cores)
+- **Browser Web Workers**: Simulations run in parallel via `simulationRunner.ts`, concurrency = `navigator.hardwareConcurrency`
 - **Flat Simulation**: 500 simulations for all skills in a single pass
 - **Skill Resolution**: Skills referenced by global English names; cost > 0 for regular skills, cost 0 for unique skills. Handles ○/◎ variants automatically.
-- **Auto-save**: Web UI automatically persists config changes to disk (500ms debounce)
-- **SSE Streaming**: Web UI receives simulation output via Server-Sent Events at `/api/simulate`
+- **Auto-save**: Web UI automatically persists config changes to IndexedDB (500ms debounce)
 - **Per-Combination Batching**: When random conditions (mood, weather, etc.) are enabled, simulations are batched per unique combination to preserve internal variance from `runComparison`
 
 ## Implementation Guidance
@@ -87,4 +102,4 @@ The `runComparison` function from uma-tools generates variance through:
 2. **RNG state advancement** - Each simulation advances internal RNG
 3. **Wisdom checks** - Random activation probability
 
-When calling `runComparison`, always use `nsamples > 1` to preserve internal variance. Calling with `nsamples=1` eliminates variance from trigger sampling and RNG.
+`runComparison` signature: `(nsamples, course, racedef, uma1, uma2, seed: [number, number], options)`. The seed is a `[lo, hi]` tuple passed as the 6th argument. Always use `nsamples > 1` to preserve internal variance.
