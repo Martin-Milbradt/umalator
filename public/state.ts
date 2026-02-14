@@ -20,6 +20,7 @@ let skillNameToId: Record<string, string> | null = null
 let skillmeta: SkillMeta | null = null
 let courseData: CourseData | null = null
 let skillData: SkillData | null = null
+let trackNames: Record<string, string[]> | null = null
 
 // Cache for variant lookups (built once after skillnames loads)
 let variantCache: Map<string, string[]> | null = null
@@ -77,6 +78,10 @@ export function getCourseData(): CourseData | null {
 
 export function getSkillData(): SkillData | null {
     return skillData
+}
+
+export function getTrackNames(): Record<string, string[]> | null {
+    return trackNames
 }
 
 export function getVariantCache(): Map<string, string[]> | null {
@@ -158,6 +163,10 @@ export function setCourseData(data: CourseData | null): void {
 
 export function setSkillData(data: SkillData | null): void {
     skillData = data
+}
+
+export function setTrackNames(data: Record<string, string[]> | null): void {
+    trackNames = data
 }
 
 export function setVariantCache(cache: Map<string, string[]> | null): void {

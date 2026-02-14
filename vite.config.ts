@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
     root: resolve(__dirname, 'public'),
-    publicDir: false,
+    publicDir: resolve(__dirname, 'static'),
     plugins: [tailwindcss()],
     resolve: {
         alias: {

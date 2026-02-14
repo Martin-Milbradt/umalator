@@ -1,3 +1,4 @@
+import * as configStore from './configStore'
 import { LAST_USED_CONFIG_KEY } from './constants'
 import { callRenderSkills, callRenderUma } from './renderCallbacks'
 import { renderTrack, waitForCourseData } from './trackUI'
@@ -15,8 +16,7 @@ import { showToast } from './toast'
 import type { Config } from './types'
 
 export async function loadConfigFiles(): Promise<void> {
-    const response = await fetch('/api/configs')
-    const files = (await response.json()) as string[]
+    const files = await configStore.listConfigs()
     const select = document.getElementById('config-select') as HTMLSelectElement
     if (!select) return
     select.innerHTML = ''
@@ -28,15 +28,12 @@ export async function loadConfigFiles(): Promise<void> {
     })
     await waitForCourseData()
     if (files.length > 0) {
-        // Check if there's a saved config in localStorage
         let lastUsedConfig: string | null = null
         try {
             lastUsedConfig = localStorage.getItem(LAST_USED_CONFIG_KEY)
         } catch (e: unknown) {
-            // localStorage might be unavailable (private browsing, disabled, etc.)
             console.warn('Failed to read from localStorage:', e)
         }
-        // If the saved config exists in the list, load it; otherwise load the first one
         const configToLoad =
             lastUsedConfig && files.includes(lastUsedConfig)
                 ? lastUsedConfig
@@ -46,8 +43,7 @@ export async function loadConfigFiles(): Promise<void> {
 }
 
 export async function loadConfig(filename: string): Promise<void> {
-    const response = await fetch(`/api/config/${filename}`)
-    const config = (await response.json()) as Config
+    const config = await configStore.loadConfig(filename)
     setCurrentConfig(config)
     setCurrentConfigFile(filename)
     const select = document.getElementById('config-select') as HTMLSelectElement
@@ -55,11 +51,9 @@ export async function loadConfig(filename: string): Promise<void> {
         select.value = filename
     }
 
-    // Save the last used config to localStorage
     try {
         localStorage.setItem(LAST_USED_CONFIG_KEY, filename)
     } catch (e: unknown) {
-        // localStorage might be unavailable (private browsing, quota exceeded, etc.)
         console.warn('Failed to save to localStorage:', e)
     }
 
@@ -74,13 +68,7 @@ export async function saveConfig(): Promise<void> {
     if (!currentConfigFile || !currentConfig) return
 
     try {
-        await fetch(`/api/config/${currentConfigFile}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(currentConfig),
-        })
+        await configStore.saveConfig(currentConfigFile, currentConfig)
     } catch {
         showToast({ type: 'error', message: 'Failed to save config' })
     }

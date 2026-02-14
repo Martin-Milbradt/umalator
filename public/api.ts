@@ -1,29 +1,71 @@
 import { ensureSaved } from './configManager'
 import { renderResultsTable, setRunSelectiveCalculations } from './resultsUI'
 import {
+    BrowserSimulationRunner,
+    type SimulationRunnerConfig,
+    type StaticData,
+} from './simulationRunner'
+import {
     getCalculatedResultsCache,
-    getCurrentConfigFile,
+    getCourseData,
+    getCurrentConfig,
     getResultsMap,
     getSelectedSkills,
+    getSkillData,
+    getSkillmeta,
+    getSkillnames,
+    getTrackNames,
     setLastCalculationTime,
 } from './state'
 import { showToast } from './toast'
 import type { SkillResult } from './types'
 
+function getStaticData() {
+    const skillMeta = getSkillmeta()
+    const skillNames = getSkillnames()
+    const skillData = getSkillData()
+    const courseData = getCourseData()
+    const trackNames = getTrackNames()
+
+    if (!skillMeta || !skillNames || !skillData || !courseData || !trackNames) {
+        throw new Error('Static data not loaded yet')
+    }
+
+    // Cast needed: frontend SkillMeta has optional baseCost, root types.ts requires it
+    return {
+        skillMeta,
+        skillNames,
+        skillData,
+        courseData,
+        trackNames,
+    } as unknown as StaticData
+}
+
+// Vite sets BASE_URL from the `base` config option (defaults to '/')
+const BASE_URL = import.meta.env.BASE_URL ?? '/'
+
+function createRunner(config: SimulationRunnerConfig) {
+    const staticData = getStaticData()
+    return new BrowserSimulationRunner(
+        config,
+        staticData,
+        `${BASE_URL}simulation.browser-worker.js`,
+    )
+}
+
 export async function runCalculations(clearExisting = true): Promise<void> {
-    const currentConfigFile = getCurrentConfigFile()
+    const currentConfig = getCurrentConfig()
     const resultsMap = getResultsMap()
     const selectedSkills = getSelectedSkills()
     const calculatedResultsCache = getCalculatedResultsCache()
 
-    if (!currentConfigFile) return
+    if (!currentConfig) return
     const button = document.getElementById('run-button') as HTMLButtonElement
     const countEl = document.getElementById('results-count')
     if (!button) return
     button.disabled = true
 
     if (clearExisting) {
-        // Clear previous results and cache, show calculating state
         resultsMap.clear()
         selectedSkills.clear()
         calculatedResultsCache.clear()
@@ -34,114 +76,50 @@ export async function runCalculations(clearExisting = true): Promise<void> {
     await ensureSaved()
 
     try {
-        const response = await fetch(
-            `/api/simulate?configFile=${encodeURIComponent(currentConfigFile)}`,
-            {
-                method: 'GET',
-            },
-        )
+        const runner = createRunner(currentConfig as unknown as SimulationRunnerConfig)
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`)
-        }
+        await runner.run((progress) => {
+            if (progress.type === 'phase') {
+                if (countEl && progress.phase) {
+                    countEl.textContent = progress.phase
+                }
+            } else if (progress.type === 'info') {
+                if (progress.info) {
+                    showToast({ type: 'info', message: progress.info })
+                }
+            } else if (progress.type === 'result' && progress.result) {
+                calculatedResultsCache.set(
+                    progress.result.skill,
+                    progress.result,
+                )
+                resultsMap.set(progress.result.skill, {
+                    ...progress.result,
+                    status: 'fresh',
+                })
+                renderResultsTable()
+            } else if (progress.type === 'complete') {
+                button.disabled = false
+                setLastCalculationTime(new Date())
 
-        if (!response.body) {
-            throw new Error('Response body is null')
-        }
+                if (progress.results) {
+                    for (const result of progress.results) {
+                        calculatedResultsCache.set(result.skill, result)
+                        resultsMap.set(result.skill, {
+                            ...result,
+                            status: 'fresh',
+                        })
+                    }
+                }
 
-        const reader = response.body.getReader()
-        const decoder = new TextDecoder()
-
-        while (true) {
-            let result: ReadableStreamReadResult<Uint8Array>
-            try {
-                result = await reader.read()
-            } catch (readError) {
-                const err = readError as Error
-                console.error('Error reading stream:', readError)
+                renderResultsTable()
+            } else if (progress.type === 'error') {
                 button.disabled = false
                 showToast({
                     type: 'error',
-                    message: `Error reading stream: ${err.message}`,
+                    message: progress.error || 'Simulation error',
                 })
-                break
             }
-
-            const { done, value } = result
-            if (done) break
-
-            const chunk = decoder.decode(value)
-            const lines = chunk.split('\n')
-
-            for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                    try {
-                        const data = JSON.parse(line.slice(6)) as {
-                            type: string
-                            phase?: string
-                            result?: SkillResult
-                            results?: SkillResult[]
-                            error?: string
-                            info?: string
-                        }
-                        if (data.type === 'started') {
-                            // Calculation started
-                        } else if (data.type === 'phase') {
-                            // Phase update - could show in UI if desired
-                            if (countEl && data.phase) {
-                                countEl.textContent = data.phase
-                            }
-                        } else if (data.type === 'info') {
-                            // Info message
-                            if (data.info) {
-                                showToast({ type: 'info', message: data.info })
-                            }
-                        } else if (data.type === 'result' && data.result) {
-                            // Individual skill result - add to map
-                            calculatedResultsCache.set(
-                                data.result.skill,
-                                data.result,
-                            )
-                            resultsMap.set(data.result.skill, {
-                                ...data.result,
-                                status: 'fresh',
-                            })
-                            renderResultsTable()
-                        } else if (data.type === 'complete') {
-                            button.disabled = false
-                            setLastCalculationTime(new Date())
-
-                            // Update with final sorted results
-                            if (data.results) {
-                                for (const result of data.results) {
-                                    calculatedResultsCache.set(
-                                        result.skill,
-                                        result,
-                                    )
-                                    resultsMap.set(result.skill, {
-                                        ...result,
-                                        status: 'fresh',
-                                    })
-                                }
-                            }
-
-                            renderResultsTable()
-                        } else if (data.type === 'error') {
-                            button.disabled = false
-                            showToast({
-                                type: 'error',
-                                message: data.error || 'Simulation error',
-                            })
-                        }
-                    } catch {
-                        // Ignore keepalive messages, log unexpected parse errors
-                        if (!line.includes('keepalive')) {
-                            console.warn('SSE parse error:', line)
-                        }
-                    }
-                }
-            }
-        }
+        })
     } catch (error) {
         const err = error as Error
         button.disabled = false
@@ -151,106 +129,56 @@ export async function runCalculations(clearExisting = true): Promise<void> {
 
 /**
  * Run calculations for specific skills only.
- * More efficient than runCalculations(false) when only a few skills need updating.
  */
 export async function runSelectiveCalculations(
     skillNames: string[],
 ): Promise<void> {
-    const currentConfigFile = getCurrentConfigFile()
+    const currentConfig = getCurrentConfig()
     const resultsMap = getResultsMap()
     const calculatedResultsCache = getCalculatedResultsCache()
 
-    if (!currentConfigFile || skillNames.length === 0) return
+    if (!currentConfig || skillNames.length === 0) return
 
     await ensureSaved()
 
     try {
-        const skillsParam = encodeURIComponent(skillNames.join(','))
-        const response = await fetch(
-            `/api/simulate?configFile=${encodeURIComponent(currentConfigFile)}&skills=${skillsParam}`,
-            { method: 'GET' },
-        )
+        const runner = createRunner(currentConfig as unknown as SimulationRunnerConfig)
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`)
-        }
-
-        if (!response.body) {
-            throw new Error('Response body is null')
-        }
-
-        const reader = response.body.getReader()
-        const decoder = new TextDecoder()
-
-        while (true) {
-            let result: ReadableStreamReadResult<Uint8Array>
-            try {
-                result = await reader.read()
-            } catch (readError) {
-                const err = readError as Error
-                console.error('Error reading stream:', readError)
-                showToast({
-                    type: 'error',
-                    message: `Error reading stream: ${err.message}`,
+        await runner.run((progress) => {
+            if (progress.type === 'result' && progress.result) {
+                calculatedResultsCache.set(
+                    progress.result.skill,
+                    progress.result,
+                )
+                resultsMap.set(progress.result.skill, {
+                    ...progress.result,
+                    status: 'fresh',
                 })
-                break
-            }
-
-            if (result.done) break
-
-            const chunk = decoder.decode(result.value, { stream: true })
-            const lines = chunk.split('\n')
-
-            for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                    try {
-                        const data = JSON.parse(line.slice(6))
-                        if (data.type === 'result' && data.result) {
-                            calculatedResultsCache.set(
-                                data.result.skill,
-                                data.result,
-                            )
-                            resultsMap.set(data.result.skill, {
-                                ...data.result,
-                                status: 'fresh',
-                            })
-                            renderResultsTable()
-                        } else if (data.type === 'batch' && data.results) {
-                            for (const result of data.results) {
-                                calculatedResultsCache.set(result.skill, result)
-                                resultsMap.set(result.skill, {
-                                    ...result,
-                                    status: 'fresh',
-                                })
-                            }
-                            renderResultsTable()
-                        } else if (data.type === 'error') {
-                            console.error(
-                                'Selective calculation error:',
-                                data.error,
-                            )
-                            // Mark skills as error state
-                            for (const skillName of skillNames) {
-                                const existing = resultsMap.get(skillName)
-                                if (existing?.status === 'pending') {
-                                    resultsMap.set(skillName, {
-                                        ...existing,
-                                        status: 'error',
-                                        errorMessage: data.error,
-                                    })
-                                }
-                            }
-                            renderResultsTable()
-                        }
-                    } catch {
-                        // Ignore keepalive messages, log unexpected parse errors
-                        if (!line.includes('keepalive')) {
-                            console.warn('SSE parse error:', line)
-                        }
+                renderResultsTable()
+            } else if (progress.type === 'complete' && progress.results) {
+                for (const result of progress.results) {
+                    calculatedResultsCache.set(result.skill, result)
+                    resultsMap.set(result.skill, {
+                        ...result,
+                        status: 'fresh',
+                    })
+                }
+                renderResultsTable()
+            } else if (progress.type === 'error') {
+                console.error('Selective calculation error:', progress.error)
+                for (const skillName of skillNames) {
+                    const existing = resultsMap.get(skillName)
+                    if (existing?.status === 'pending') {
+                        resultsMap.set(skillName, {
+                            ...existing,
+                            status: 'error',
+                            errorMessage: progress.error,
+                        })
                     }
                 }
+                renderResultsTable()
             }
-        }
+        }, skillNames)
     } catch (error) {
         const err = error as Error
         console.error('Selective calculation error:', err)

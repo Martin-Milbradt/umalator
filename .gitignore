@@ -5,6 +5,7 @@ public/app.js
 public/index.css
 public/style.css
 dist/
+static/
 settings.local.json
 tsconfig.tsbuildinfo
 .prettierrc

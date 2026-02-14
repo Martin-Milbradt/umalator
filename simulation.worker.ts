@@ -46,7 +46,7 @@ function convertSkillsToArray(skills: HorseStateData['skills']): string[] {
     return []
 }
 
-function runSkillSimulation(task: SimulationTask) {
+export function runSkillSimulation(task: SimulationTask) {
     const results: number[] = []
     const courses = task.courses
     const numCourses = courses.length
@@ -175,10 +175,9 @@ function runSkillSimulation(task: SimulationTask) {
                     weather,
                     groundCondition: condition,
                 }
-                const comboSimOptions = { ...task.simOptions }
-                if (comboSimOptions.seed != null) {
-                    comboSimOptions.seed = comboSimOptions.seed + seedOffset
-                }
+                const comboSeed = task.simOptions.seed != null
+                    ? task.simOptions.seed + seedOffset
+                    : Math.floor(Math.random() * 1000000000)
                 seedOffset += nsamplesPerCombo
 
                 const { results: comboResults } = runComparison(
@@ -187,7 +186,8 @@ function runSkillSimulation(task: SimulationTask) {
                     racedefForSim,
                     baseUma,
                     umaWithSkill,
-                    comboSimOptions,
+                    [comboSeed, 0],
+                    task.simOptions,
                 )
                 for (const v of comboResults) {
                     weightedResults.push({ value: v, weight: comboWeight })
@@ -200,12 +200,16 @@ function runSkillSimulation(task: SimulationTask) {
     } else {
         const baseUma = createHorseState(task.baseUma, baseSkillIds)
         const umaWithSkill = createHorseState(task.baseUma, filteredSkillIds)
+        const batchSeed = task.simOptions.seed != null
+            ? task.simOptions.seed
+            : Math.floor(Math.random() * 1000000000)
         const { results: batchResults } = runComparison(
             task.numSimulations,
             courses[0],
             task.racedef,
             baseUma,
             umaWithSkill,
+            [batchSeed, 0],
             task.simOptions,
         )
         results.push(...batchResults)
