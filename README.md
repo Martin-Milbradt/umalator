@@ -6,15 +6,18 @@ Results differ from the browser version because all optional simulation options 
 
 ## Getting Started
 
+This project requires [uma-tools](https://github.com/alpha123/uma-tools) as a sibling directory (`../uma-tools`). Clone it first:
+
 ```bash
-# Install dependencies
+git clone https://github.com/alpha123/uma-tools.git ../uma-tools
+```
+
+Then install and run:
+
+```bash
 npm install
-
-# Build worker (required before running)
-npm run build
-
-# Start web server (builds frontend first)
-npm run web
+npm run build   # Build simulation worker
+npm run web     # Build frontend + start server
 ```
 
 Then open `http://localhost:3000` in your browser.
