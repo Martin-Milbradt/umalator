@@ -50,6 +50,26 @@
                         +
                     </button>
                     <button
+                        id="export-config-button"
+                        class="bg-zinc-600 text-white border-none rounded h-9 px-2 text-sm cursor-pointer transition-colors hover:bg-zinc-500 active:bg-zinc-700 flex items-center"
+                        title="Export config as JSON file"
+                    >
+                        Export
+                    </button>
+                    <button
+                        id="import-config-button"
+                        class="bg-zinc-600 text-white border-none rounded h-9 px-2 text-sm cursor-pointer transition-colors hover:bg-zinc-500 active:bg-zinc-700 flex items-center"
+                        title="Import config from JSON file"
+                    >
+                        Import
+                    </button>
+                    <input
+                        id="import-config-input"
+                        type="file"
+                        accept=".json"
+                        class="hidden"
+                    />
+                    <button
                         id="run-button"
                         class="h-9 px-4 text-white border-none rounded-md text-base font-semibold cursor-pointer transition-colors bg-sky-600 hover:bg-sky-700 active:bg-sky-800 disabled:bg-zinc-600 disabled:cursor-not-allowed flex items-center"
                     >

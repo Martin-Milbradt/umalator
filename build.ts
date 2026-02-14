@@ -1,6 +1,6 @@
 import * as esbuild from 'esbuild'
+import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
 import * as path from 'node:path'
-import { existsSync, readFileSync } from 'node:fs'
 
 const root = path.join(import.meta.dirname, '..', 'uma-tools')
 const nodeModulesPath = path.join(import.meta.dirname, 'node_modules')
@@ -60,6 +60,40 @@ const redirectData: esbuild.Plugin = {
         build.onResolve({ filter: /skillnames\.json$/ }, () => ({
             path: path.join(root, 'umalator-global', 'skillnames.json'),
         }))
+    },
+}
+
+/** Mock node:assert for browser builds (same pattern as uma-tools/umalator-global/build.mjs) */
+const mockAssert: esbuild.Plugin = {
+    name: 'mockAssert',
+    setup(build) {
+        build.onResolve({ filter: /^node:assert$/ }, (args) => ({
+            path: args.path,
+            namespace: 'mockAssert-ns',
+        }))
+        build.onLoad({ filter: /.*/, namespace: 'mockAssert-ns' }, () => ({
+            contents: 'module.exports={strict:function(){}};',
+            loader: 'js',
+        }))
+    },
+}
+
+/** Mock node:worker_threads for browser builds (parentPort/workerData stay null so the Node entry guard is skipped) */
+const mockNodeWorkerThreads: esbuild.Plugin = {
+    name: 'mockNodeWorkerThreads',
+    setup(build) {
+        build.onResolve({ filter: /^node:worker_threads$/ }, (args) => ({
+            path: args.path,
+            namespace: 'mockWorkerThreads-ns',
+        }))
+        build.onLoad(
+            { filter: /.*/, namespace: 'mockWorkerThreads-ns' },
+            () => ({
+                contents:
+                    'module.exports={parentPort:null,workerData:null,Worker:function(){}};',
+                loader: 'js',
+            }),
+        )
     },
 }
 
@@ -125,6 +159,7 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 `
 
+// --- Node worker build (existing) ---
 const workerBuildOptions: esbuild.BuildOptions = {
     entryPoints: ['simulation.worker.ts'],
     bundle: true,
@@ -141,8 +176,52 @@ const workerBuildOptions: esbuild.BuildOptions = {
     plugins: [markNodeBuiltinsExternal, resolveNodeModules, redirectData],
 }
 
+// --- Browser worker build (new) ---
+const browserWorkerBuildOptions: esbuild.BuildOptions = {
+    entryPoints: ['simulation.browser-worker.ts'],
+    bundle: true,
+    platform: 'browser',
+    target: 'es2020',
+    format: 'iife',
+    outfile: 'static/simulation.browser-worker.js',
+    define: { CC_GLOBAL: 'true' },
+    mainFields: ['module', 'main'],
+    plugins: [mockAssert, mockNodeWorkerThreads, resolveNodeModules, redirectData],
+}
+
+// --- Copy uma-tools data files to static/data/ ---
+function copyDataFiles(): void {
+    const dataDir = path.join(import.meta.dirname, 'static', 'data')
+    mkdirSync(dataDir, { recursive: true })
+
+    const files = [
+        'course_data.json',
+        'skill_data.json',
+        'skill_meta.json',
+        'skillnames.json',
+        'tracknames.json',
+    ]
+    const sourceDir = path.join(root, 'umalator-global')
+
+    for (const file of files) {
+        const src = path.join(sourceDir, file)
+        const dest = path.join(dataDir, file)
+        copyFileSync(src, dest)
+    }
+
+    // Copy example config for seeding IndexedDB on first visit
+    const exampleSrc = path.join(import.meta.dirname, 'configs', 'config.example.json')
+    if (existsSync(exampleSrc)) {
+        copyFileSync(exampleSrc, path.join(dataDir, 'config.example.json'))
+    }
+}
+
 try {
-    await esbuild.build(workerBuildOptions)
+    copyDataFiles()
+    await Promise.all([
+        esbuild.build(workerBuildOptions),
+        esbuild.build(browserWorkerBuildOptions),
+    ])
 } catch (error) {
     console.error('Build failed:', error)
     process.exit(1)

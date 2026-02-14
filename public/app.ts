@@ -4,6 +4,12 @@ import './input.css'
 import './api'
 
 import { runCalculations } from './api'
+import {
+    duplicateConfig,
+    exportConfig,
+    importConfig,
+    seedDefaultConfig,
+} from './configStore'
 import { autoSave, loadConfig, loadConfigFiles } from './configManager'
 import {
     renderResultsTable,
@@ -19,6 +25,7 @@ import { renderSkills, setupSkillsContainerDelegation } from './skillsUI'
 import {
     getCalculatedResultsCache,
     getCurrentConfig,
+    getCurrentConfigFile,
     getResultsMap,
     getSelectedSkills,
     setCourseData,
@@ -26,15 +33,18 @@ import {
     setSkillmeta,
     setSkillNameToId,
     setSkillnames,
+    setTrackNames,
 } from './state'
 import { showToast } from './toast'
 import { renderTrack } from './trackUI'
 import type { CourseData, SkillData, SkillMeta, SkillNames } from './types'
 import { renderUma } from './umaUI'
 
+const BASE_URL = import.meta.env.BASE_URL ?? '/'
+
 // Load skill names on init
 ;(async function loadSkillnamesOnInit() {
-    const response = await fetch('/api/skillnames')
+    const response = await fetch(`${BASE_URL}data/skillnames.json`)
     if (!response.ok) {
         throw new Error(
             `Failed to load skillnames: ${response.status} ${response.statusText}`,
@@ -58,7 +68,7 @@ import { renderUma } from './umaUI'
 
 // Load skill metadata on init
 ;(async function loadSkillmetaOnInit() {
-    const response = await fetch('/api/skillmeta')
+    const response = await fetch(`${BASE_URL}data/skill_meta.json`)
     if (!response.ok) {
         throw new Error(
             `Failed to load skillmeta: ${response.status} ${response.statusText}`,
@@ -75,7 +85,7 @@ import { renderUma } from './umaUI'
 
 // Load skill data on init
 ;(async function loadSkillDataOnInit() {
-    const response = await fetch('/api/skilldata')
+    const response = await fetch(`${BASE_URL}data/skill_data.json`)
     if (!response.ok) {
         throw new Error(
             `Failed to load skilldata: ${response.status} ${response.statusText}`,
@@ -92,7 +102,7 @@ import { renderUma } from './umaUI'
 
 // Load course data on init
 ;(async function loadCourseDataOnInit() {
-    const response = await fetch('/api/coursedata')
+    const response = await fetch(`${BASE_URL}data/course_data.json`)
     if (!response.ok) {
         throw new Error(
             `Failed to load course data: ${response.status} ${response.statusText}`,
@@ -109,6 +119,23 @@ import { renderUma } from './umaUI'
     }
 })().catch(() => {
     showToast({ type: 'error', message: 'Failed to load course data' })
+})
+
+// Load track names on init
+;(async function loadTrackNamesOnInit() {
+    const response = await fetch(`${BASE_URL}data/tracknames.json`)
+    if (!response.ok) {
+        throw new Error(
+            `Failed to load track names: ${response.status} ${response.statusText}`,
+        )
+    }
+    const trackNames = (await response.json()) as Record<string, string[]>
+    if (!trackNames || typeof trackNames !== 'object') {
+        throw new Error('Invalid track names received')
+    }
+    setTrackNames(trackNames)
+})().catch(() => {
+    showToast({ type: 'error', message: 'Failed to load track names' })
 })
 
 function resetUmaSkills(): void {
@@ -180,30 +207,7 @@ if (duplicateButton) {
         }
 
         try {
-            const response = await fetch(
-                `/api/config/${encodeURIComponent(currentConfigFile)}/duplicate`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ newName: trimmedName }),
-                },
-            )
-
-            if (!response.ok) {
-                let errorMessage = 'Failed to duplicate config file'
-                try {
-                    const error = (await response.json()) as { error?: string }
-                    errorMessage = error.error || errorMessage
-                } catch {
-                    const text = await response.text()
-                    errorMessage = text || errorMessage
-                }
-                alert(`Error: ${errorMessage}`)
-                return
-            }
-
+            await duplicateConfig(currentConfigFile, trimmedName)
             await loadConfigFiles()
             await loadConfig(trimmedName)
         } catch (error) {
@@ -269,5 +273,41 @@ setupSkillsContainerDelegation()
 setupResultsTableSorting()
 setupSelectAllCheckbox()
 
-// Load config files on startup
-loadConfigFiles()
+// Set up export config button
+const exportButton = document.getElementById('export-config-button')
+if (exportButton) {
+    exportButton.addEventListener('click', async () => {
+        const currentConfigFile = getCurrentConfigFile()
+        const currentConfig = getCurrentConfig()
+        if (!currentConfigFile || !currentConfig) return
+        exportConfig(currentConfigFile, currentConfig)
+    })
+}
+
+// Set up import config button
+const importButton = document.getElementById('import-config-button')
+const importInput = document.getElementById(
+    'import-config-input',
+) as HTMLInputElement
+if (importButton && importInput) {
+    importButton.addEventListener('click', () => importInput.click())
+    importInput.addEventListener('change', async () => {
+        const file = importInput.files?.[0]
+        if (!file) return
+        try {
+            const { name } = await importConfig(file)
+            await loadConfigFiles()
+            await loadConfig(name)
+            showToast({ type: 'info', message: `Imported ${name}` })
+        } catch (error) {
+            const err = error as Error
+            showToast({ type: 'error', message: `Import failed: ${err.message}` })
+        }
+        importInput.value = ''
+    })
+}
+
+// Seed default config on first visit, then load config files
+seedDefaultConfig()
+    .then(() => loadConfigFiles())
+    .catch(() => loadConfigFiles())

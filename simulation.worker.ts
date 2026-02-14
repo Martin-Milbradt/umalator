@@ -46,7 +46,7 @@ function convertSkillsToArray(skills: HorseStateData['skills']): string[] {
     return []
 }
 
-function runSkillSimulation(task: SimulationTask) {
+export function runSkillSimulation(task: SimulationTask) {
     const results: number[] = []
     const courses = task.courses
     const numCourses = courses.length

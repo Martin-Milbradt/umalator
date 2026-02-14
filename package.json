@@ -6,9 +6,11 @@
   "scripts": {
     "build": "tsx build.ts",
     "build:frontend": "vite build",
-    "dev": "concurrently \"tsx server.ts\" \"vite\"",
+    "dev": "npm run build && vite",
+    "dev:server": "concurrently \"tsx server.ts\" \"vite\"",
     "markdownlint": "markdownlint-cli2 \"**/*.md\"",
     "test": "vitest run",
+    "preview": "npm run build && npm run build:frontend && vite preview",
     "web": "npm run build:frontend && tsx server.ts"
   },
   "dependencies": {
