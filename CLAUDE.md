@@ -36,8 +36,9 @@ npx vitest run utils.test.ts
 - `utils.ts` - Pure utility functions for parsing, formatting, statistics, and skill resolution
 - `server.ts` - Express server (port 3000) serving the web UI and REST API endpoints
 - `simulation.worker.ts` - Worker thread that runs skill simulations using `uma-tools` comparison engine
-- `simulation-runner.ts` - Orchestrates parallel simulations with tiered refinement
+- `simulation-runner.ts` - Orchestrates parallel simulations across worker threads
 - `build.ts` - esbuild configuration for bundling the worker
+- `types.ts` - Shared type definitions (worker messages, simulation tasks, skill metadata)
 
 ### Frontend (public/)
 
@@ -61,7 +62,7 @@ npx vitest run utils.test.ts
 ## Key Patterns
 
 - **Worker Threads**: Simulations run in parallel via `simulation.worker.ts`, concurrency = min(skills, CPU cores)
-- **Tiered Simulation**: 100 sims for all skills → 100 more for top half → 100 for top 10 → 100 for top 25% → 100 for top 5
+- **Flat Simulation**: 500 simulations for all skills in a single pass
 - **Skill Resolution**: Skills referenced by global English names; cost > 0 for regular skills, cost 0 for unique skills. Handles ○/◎ variants automatically.
 - **Auto-save**: Web UI automatically persists config changes to disk (500ms debounce)
 - **SSE Streaming**: Web UI receives simulation output via Server-Sent Events at `/api/simulate`
