@@ -22,6 +22,11 @@ jobs:
         with:
           submodules: recursive
 
+      # Pull latest uma-skill-tools regardless of what uma-tools pins,
+      # since upstream develops against an unpublished local copy.
+      - name: Update uma-skill-tools to latest
+        run: cd uma-tools/uma-skill-tools && git fetch origin && git checkout origin/master
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
