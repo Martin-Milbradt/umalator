@@ -22,10 +22,10 @@ jobs:
         with:
           submodules: recursive
 
-      # Pull latest uma-skill-tools regardless of what uma-tools pins,
-      # since upstream develops against an unpublished local copy.
-      - name: Update uma-skill-tools to latest
-        run: cd uma-tools/uma-skill-tools && git fetch origin && git checkout origin/master
+      # uma-tools compare.ts requires otherHorse() which is at a specific
+      # uma-skill-tools commit not yet on master.
+      - name: Update uma-skill-tools to compatible commit
+        run: cd uma-tools/uma-skill-tools && git fetch origin 24f0a8862106dd4aaeea55e90e975acc9ca5d019 && git checkout 24f0a8862106dd4aaeea55e90e975acc9ca5d019
 
       - uses: actions/setup-node@v4
         with:

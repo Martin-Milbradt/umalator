@@ -54,16 +54,15 @@ if (-not (Test-Path $umaToolsPath)) {
     }
 }
 
-# Update uma-tools submodule to the commit pinned by umalator, then pull
-# latest uma-skill-tools from upstream. We do NOT pull uma-tools master because
-# upstream compare.ts uses an unreleased otherHorse() API that isn't in any
-# published uma-skill-tools yet (alpha123 builds from a local copy).
+# Update submodules. uma-skill-tools needs a specific commit (24f0a88) that
+# has the otherHorse() API required by upstream uma-tools compare.ts.
+# This commit is not yet on uma-skill-tools master, so we fetch it by SHA.
 Write-Host "Updating uma-tools submodule..."
-git submodule update --init --recursive
+git submodule update --init --remote uma-tools
 if (Test-Path $umaToolsPath) {
     Push-Location (Join-Path $umaToolsPath "uma-skill-tools")
-    git fetch origin
-    git checkout origin/master
+    git fetch origin 24f0a8862106dd4aaeea55e90e975acc9ca5d019
+    git checkout 24f0a8862106dd4aaeea55e90e975acc9ca5d019
     if ($LASTEXITCODE -ne 0) {
         Write-Warning "Failed to update uma-skill-tools, continuing anyway..."
     }

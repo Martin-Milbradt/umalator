@@ -40,6 +40,9 @@ function getOrCreateContainer(): HTMLDivElement {
 }
 
 export function showToast(options: ToastOptions): void {
+    if (options.type === 'error') {
+        console.error('[umalator]', options.message)
+    }
     const container = getOrCreateContainer()
     const duration = options.duration ?? DEFAULT_DURATIONS[options.type]
 

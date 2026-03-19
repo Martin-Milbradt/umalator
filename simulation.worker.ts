@@ -22,6 +22,8 @@ function createHorseState(
         power: props.power,
         guts: props.guts,
         wisdom: props.wisdom,
+        mood: (props.mood ?? 2) as HorseState['mood'],
+        popularity: props.popularity ?? 1,
         strategy: props.strategy as HorseState['strategy'],
         distanceAptitude:
             props.distanceAptitude as HorseState['distanceAptitude'],
@@ -29,6 +31,7 @@ function createHorseState(
         strategyAptitude:
             props.strategyAptitude as HorseState['strategyAptitude'],
         skills: SkillSet(skillIds),
+        samplePolicies: new Map(),
     }
 }
 
@@ -138,8 +141,6 @@ export function runSkillSimulation(task: SimulationTask) {
         const weatherProbs = computeProbs(weatherPool)
         const conditionProbs = computeProbs(conditionPool)
 
-        const baseUma = createHorseState(task.baseUma, baseSkillIds)
-        const umaWithSkill = createHorseState(task.baseUma, filteredSkillIds)
         let seedOffset = 0
 
         // Step 6: Run combos with global rotation
@@ -168,9 +169,11 @@ export function runSkillSimulation(task: SimulationTask) {
                         ? (conditionProbs.get(condition) ?? 0.25)
                         : 1)
 
+                // mood is set on horse objects, not racedef (uma-skill-tools 24f0a88+)
+                const baseUma = createHorseState({ ...task.baseUma, mood }, baseSkillIds)
+                const umaWithSkill = createHorseState({ ...task.baseUma, mood }, filteredSkillIds)
                 const racedefForSim = {
                     ...task.racedef,
-                    mood,
                     season,
                     weather,
                     groundCondition: condition,

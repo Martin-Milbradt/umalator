@@ -22,6 +22,7 @@ export interface HorseStateData {
     surfaceAptitude: string
     strategyAptitude: string
     mood?: Mood
+    popularity?: number
     /** Skill IDs as either an array or a Record (from immutable Map serialization) */
     skills: Record<string, string> | string[]
 }

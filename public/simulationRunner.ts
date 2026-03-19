@@ -185,6 +185,8 @@ interface BaseUmaData {
     power: number
     guts: number
     wisdom: number
+    mood?: Mood
+    popularity?: number
     strategy: string
     distanceAptitude: string
     surfaceAptitude: string
@@ -198,6 +200,8 @@ function createBaseUmaData(props: {
     power: number
     guts: number
     wisdom: number
+    mood?: Mood
+    popularity?: number
     strategy: string
     distanceAptitude: string
     surfaceAptitude: string
@@ -210,6 +214,8 @@ function createBaseUmaData(props: {
         power: props.power,
         guts: props.guts,
         wisdom: props.wisdom,
+        mood: props.mood,
+        popularity: props.popularity,
         strategy: props.strategy,
         distanceAptitude: props.distanceAptitude,
         surfaceAptitude: props.surfaceAptitude,
@@ -421,6 +427,7 @@ export class BrowserSimulationRunner {
             power: umaConfig.power ?? 800,
             guts: umaConfig.guts ?? 400,
             wisdom: umaConfig.wisdom ?? 400,
+            mood: conditions.mood.isRandom ? undefined : conditions.mood.value as Mood,
             strategy: strategyName,
             distanceAptitude: umaConfig.distanceAptitude ?? 'A',
             surfaceAptitude: umaConfig.surfaceAptitude ?? 'A',
