@@ -90,6 +90,7 @@ export interface SimulationRunnerConfig {
     }
     deterministic?: boolean
     confidenceInterval?: number
+    numSimulations?: number
 }
 
 export interface SimulationProgress {
@@ -696,13 +697,15 @@ export class SimulationRunner {
             return results
         }
 
+        const numSims = config.numSimulations ?? 500
+
         onProgress({
             type: 'phase',
-            phase: `Running 500 simulations for ${availableSkillNames.length} skills...`,
+            phase: `Running ${numSims} simulations for ${availableSkillNames.length} skills...`,
         })
 
         const factories = availableSkillNames.map(
-            (skillName) => () => runSimulationInWorker(skillName, 500, true),
+            (skillName) => () => runSimulationInWorker(skillName, numSims, true),
         )
         const results = await processWithConcurrency(factories, concurrency)
 

@@ -11,6 +11,7 @@
     "markdownlint": "markdownlint-cli2 \"**/*.md\"",
     "test": "vitest run",
     "preview": "npm run build && npm run build:frontend && vite preview",
+    "race-check": "tsx race-check.ts",
     "web": "npm run build:frontend && tsx server.ts"
   },
   "dependencies": {

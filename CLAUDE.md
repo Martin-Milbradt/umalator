@@ -23,10 +23,25 @@ npm run preview
 # Build frontend only
 npm run build:frontend
 
+# Type check
+npx tsc --noEmit
+
 # Run tests
 npm test
 # Run single test file
 npx vitest run utils.test.ts
+
+# CLI: run simulation with a config (outputs JSON)
+npx tsx cli.ts Pisc_GS.json
+# CLI: filter specific skills
+npx tsx cli.ts Pisc_GS.json --skills "Skill Name,Another Skill"
+
+# Race check: compare skills across races (uses race-check.default.json)
+npx tsx race-check.ts
+# Race check: one-off
+npx tsx race-check.ts --track Kyoto --distance 3200 --skills "Straightaway Spurt:End Closer"
+# Race check: custom races file, override sims count
+npx tsx race-check.ts --races path/to/races.json --sims 200
 ```
 
 ## Architecture
@@ -37,7 +52,8 @@ npx vitest run utils.test.ts
 
 - `simulation.worker.ts` - Simulation logic using uma-tools comparison engine (shared by Node and browser builds)
 - `simulation.browser-worker.ts` - Thin Web Worker entry point for browser builds
-- `simulation-runner.ts` - Server-side worker orchestration (legacy, used by `server.ts`)
+- `cli.ts` - CLI entry point: loads data at runtime, runs `SimulationRunner`, outputs JSON
+- `simulation-runner.ts` - Node worker orchestration (used by `cli.ts` and `server.ts`)
 - `build.ts` - esbuild config: bundles Node worker + browser worker, copies data files to `static/data/`
 - `utils.ts` - Pure utility functions for parsing, formatting, statistics, and skill resolution
 - `types.ts` - Shared type definitions (worker messages, simulation tasks, skill metadata)
@@ -48,12 +64,14 @@ npx vitest run utils.test.ts
 - `simulationRunner.ts` - Browser Web Worker orchestration (parallel simulation via `navigator.hardwareConcurrency`)
 - `configStore.ts` - IndexedDB CRUD for config persistence
 - `configManager.ts` - Config loading, auto-save (500ms debounce), UI sync
+- `devConfigSync.ts` - Dev-only bidirectional sync between `configs/` directory and IndexedDB
 - `api.ts` - Creates `BrowserSimulationRunner`, handles progress callbacks
 - `index.html` - Tailwind CSS dark theme UI
 
 ### Configuration
 
 - Configs stored in IndexedDB (per-browser, not synced across devices)
+- In dev mode, configs sync bidirectionally with the `configs/` directory via a Vite plugin (`vite-plugin-config-sync.ts`)
 - Export/import buttons for config portability (JSON files)
 - Each config defines `skills`, `track`, and `uma` settings
 - See `configs/config.example.json` for format reference
@@ -63,6 +81,7 @@ npx vitest run utils.test.ts
 
 - `./uma-tools` is a git submodule (clone with `--recursive`)
 - `./uma-tools/uma-skill-tools/` is derived from <https://github.com/alpha123/uma-skill-tools> - understanding this code helps when working on simulation logic, but **never modify it**; pull latest from upstream instead
+- `uma-skill-tools` is pinned to commit `24f0a88` (has `otherHorse()` API not yet on upstream master). CI and `start_web.ps1` auto-checkout this commit. For local dev, verify the pin: `git -C uma-tools/uma-skill-tools rev-parse HEAD`
 - Ignore type checking errors from `./uma-tools` package
 
 ### Build Pipeline
@@ -72,8 +91,13 @@ npx vitest run utils.test.ts
   2. Builds Node worker (`simulation.worker.js` in repo root)
   3. Builds browser worker (`static/simulation.browser-worker.js`)
 - `npm run build:frontend` runs `vite build` which bundles `public/` into `dist/`
-- `static/` is Vite's publicDir - files are copied as-is to `dist/`
+- `static/` is Vite's publicDir (configured in `vite.config.ts`) - files are copied as-is to `dist/`
 - GitHub Pages deploy sets `VITE_BASE=/umalator/` so asset paths resolve correctly
+
+### Static vs Runtime Data
+
+- **Browser** uses bundled data files in `static/data/` (copied at build time). Data is stale until `npm run build` re-copies from uma-tools.
+- **CLI** loads data from `uma-tools/umalator-global/` at runtime, so it always reflects current skill data without rebuilding.
 
 ## Key Patterns
 
@@ -82,17 +106,19 @@ npx vitest run utils.test.ts
 - **Skill Resolution**: Skills referenced by global English names; cost > 0 for regular skills, cost 0 for unique skills. Handles ○/◎ variants automatically.
 - **Auto-save**: Web UI automatically persists config changes to IndexedDB (500ms debounce)
 - **Per-Combination Batching**: When random conditions (mood, weather, etc.) are enabled, simulations are batched per unique combination to preserve internal variance from `runComparison`
+- **Limit changes to uma-tools**: Use the already-implemented tools in this repository. Avoid modifying the uma-tools submodule or its nested uma-skill-tools.
 
 ## Implementation Guidance
 
 When fixing an issue or writing a new feature that doesn't have any tests yet, implement at least one.
 
-### Testing
+### Testing and Verification
 
 - `utils.test.ts` - Unit tests for pure functions from `utils.ts`
 - `simulation-runner.test.ts` - Integration tests for worker thread simulations
-
-Run a single test file: `npx vitest run <filename>`
+- Run a single test file: `npx vitest run <filename>`
+- Use the CLI to verify simulation changes work end-to-end: `npx tsx cli.ts <config>.json`
+- The CLI loads data from `uma-tools/umalator-global/` at runtime (no bundled data), so it always uses current skill data
 
 ### Simulation Variance
 

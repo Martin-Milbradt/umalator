@@ -1,0 +1,18 @@
+{
+  "races": "C:/Users/TrueM/Local Documents/Obsidian Notes/ZZ3 Not markdown/Documents/MML.json",
+  "skills": [
+    { "name": "Angling and Scheming", "strategy": "Front Runner" },
+    { "name": "Let's Pump Some Iron!", "strategy": "Late Surger" },
+    { "name": "Straightaway Spurt", "strategy": "End Closer" }
+  ],
+  "uma": {
+    "distanceAptitude": "A",
+    "guts": 600,
+    "power": 1000,
+    "speed": 1200,
+    "stamina": 1200,
+    "styleAptitude": "A",
+    "surfaceAptitude": "A",
+    "wisdom": 800
+  }
+}

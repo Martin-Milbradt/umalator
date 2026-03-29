@@ -1,5 +1,6 @@
 import * as configStore from './configStore'
 import { LAST_USED_CONFIG_KEY } from './constants'
+import { writeConfigToFilesystem } from './devConfigSync'
 import { callRenderSkills, callRenderUma } from './renderCallbacks'
 import { renderTrack, waitForCourseData } from './trackUI'
 import {
@@ -69,6 +70,7 @@ export async function saveConfig(): Promise<void> {
 
     try {
         await configStore.saveConfig(currentConfigFile, currentConfig)
+        writeConfigToFilesystem(currentConfigFile, currentConfig)
     } catch {
         showToast({ type: 'error', message: 'Failed to save config' })
     }

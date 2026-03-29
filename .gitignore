@@ -1,5 +1,4 @@
 node_modules/
-cli.js
 simulation.worker.js
 public/app.js
 public/index.css
@@ -13,3 +12,4 @@ biome.json
 .markdownlint.json
 configs/
 !configs/config.example.json
+race-check-results.md

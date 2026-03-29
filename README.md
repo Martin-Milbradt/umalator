@@ -31,6 +31,7 @@ npm run build:frontend   # Build frontend only
 npm run preview          # Full production build + preview
 npm test                 # Run all tests
 npx vitest run <file>    # Run single test file
+npm run race-check       # Compare skills across races (see Race Check below)
 ```
 
 ## Architecture
@@ -79,6 +80,37 @@ Static JSON files from uma-tools, copied to `static/data/` at build time and ser
 - **Uma Editor**: Configure uma stats, strategy, aptitudes, mood, and active skills
 - **Interactive Results**: Sort, multi-select, and track skill points in the results table
 - **Auto-save**: Changes persist automatically (500ms debounce)
+
+## Race Check
+
+CLI tool to compare skill effectiveness across multiple races. Runs simulations for each race and outputs a markdown table of mean length gains.
+
+```bash
+# Default run (uses race-check.default.json for skills, uma stats, and races file)
+npx tsx race-check.ts
+
+# Override skills (format: "SkillName:Strategy", strategy defaults to End Closer)
+npx tsx race-check.ts --skills "Straightaway Spurt:End Closer,Angling and Scheming:Front Runner"
+
+# Custom races file
+npx tsx race-check.ts --races path/to/races.json
+
+# One-off check for a single race
+npx tsx race-check.ts --track Kyoto --distance 3200 --surface Turf --skills "Straightaway Spurt:End Closer"
+
+# Override uma stats from an existing config
+npx tsx race-check.ts --config Pisc_GS.json
+
+# Control simulation count (default: 100)
+npx tsx race-check.ts --sims 200
+
+# JSON output
+npx tsx race-check.ts --json
+```
+
+The races file uses the MML format: an array of objects with `raceName`, `turn` (MM_HH), `location` (with ⇐/⇒ prefix), `type` (Turf/Dirt), and `lengthM` (e.g. "1600 m"). Season is derived from the turn's month. Ground condition defaults to Firm, weather to Sunny.
+
+Results are written to `race-check-results.md` on each run.
 
 ## Config File Format
 

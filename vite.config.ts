@@ -1,12 +1,13 @@
 import { defineConfig } from 'vite'
 import { resolve } from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
+import { configSyncPlugin } from './vite-plugin-config-sync'
 
 export default defineConfig({
     base: process.env.VITE_BASE ?? '/',
     root: resolve(__dirname, 'public'),
     publicDir: resolve(__dirname, 'static'),
-    plugins: [tailwindcss()],
+    plugins: [tailwindcss(), configSyncPlugin()],
     resolve: {
         alias: {
             '/app.js': resolve(__dirname, 'public/app.ts'),

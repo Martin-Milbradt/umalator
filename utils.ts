@@ -155,6 +155,18 @@ export function parseSeason(name: string): Season {
     return parseWithMap(name, SEASON_MAP, 'season')
 }
 
+export function deriveSeason(turn: string): Season {
+    const month = parseInt(turn.split('_')[0], 10)
+    if (month >= 3 && month <= 5) return Season.Spring
+    if (month >= 6 && month <= 8) return Season.Summer
+    if (month >= 9 && month <= 11) return Season.Autumn
+    return Season.Winter
+}
+
+export function parseLocationToTrackName(location: string): string {
+    return location.replace(/^[⇐⇒]\s*/, '').trim()
+}
+
 export function parseStrategyName(name: string): string {
     return parseWithMap(name, STRATEGY_TO_INTERNAL, 'strategy')
 }

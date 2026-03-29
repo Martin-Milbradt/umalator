@@ -54,11 +54,12 @@ if (-not (Test-Path $umaToolsPath)) {
     }
 }
 
-# Update submodules. uma-skill-tools needs a specific commit (24f0a88) that
-# has the otherHorse() API required by upstream uma-tools compare.ts.
-# This commit is not yet on uma-skill-tools master, so we fetch it by SHA.
-Write-Host "Updating uma-tools submodule..."
-git submodule update --init --remote uma-tools
+# Update submodules to the commits pinned in the parent repo.
+# uma-skill-tools needs a specific commit (24f0a88) with the otherHorse() API
+# that is not yet on uma-skill-tools master. The CI workflow and this script
+# both override uma-skill-tools to that commit after checkout.
+Write-Host "Updating submodules..."
+git submodule update --init uma-tools
 if (Test-Path $umaToolsPath) {
     Push-Location (Join-Path $umaToolsPath "uma-skill-tools")
     git fetch origin 24f0a8862106dd4aaeea55e90e975acc9ca5d019
@@ -69,19 +70,19 @@ if (Test-Path $umaToolsPath) {
     Pop-Location
 }
 
-# Build frontend before starting the server
-Write-Host "Building frontend..."
-npm run build:frontend
+# Build workers before starting servers
+Write-Host "Building workers..."
+npm run build
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "Frontend build failed!"
+    Write-Error "Worker build failed!"
     exit 1
 }
 
-# Start the server in a new window
-$startCommand = "Set-Location '$PSScriptRoot'; npx tsx server.ts"
+# Start Express server + Vite dev server in a new window
+$startCommand = "Set-Location '$PSScriptRoot'; npm run dev:server"
 Start-Process powershell -ArgumentList "-NoExit", "-Command", $startCommand
 
-Start-Sleep 1
+Start-Sleep 2
 
-# Open the browser
-Start-Process "http://localhost:3000"
+# Open the browser (Vite dev server)
+Start-Process "http://localhost:5173"

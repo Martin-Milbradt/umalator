@@ -10,6 +10,7 @@ import {
     importConfig,
     seedDefaultConfig,
 } from './configStore'
+import { syncConfigsFromFilesystem } from './devConfigSync'
 import { autoSave, loadConfig, loadConfigFiles } from './configManager'
 import {
     renderResultsTable,
@@ -307,7 +308,8 @@ if (importButton && importInput) {
     })
 }
 
-// Seed default config on first visit, then load config files
-seedDefaultConfig()
-    .then(() => loadConfigFiles())
-    .catch(() => loadConfigFiles())
+// In dev: sync configs from filesystem; in prod: seed default config
+const initConfigs = import.meta.env.DEV
+    ? syncConfigsFromFilesystem()
+    : seedDefaultConfig()
+initConfigs.then(() => loadConfigFiles()).catch(() => loadConfigFiles())
