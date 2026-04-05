@@ -143,7 +143,7 @@ export function renderResultsTable(): void {
             wrapper.className = 'flex items-center gap-1'
             const img = document.createElement('img')
             img.src = iconUrl
-            img.className = 'w-4 h-4 shrink-0'
+            img.className = 'w-5 h-5 shrink-0'
             img.alt = ''
             const text = document.createElement('span')
             text.textContent = result.skill

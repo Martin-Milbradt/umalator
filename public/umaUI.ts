@@ -8,10 +8,12 @@ import {
     updateUpgradedSkillsForBasicSkill,
 } from './resultsUI'
 import {
+    findSkillId,
     getBasicVariant,
     getCanonicalSkillName,
     getGroupVariantOnUma,
     getSkillCostWithDiscount,
+    getSkillIconUrl,
     getSkillOrder,
     getUpgradedVariant,
 } from './skillHelpers'
@@ -451,14 +453,30 @@ export function renderUma(): void {
             updateSkills(newSkills)
         })
 
+        const iconUrl = getSkillIconUrl(skill)
+        if (iconUrl) {
+            const img = document.createElement('img')
+            img.src = iconUrl
+            img.className = 'w-4 h-4 shrink-0'
+            img.alt = ''
+            pill.appendChild(img)
+        }
         pill.appendChild(textSpan)
         pill.appendChild(removeBtn)
         return pill
     }
 
-    skills.forEach((skill, index) => {
+    // Sort equipped skills by skill ID (same order as the skills list)
+    const sortedIndices = skills
+        .map((skill, index) => ({ skill, index }))
+        .sort((a, b) => {
+            const idA = parseInt(findSkillId(a.skill) || '0', 10)
+            const idB = parseInt(findSkillId(b.skill) || '0', 10)
+            return idA - idB
+        })
+    for (const { skill, index } of sortedIndices) {
         skillsDiv.appendChild(createSkillPill(skill, index))
-    })
+    }
 
     // Add button (blue "+") to add new skills
     const addButton = document.createElement('button')
