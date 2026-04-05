@@ -214,6 +214,26 @@ function copyDataFiles(): void {
     if (existsSync(exampleSrc)) {
         copyFileSync(exampleSrc, path.join(dataDir, 'config.example.json'))
     }
+
+    // Copy skill icon PNGs (only those referenced by skill_meta.json)
+    const iconDir = path.join(dataDir, 'icons')
+    mkdirSync(iconDir, { recursive: true })
+    const skillMeta = JSON.parse(
+        readFileSync(path.join(dataDir, 'skill_meta.json'), 'utf-8'),
+    ) as Record<string, { iconId?: string }>
+    const iconIds = new Set(
+        Object.values(skillMeta)
+            .map((m) => m.iconId)
+            .filter(Boolean),
+    )
+    const iconSourceDir = path.join(root, 'icons', 'skill')
+    for (const iconId of iconIds) {
+        const filename = `utx_ico_skill_${iconId}.png`
+        const src = path.join(iconSourceDir, filename)
+        if (existsSync(src)) {
+            copyFileSync(src, path.join(iconDir, filename))
+        }
+    }
 }
 
 try {

@@ -12,6 +12,7 @@ import {
     getCanonicalSkillName,
     getOtherVariant,
     getSkillCostWithDiscount,
+    getSkillIconUrl,
     getVariantsForBaseName,
     updateSkillVariantsDefault,
 } from './skillHelpers'
@@ -307,6 +308,14 @@ export function renderSkills(): void {
 
         const label = document.createElement('label')
         label.className = 'flex-1 m-0 flex items-center gap-2'
+        const iconUrl = getSkillIconUrl(skillName)
+        if (iconUrl) {
+            const img = document.createElement('img')
+            img.src = iconUrl
+            img.className = 'w-5 h-5 shrink-0'
+            img.alt = ''
+            label.appendChild(img)
+        }
         label.appendChild(skillNameSpan)
 
         div.appendChild(addToUmaButton)

@@ -168,6 +168,16 @@ export function findSkillId(skillName: string): string | null {
     return null
 }
 
+export function getSkillIconUrl(skillName: string): string | null {
+    const skillId = findSkillId(skillName)
+    if (!skillId) return null
+    const meta = getSkillmeta()
+    const iconId = meta?.[skillId]?.iconId
+    if (!iconId) return null
+    const base = import.meta.env.BASE_URL ?? '/'
+    return `${base}data/icons/utx_ico_skill_${iconId}.png`
+}
+
 export function getSkillGroupId(skillName: string): string | null {
     const skillmeta = getSkillmeta()
     if (!skillmeta) return null

@@ -59,7 +59,7 @@ export interface SkillResultWithStatus extends SkillResult {
 export type SkillNames = Record<string, string[]>
 export type SkillMeta = Record<
     string,
-    { baseCost?: number; groupId?: string; order?: number }
+    { baseCost?: number; groupId?: string; iconId?: string; order?: number }
 >
 export type CourseData = Record<
     string,

@@ -5,6 +5,7 @@ import {
     getBasicVariant,
     getGroupVariantOnUma,
     getSkillCostWithDiscount,
+    getSkillIconUrl,
     getSkillOrder,
     getUpgradedVariant,
     isSkillOnUma,
@@ -136,7 +137,22 @@ export function renderResultsTable(): void {
         // Skill name
         const skillCell = document.createElement('td')
         skillCell.className = 'p-1'
-        skillCell.textContent = result.skill
+        const iconUrl = getSkillIconUrl(result.skill)
+        if (iconUrl) {
+            const wrapper = document.createElement('div')
+            wrapper.className = 'flex items-center gap-1'
+            const img = document.createElement('img')
+            img.src = iconUrl
+            img.className = 'w-4 h-4 shrink-0'
+            img.alt = ''
+            const text = document.createElement('span')
+            text.textContent = result.skill
+            wrapper.appendChild(img)
+            wrapper.appendChild(text)
+            skillCell.appendChild(wrapper)
+        } else {
+            skillCell.textContent = result.skill
+        }
         row.appendChild(skillCell)
 
         // Cost
