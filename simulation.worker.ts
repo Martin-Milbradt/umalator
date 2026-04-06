@@ -17,6 +17,7 @@ function createHorseState(
 ): HorseState {
     return {
         outfitId: '',
+        starCount: (props.starCount ?? 3) as HorseState['starCount'],
         speed: props.speed,
         stamina: props.stamina,
         power: props.power,
@@ -30,6 +31,7 @@ function createHorseState(
         surfaceAptitude: props.surfaceAptitude as HorseState['surfaceAptitude'],
         strategyAptitude:
             props.strategyAptitude as HorseState['strategyAptitude'],
+        aptitudes: (props.aptitudes ?? ['S','S','S','S','A','A','A','A','A','A']) as HorseState['aptitudes'],
         skills: SkillSet(skillIds),
         samplePolicies: new Map(),
     }

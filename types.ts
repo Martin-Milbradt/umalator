@@ -21,6 +21,8 @@ export interface HorseStateData {
     distanceAptitude: string
     surfaceAptitude: string
     strategyAptitude: string
+    starCount?: 1 | 2 | 3 | 4 | 5
+    aptitudes?: string[]
     mood?: Mood
     popularity?: number
     /** Skill IDs as either an array or a Record (from immutable Map serialization) */

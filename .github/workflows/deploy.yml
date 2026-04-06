@@ -24,8 +24,16 @@ jobs:
 
       # uma-tools compare.ts requires otherHorse() which is at a specific
       # uma-skill-tools commit not yet on master.
-      - name: Update uma-skill-tools to compatible commit
+      - name: Pin uma-skill-tools to otherHorse commit
         run: cd uma-tools/uma-skill-tools && git fetch origin 24f0a8862106dd4aaeea55e90e975acc9ca5d019 && git checkout 24f0a8862106dd4aaeea55e90e975acc9ca5d019
+
+      - name: Fetch latest game data from upstream uma-tools
+        run: |
+          cd uma-tools
+          git fetch origin master
+          git show origin/master:umalator-global/skill_data.json > umalator-global/skill_data.json
+          git show origin/master:umalator-global/skill_meta.json > umalator-global/skill_meta.json
+          git show origin/master:skill_meta.json > skill_meta.json
 
       - uses: actions/setup-node@v4
         with:
