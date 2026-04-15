@@ -333,8 +333,8 @@ export function findSkillVariantsByName(
         true,
     )
     if (exactMatchId) {
-        const baseCost = skillMeta[exactMatchId]?.baseCost ?? 200
-        if (baseCost > 0) {
+        const meta = skillMeta[exactMatchId]
+        if (meta && meta.baseCost > 0) {
             const canonicalName = skillNames[exactMatchId][0]
             variants.push({
                 skillId: exactMatchId,
@@ -351,8 +351,8 @@ export function findSkillVariantsByName(
             normalizedName === `${normalizedBaseName} ○` ||
             normalizedName === `${normalizedBaseName} ◎`
         ) {
-            const baseCost = skillMeta[id]?.baseCost ?? 200
-            if (baseCost > 0) {
+            const meta = skillMeta[id]
+            if (meta && meta.baseCost > 0) {
                 variants.push({ skillId: id, skillName: name })
             }
         }

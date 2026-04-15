@@ -560,6 +560,32 @@ describe('findSkillVariantsByName', () => {
             { skillId: 'skill001', skillName: 'Victoria por Plancha ☆' },
         ])
     })
+
+    it('excludes skills that exist in skillNames but not in skillMeta', () => {
+        const names: Record<string, string[]> = {
+            skill001: ['Eager'],
+        }
+        const meta: Record<string, { baseCost: number }> = {}
+        const result = findSkillVariantsByName('Eager', names, meta)
+        expect(result).toEqual([])
+    })
+
+    it('excludes ○/◎ variants missing from skillMeta', () => {
+        const names: Record<string, string[]> = {
+            skill001: ['Test Skill', 'テスト'],
+            skill002: ['Test Skill ○'],
+            skill003: ['Test Skill ◎'],
+        }
+        const meta: Record<string, { baseCost: number }> = {
+            skill001: { baseCost: 0 },
+            skill002: { baseCost: 100 },
+            // skill003 intentionally missing from meta
+        }
+        const result = findSkillVariantsByName('Test Skill', names, meta)
+        expect(result).toEqual([
+            { skillId: 'skill002', skillName: 'Test Skill ○' },
+        ])
+    })
 })
 
 describe('processCourseData', () => {
