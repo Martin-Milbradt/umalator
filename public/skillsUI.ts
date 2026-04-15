@@ -7,12 +7,12 @@ import {
 } from './resultsUI'
 import {
     deleteSkill,
-    findSkillId,
     getBaseSkillName,
     getCanonicalSkillName,
     getOtherVariant,
     getSkillCostWithDiscount,
     getSkillIconUrl,
+    getSkillOrder,
     getVariantsForBaseName,
     updateSkillVariantsDefault,
 } from './skillHelpers'
@@ -99,14 +99,13 @@ export function renderSkills(): void {
         }
     })
 
-    // Pre-compute skill IDs to avoid O(n^2) lookups in sort comparator
-    const skillIdCache = new Map<string, number>()
+    // Pre-compute skill order to avoid O(n^2) lookups in sort comparator
+    const skillOrderCache = new Map<string, number>()
     for (const name of skillsToRender) {
-        const idStr = findSkillId(name)
-        skillIdCache.set(name, idStr ? parseInt(idStr, 10) : 0)
+        skillOrderCache.set(name, getSkillOrder(name))
     }
     const sortedSkillNames = Array.from(skillsToRender).sort((a, b) => {
-        return (skillIdCache.get(a) || 0) - (skillIdCache.get(b) || 0)
+        return (skillOrderCache.get(a) || 0) - (skillOrderCache.get(b) || 0)
     })
 
     // Filter out skills that cannot trigger under current settings

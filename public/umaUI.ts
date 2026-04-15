@@ -8,7 +8,6 @@ import {
     updateUpgradedSkillsForBasicSkill,
 } from './resultsUI'
 import {
-    findSkillId,
     getBasicVariant,
     getCanonicalSkillName,
     getGroupVariantOnUma,
@@ -466,14 +465,10 @@ export function renderUma(): void {
         return pill
     }
 
-    // Sort equipped skills by skill ID (same order as the skills list)
+    // Sort equipped skills by order (same order as the skills list)
     const sortedIndices = skills
         .map((skill, index) => ({ skill, index }))
-        .sort((a, b) => {
-            const idA = parseInt(findSkillId(a.skill) || '0', 10)
-            const idB = parseInt(findSkillId(b.skill) || '0', 10)
-            return idA - idB
-        })
+        .sort((a, b) => getSkillOrder(a.skill) - getSkillOrder(b.skill))
     for (const { skill, index } of sortedIndices) {
         skillsDiv.appendChild(createSkillPill(skill, index))
     }
