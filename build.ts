@@ -1,5 +1,6 @@
 import * as esbuild from 'esbuild'
-import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
+import { execSync } from 'node:child_process'
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import * as path from 'node:path'
 
 const root = path.join(import.meta.dirname, 'uma-tools')
@@ -236,7 +237,31 @@ function copyDataFiles(): void {
     }
 }
 
+// Fetch latest game data from upstream uma-tools (mirrors CI behavior).
+// Falls back to local files on network failure.
+function fetchLatestGameData(): void {
+    const dataFiles = [
+        'umalator-global/skill_data.json',
+        'umalator-global/skill_meta.json',
+        'skill_meta.json',
+    ]
+    try {
+        execSync('git fetch origin master', { cwd: root, stdio: 'pipe' })
+        for (const file of dataFiles) {
+            const content = execSync(`git show origin/master:${file}`, {
+                cwd: root,
+                maxBuffer: 10 * 1024 * 1024,
+            })
+            writeFileSync(path.join(root, file), content)
+        }
+        console.log('Fetched latest game data from upstream uma-tools')
+    } catch {
+        console.log('Could not fetch latest game data, using local files')
+    }
+}
+
 try {
+    fetchLatestGameData()
     copyDataFiles()
     await Promise.all([
         esbuild.build(workerBuildOptions),
