@@ -560,6 +560,53 @@ describe('findSkillVariantsByName', () => {
             { skillId: 'skill001', skillName: 'Victoria por Plancha ☆' },
         ])
     })
+
+    it('includes upgraded variants from the same group via groupId', () => {
+        const names: Record<string, string[]> = {
+            '201101': ['Medium Straightaways ◎'],
+            '201102': ['Medium Straightaways ○'],
+            '201103': ['Flash Forward'],
+        }
+        const meta: Record<
+            string,
+            { baseCost: number; groupId?: string; order?: number }
+        > = {
+            '201101': { baseCost: 110, groupId: '20110', order: 20300 },
+            '201102': { baseCost: 100, groupId: '20110', order: 20310 },
+            '201103': { baseCost: 150, groupId: '20110', order: 20290 },
+        }
+        const result = findSkillVariantsByName(
+            'Medium Straightaways',
+            names,
+            meta,
+        )
+        expect(result).toHaveLength(3)
+        const skillNames = result.map((v) => v.skillName)
+        expect(skillNames).toContain('Medium Straightaways ◎')
+        expect(skillNames).toContain('Medium Straightaways ○')
+        expect(skillNames).toContain('Flash Forward')
+    })
+
+    it('excludes × debuff variants from groupId expansion', () => {
+        const names: Record<string, string[]> = {
+            '201101': ['Skill ◎'],
+            '201102': ['Skill ○'],
+            '201103': ['Upgraded Skill'],
+            '201104': ['Skill ×'],
+        }
+        const meta: Record<
+            string,
+            { baseCost: number; groupId?: string; order?: number }
+        > = {
+            '201101': { baseCost: 110, groupId: '20110', order: 20300 },
+            '201102': { baseCost: 100, groupId: '20110', order: 20310 },
+            '201103': { baseCost: 150, groupId: '20110', order: 20290 },
+            '201104': { baseCost: 100, groupId: '20110', order: 20320 },
+        }
+        const result = findSkillVariantsByName('Skill', names, meta)
+        expect(result).toHaveLength(3)
+        expect(result.map((v) => v.skillName)).not.toContain('Skill ×')
+    })
 })
 
 describe('processCourseData', () => {

@@ -320,7 +320,10 @@ export function findSkillIdByNameWithPreference(
 export function findSkillVariantsByName(
     baseSkillName: string,
     skillNames: Record<string, string[]>,
-    skillMeta: Record<string, { baseCost: number }>,
+    skillMeta: Record<
+        string,
+        { baseCost: number; groupId?: string; order?: number }
+    >,
 ): Array<{ skillId: string; skillName: string }> {
     const variants: Array<{ skillId: string; skillName: string }> = []
     const trimmedBaseName = baseSkillName.trim()
@@ -344,6 +347,7 @@ export function findSkillVariantsByName(
         }
     }
 
+    const groupIds = new Set<string>()
     for (const [id, names] of Object.entries(skillNames)) {
         const name = names[0]
         const normalizedName = name.toLowerCase()
@@ -351,9 +355,31 @@ export function findSkillVariantsByName(
             normalizedName === `${normalizedBaseName} ○` ||
             normalizedName === `${normalizedBaseName} ◎`
         ) {
-            const baseCost = skillMeta[id]?.baseCost ?? 200
+            const meta = skillMeta[id]
+            const baseCost = meta?.baseCost ?? 200
             if (baseCost > 0) {
                 variants.push({ skillId: id, skillName: name })
+                if (meta?.groupId) {
+                    groupIds.add(meta.groupId)
+                }
+            }
+        }
+    }
+
+    // Include upgraded variants from the same group (e.g. Flash Forward for Medium Straightaways)
+    const variantIds = new Set(variants.map((v) => v.skillId))
+    for (const groupId of groupIds) {
+        for (const [id, meta] of Object.entries(skillMeta)) {
+            if (
+                meta.groupId === groupId &&
+                !variantIds.has(id) &&
+                (meta.baseCost ?? 200) > 0
+            ) {
+                const names = skillNames[id]
+                if (names?.[0] && !names[0].endsWith(' ×')) {
+                    variants.push({ skillId: id, skillName: names[0] })
+                    variantIds.add(id)
+                }
             }
         }
     }
