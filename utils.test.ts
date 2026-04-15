@@ -974,6 +974,56 @@ describe('calculateSkillCost', () => {
         )
         expect(result).toBe(110)
     })
+
+    it('skips all prerequisites covered by an equipped higher-tier skill', () => {
+        // Flash Forward (order 20290) with Medium Straightaways ◎ (order 20300) equipped
+        // ◎ covers ○ (order 20310), so neither prerequisite should be charged
+        // Expected cost: 150 (just Flash Forward itself)
+        const skillMeta: Record<
+            string,
+            { baseCost: number; groupId?: string; order?: number }
+        > = {
+            '201101': {
+                baseCost: 110,
+                groupId: '20110',
+                order: 20300,
+            },
+            '201102': {
+                baseCost: 100,
+                groupId: '20110',
+                order: 20310,
+            },
+            '201103': {
+                baseCost: 150,
+                groupId: '20110',
+                order: 20290,
+            },
+        }
+        const skillNames: Record<string, string[]> = {
+            '201101': ['Medium Straightaways ◎'],
+            '201102': ['Medium Straightaways ○'],
+            '201103': ['Flash Forward'],
+        }
+        const skillIdToName: Record<string, string> = {
+            '201101': 'Medium Straightaways ◎',
+            '201102': 'Medium Straightaways ○',
+            '201103': 'Flash Forward',
+        }
+        const context = {
+            skillMeta,
+            skillNames,
+            skillIdToName,
+            skillNameToConfigKey: {} as Record<string, string>,
+            configSkills: {} as Record<string, { discount?: number | null }>,
+            baseUmaSkillIds: ['201101'], // Uma has ◎ equipped
+        }
+        const result = calculateSkillCost(
+            '201103',
+            { discount: 0 },
+            context,
+        )
+        expect(result).toBe(150)
+    })
 })
 
 describe('formatTable', () => {

@@ -351,11 +351,24 @@ export function getSkillCostWithDiscount(skillName: string): number {
     const currentOrder = currentMeta.order ?? 0
     const umaSkills = currentConfig?.uma?.skills || []
 
+    // Find the most advanced (lowest order) skill the Uma has in this group
+    let umaGroupOrder = Infinity
+    for (const umaSkill of umaSkills) {
+        const umaSkillId = findSkillId(umaSkill)
+        if (!umaSkillId) continue
+        const umaMeta = skillmeta[umaSkillId]
+        if (umaMeta?.groupId === currentGroupId) {
+            umaGroupOrder = Math.min(umaGroupOrder, umaMeta.order ?? 0)
+        }
+    }
+
     // Find prerequisite skills (same groupId, higher order = basic versions)
     for (const [otherSkillId, otherMeta] of Object.entries(skillmeta)) {
+        const otherOrder = otherMeta.order ?? 0
         if (
             otherMeta.groupId === currentGroupId &&
-            (otherMeta.order ?? 0) > currentOrder
+            otherOrder > currentOrder &&
+            umaGroupOrder > otherOrder
         ) {
             const otherSkillNames = skillnames[otherSkillId]
             if (!otherSkillNames) continue
@@ -369,21 +382,13 @@ export function getSkillCostWithDiscount(skillName: string): number {
                 continue
             }
 
-            // Check if Uma already has this prerequisite
-            const umaHasPrereq = umaSkills.some((umaSkill) => {
-                const umaSkillId = findSkillId(umaSkill)
-                return umaSkillId === otherSkillId
-            })
-
-            if (!umaHasPrereq) {
-                // Add prerequisite cost with its discount
-                const prereqBaseCost = otherMeta.baseCost ?? 200
-                const prereqDiscount =
-                    currentConfig?.skills[primaryName]?.discount ?? 0
-                totalCost += Math.ceil(
-                    prereqBaseCost * (1 - prereqDiscount / 100),
-                )
-            }
+            // Add prerequisite cost with its discount
+            const prereqBaseCost = otherMeta.baseCost ?? 200
+            const prereqDiscount =
+                currentConfig?.skills[primaryName]?.discount ?? 0
+            totalCost += Math.ceil(
+                prereqBaseCost * (1 - prereqDiscount / 100),
+            )
         }
     }
 

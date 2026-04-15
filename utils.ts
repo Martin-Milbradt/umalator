@@ -490,13 +490,28 @@ export function calculateSkillCost(
         const currentGroupId = currentSkill.groupId
         const currentOrder = currentSkill.order ?? 0
 
+        // Find the most advanced (lowest order) skill the Uma has in this group
+        let umaGroupOrder = Infinity
+        if (baseUmaSkillIds) {
+            for (const umaId of baseUmaSkillIds) {
+                const umaMeta = skillMeta[umaId]
+                if (umaMeta?.groupId === currentGroupId) {
+                    umaGroupOrder = Math.min(
+                        umaGroupOrder,
+                        umaMeta.order ?? 0,
+                    )
+                }
+            }
+        }
+
         for (const [otherSkillId, otherSkillMeta] of Object.entries(
             skillMeta,
         )) {
+            const otherOrder = otherSkillMeta.order ?? 0
             if (
                 otherSkillMeta.groupId === currentGroupId &&
-                (otherSkillMeta.order ?? 0) > currentOrder &&
-                !baseUmaSkillIds.includes(otherSkillId)
+                otherOrder > currentOrder &&
+                umaGroupOrder > otherOrder
             ) {
                 const otherSkillNames = skillNames[otherSkillId]
                 if (otherSkillNames) {
