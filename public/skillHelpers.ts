@@ -98,6 +98,32 @@ export function getOtherVariant(skillName: string): string | string[] | null {
 }
 
 /**
+ * Canonical skill-variant names that share discount / default state with `skillName`.
+ * For a ○/◎ pair, returns both variants. Always includes `skillName` itself. Does
+ * not include the stripped base name; callers that need to touch a legacy
+ * base-name config entry must handle it separately.
+ */
+export function getDiscountVariants(skillName: string): string[] {
+    const baseName = getBaseSkillName(skillName)
+    const variants = getVariantsForBaseName(baseName)
+    const names = new Set<string>([skillName])
+
+    if (variants.length === 2) {
+        for (const variant of variants) names.add(variant)
+    } else {
+        const otherVariant = getOtherVariant(skillName)
+        if (otherVariant) {
+            const others = Array.isArray(otherVariant)
+                ? otherVariant
+                : [otherVariant]
+            for (const variant of others) names.add(variant)
+        }
+    }
+
+    return [...names]
+}
+
+/**
  * Updates the default value for a skill and all its variants.
  * Handles both ○/◎ variant pairs consistently.
  */
@@ -109,27 +135,7 @@ export function updateSkillVariantsDefault(
     const currentConfig = getCurrentConfig()
     if (!currentConfig) return
 
-    const baseName = getBaseSkillName(skillName)
-    const variants = getVariantsForBaseName(baseName)
-
-    // Determine which skills to update - always include skillName
-    let skillsToUpdate: string[]
-    if (variants.length === 2) {
-        skillsToUpdate = [...new Set([skillName, ...variants])]
-    } else {
-        const otherVariant = getOtherVariant(skillName)
-        if (otherVariant) {
-            const variantsToAdd = Array.isArray(otherVariant)
-                ? otherVariant
-                : [otherVariant]
-            skillsToUpdate = [skillName, ...variantsToAdd]
-        } else {
-            skillsToUpdate = [skillName]
-        }
-    }
-
-    // Apply the operation to all relevant skills
-    for (const variantName of skillsToUpdate) {
+    for (const variantName of getDiscountVariants(skillName)) {
         if (!currentConfig.skills[variantName]) continue
 
         if (operation === 'remove') {
