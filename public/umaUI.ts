@@ -451,6 +451,33 @@ export function renderUma(): void {
     })
 
     skillsDiv.appendChild(addButton)
+
+    // Clear-all button: only shown when at least one skill is equipped.
+    if (skills.length > 0) {
+        const clearAllButton = document.createElement('button')
+        clearAllButton.type = 'button'
+        clearAllButton.className =
+            'w-6 h-6 rounded text-lg leading-none cursor-pointer transition-colors bg-red-600 text-white border-none hover:bg-red-700 flex items-center justify-center p-0'
+        clearAllButton.textContent = '\u00D7'
+        clearAllButton.title = 'Remove all skills'
+        clearAllButton.addEventListener('click', () => {
+            const currentConfig = getCurrentConfig()
+            if (!currentConfig?.uma) return
+            if (
+                currentConfig.uma.skillPoints !== undefined &&
+                currentConfig.uma.skillPoints !== null
+            ) {
+                for (const skill of skills) {
+                    currentConfig.uma.skillPoints += getSkillCostWithDiscount(
+                        skill,
+                    )
+                }
+            }
+            updateSkills([], [...skills])
+        })
+        skillsDiv.appendChild(clearAllButton)
+    }
+
     container.appendChild(skillsDiv)
 
     // Stats section (second row)
