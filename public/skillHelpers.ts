@@ -256,9 +256,14 @@ export function getGroupVariantOnUma(skillName: string): string | null {
     return null
 }
 
+// Debuff variants (× suffix) share the group ID but are not part of the upgrade chain.
+function isDebuffVariantName(name: string): boolean {
+    return name.endsWith(' ×')
+}
+
 /**
  * Get the basic variant (higher order) of a skill in the same group.
- * Returns null if no basic variant exists.
+ * Returns null if no basic variant exists. × debuff variants are ignored.
  */
 export function getBasicVariant(skillName: string): string | null {
     const skillmeta = getSkillmeta()
@@ -274,14 +279,13 @@ export function getBasicVariant(skillName: string): string | null {
     const currentGroupId = currentMeta.groupId
     const currentOrder = currentMeta.order ?? 0
 
-    // Find skill with higher order (basic version) in the same group
     for (const [otherId, otherMeta] of Object.entries(skillmeta)) {
         if (
             otherMeta.groupId === currentGroupId &&
             (otherMeta.order ?? 0) > currentOrder
         ) {
             const names = skillnames[otherId]
-            if (names?.[0]) {
+            if (names?.[0] && !isDebuffVariantName(names[0])) {
                 return names[0]
             }
         }
@@ -291,12 +295,15 @@ export function getBasicVariant(skillName: string): string | null {
 
 /**
  * Get the upgraded variant (lower order) of a skill in the same group.
- * Returns null if no upgraded variant exists.
+ * Returns null if no upgraded variant exists. × debuff variants are ignored
+ * both as lookup targets and as the input skill.
  */
 export function getUpgradedVariant(skillName: string): string | null {
     const skillmeta = getSkillmeta()
     const skillnames = getSkillnames()
     if (!skillmeta || !skillnames) return null
+
+    if (isDebuffVariantName(skillName)) return null
 
     const skillId = findSkillId(skillName)
     if (!skillId) return null
@@ -307,14 +314,13 @@ export function getUpgradedVariant(skillName: string): string | null {
     const currentGroupId = currentMeta.groupId
     const currentOrder = currentMeta.order ?? 0
 
-    // Find skill with lower order (upgraded version) in the same group
     for (const [otherId, otherMeta] of Object.entries(skillmeta)) {
         if (
             otherMeta.groupId === currentGroupId &&
             (otherMeta.order ?? 0) < currentOrder
         ) {
             const names = skillnames[otherId]
-            if (names?.[0]) {
+            if (names?.[0] && !isDebuffVariantName(names[0])) {
                 return names[0]
             }
         }
