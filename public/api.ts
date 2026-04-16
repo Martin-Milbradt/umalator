@@ -53,7 +53,7 @@ function createRunner(config: SimulationRunnerConfig) {
     )
 }
 
-export async function runCalculations(clearExisting = true): Promise<void> {
+export async function runCalculations(): Promise<void> {
     const currentConfig = getCurrentConfig()
     const resultsMap = getResultsMap()
     const selectedSkills = getSelectedSkills()
@@ -65,13 +65,10 @@ export async function runCalculations(clearExisting = true): Promise<void> {
     if (!button) return
     button.disabled = true
 
-    if (clearExisting) {
-        resultsMap.clear()
-        selectedSkills.clear()
-        calculatedResultsCache.clear()
-    }
     if (countEl) countEl.textContent = 'Running calculations...'
-    renderResultsTable()
+    // Keep the existing results visible during the run (#36); stale entries
+    // are pruned on completion below.
+    const seenSkillNames = new Set<string>()
 
     await ensureSaved()
 
@@ -88,6 +85,7 @@ export async function runCalculations(clearExisting = true): Promise<void> {
                     showToast({ type: 'info', message: progress.info })
                 }
             } else if (progress.type === 'result' && progress.result) {
+                seenSkillNames.add(progress.result.skill)
                 calculatedResultsCache.set(
                     progress.result.skill,
                     progress.result,
@@ -103,11 +101,26 @@ export async function runCalculations(clearExisting = true): Promise<void> {
 
                 if (progress.results) {
                     for (const result of progress.results) {
+                        seenSkillNames.add(result.skill)
                         calculatedResultsCache.set(result.skill, result)
                         resultsMap.set(result.skill, {
                             ...result,
                             status: 'fresh',
                         })
+                    }
+                }
+
+                // Drop any entries carried over from the previous run that
+                // the new simulation didn't produce a result for.
+                for (const skill of [...resultsMap.keys()]) {
+                    if (!seenSkillNames.has(skill)) {
+                        resultsMap.delete(skill)
+                        selectedSkills.delete(skill)
+                    }
+                }
+                for (const skill of [...calculatedResultsCache.keys()]) {
+                    if (!seenSkillNames.has(skill)) {
+                        calculatedResultsCache.delete(skill)
                     }
                 }
 
