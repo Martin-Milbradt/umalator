@@ -54,7 +54,7 @@ npx tsx race-check.ts --races path/to/races.json --sims 200
 - `simulation.browser-worker.ts` - Thin Web Worker entry point for browser builds
 - `cli.ts` - CLI entry point: loads data at runtime, runs `SimulationRunner`, outputs JSON
 - `simulation-runner.ts` - Node worker orchestration (used by `cli.ts` and `server.ts`)
-- `build.ts` - esbuild config: bundles Node worker + browser worker, copies data files to `static/data/`
+- `build.ts` - esbuild config: bundles Node worker + browser worker, fetches latest game data from upstream uma-tools, copies data files to `static/data/`
 - `utils.ts` - Pure utility functions for parsing, formatting, statistics, and skill resolution
 - `types.ts` - Shared type definitions (worker messages, simulation tasks, skill metadata)
 
@@ -87,16 +87,17 @@ npx tsx race-check.ts --races path/to/races.json --sims 200
 ### Build Pipeline
 
 - `npm run build` runs `tsx build.ts` which:
-  1. Copies 5 JSON data files from `uma-tools/umalator-global/` to `static/data/`
-  2. Builds Node worker (`simulation.worker.js` in repo root)
-  3. Builds browser worker (`static/simulation.browser-worker.js`)
+  1. Fetches latest `skill_data.json` and `skill_meta.json` from upstream uma-tools (falls back to local files offline)
+  2. Copies 5 JSON data files from `uma-tools/umalator-global/` to `static/data/`
+  3. Builds Node worker (`simulation.worker.js` in repo root)
+  4. Builds browser worker (`static/simulation.browser-worker.js`)
 - `npm run build:frontend` runs `vite build` which bundles `public/` into `dist/`
 - `static/` is Vite's publicDir (configured in `vite.config.ts`) - files are copied as-is to `dist/`
 - GitHub Pages deploy sets `VITE_BASE=/umalator/` so asset paths resolve correctly
 
 ### Static vs Runtime Data
 
-- **Browser** uses bundled data files in `static/data/` (copied at build time). Data is stale until `npm run build` re-copies from uma-tools.
+- **Browser** uses bundled data files in `static/data/` (copied at build time). `npm run build` fetches latest game data from upstream automatically.
 - **CLI** loads data from `uma-tools/umalator-global/` at runtime, so it always reflects current skill data without rebuilding.
 
 ## Key Patterns
