@@ -324,23 +324,34 @@ export function findSkillVariantsByName(
 ): Array<{ skillId: string; skillName: string }> {
     const variants: Array<{ skillId: string; skillName: string }> = []
     const trimmedBaseName = baseSkillName.trim()
-    const normalizedBaseName = trimmedBaseName.toLowerCase()
 
-    const exactMatchId = findSkillIdByNameWithPreference(
-        trimmedBaseName,
-        skillNames,
-        skillMeta,
-        true,
-    )
-    if (exactMatchId) {
-        const baseCost = skillMeta[exactMatchId]?.baseCost ?? 200
-        if (baseCost > 0) {
-            const canonicalName = skillNames[exactMatchId][0]
-            variants.push({
-                skillId: exactMatchId,
-                skillName: canonicalName,
-            })
-            return variants
+    // If the caller passed a ○/◎ variant directly, strip the suffix and fall
+    // through to the group search below so both siblings come back together.
+    // Without this, a config key like "Right-Handed ◎" would only yield that
+    // one variant — the ○ sibling would never be simulated.
+    const variantSuffixMatch = /^(.+?) ([○◎])$/.exec(trimmedBaseName)
+    const searchBaseName = variantSuffixMatch
+        ? variantSuffixMatch[1]
+        : trimmedBaseName
+    const normalizedBaseName = searchBaseName.toLowerCase()
+
+    if (!variantSuffixMatch) {
+        const exactMatchId = findSkillIdByNameWithPreference(
+            trimmedBaseName,
+            skillNames,
+            skillMeta,
+            true,
+        )
+        if (exactMatchId) {
+            const baseCost = skillMeta[exactMatchId]?.baseCost ?? 200
+            if (baseCost > 0) {
+                const canonicalName = skillNames[exactMatchId][0]
+                variants.push({
+                    skillId: exactMatchId,
+                    skillName: canonicalName,
+                })
+                return variants
+            }
         }
     }
 

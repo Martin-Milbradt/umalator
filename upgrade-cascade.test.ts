@@ -1,8 +1,12 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { buildSkillNameLookup } from './public/skillHelpers'
-import { refreshGroupResults } from './public/resultsUI'
+import {
+    addSkillToUmaFromTable,
+    refreshGroupResults,
+} from './public/resultsUI'
 import {
     getCalculatedResultsCache,
+    getCurrentConfig,
     getResultsMap,
     setCurrentConfig,
     setSkillmeta,
@@ -200,5 +204,71 @@ describe('refreshGroupResults', () => {
         refreshGroupResults('Unknown Skill')
         const cache = getCalculatedResultsCache()
         expect(cache.size).toBe(3)
+    })
+})
+
+describe('addSkillToUmaFromTable restores the replaced variant (#33)', () => {
+    beforeEach(() => {
+        setCurrentConfig({
+            skills: {
+                [FLASH_FORWARD]: { discount: 10 },
+                [MEDIUM_RARE]: { discount: 10 },
+                [MEDIUM_NORMAL]: { discount: 10 },
+            },
+            uma: { skills: [MEDIUM_RARE] },
+        })
+        const cache = getCalculatedResultsCache()
+        cache.clear()
+        cache.set(FLASH_FORWARD, freshResult(FLASH_FORWARD, 0.5))
+        cache.set(MEDIUM_NORMAL, freshResult(MEDIUM_NORMAL, 0.2))
+
+        const results = getResultsMap()
+        results.clear()
+        // ◎ is on Uma, so only Flash Forward is visible in results initially.
+        // ○ is dominated by ◎ and isn't shown either.
+        results.set(FLASH_FORWARD, freshWithStatus(FLASH_FORWARD, 0.5))
+    })
+
+    it('adding ○ while ◎ is on Uma brings ◎ back to the results table', () => {
+        // Regression test for #33: before the refreshGroupResults unification,
+        // replacing ◎ with ○ from the table left ◎ missing — cached data was
+        // dropped and no returnSkillToResultsTable call rehydrated it.
+        addSkillToUmaFromTable(MEDIUM_NORMAL, 100)
+
+        const cfg = getCurrentConfig()
+        expect(cfg?.uma?.skills).toEqual([MEDIUM_NORMAL])
+
+        const results = getResultsMap()
+        // Flash Forward stays visible (not on Uma, not dominated).
+        expect(results.has(FLASH_FORWARD)).toBe(true)
+        // ◎ is the replaced variant; it should return to the table.
+        expect(results.has(MEDIUM_RARE)).toBe(true)
+        // ○ is now on Uma; it stays out of the results table.
+        expect(results.has(MEDIUM_NORMAL)).toBe(false)
+    })
+
+    it('adding ◎ while ○ is on Uma keeps ○ hidden (dominated)', () => {
+        setCurrentConfig({
+            skills: {
+                [FLASH_FORWARD]: { discount: 10 },
+                [MEDIUM_RARE]: { discount: 10 },
+                [MEDIUM_NORMAL]: { discount: 10 },
+            },
+            uma: { skills: [MEDIUM_NORMAL] },
+        })
+        const results = getResultsMap()
+        results.clear()
+        results.set(FLASH_FORWARD, freshWithStatus(FLASH_FORWARD, 0.5))
+        results.set(MEDIUM_RARE, freshWithStatus(MEDIUM_RARE, 0.3))
+
+        addSkillToUmaFromTable(MEDIUM_RARE, 110)
+
+        expect(getCurrentConfig()?.uma?.skills).toEqual([MEDIUM_RARE])
+        // ○ is now dominated by ◎ on Uma; shouldn't reappear.
+        expect(results.has(MEDIUM_NORMAL)).toBe(false)
+        // ◎ is on Uma; out of results.
+        expect(results.has(MEDIUM_RARE)).toBe(false)
+        // Flash Forward still shown.
+        expect(results.has(FLASH_FORWARD)).toBe(true)
     })
 })

@@ -561,6 +561,30 @@ describe('findSkillVariantsByName', () => {
             { skillId: 'skill001', skillName: 'Victoria por Plancha ☆' },
         ])
     })
+
+    it('returns both variants when called with a ◎ input (regression for #39)', () => {
+        // A config key like "Right-Handed ◎" must still yield both siblings so
+        // the simulation runs for each variant, not only the one named.
+        const result = findSkillVariantsByName(
+            'Right-Handed ◎',
+            skillNames,
+            skillMeta,
+        )
+        expect(result).toHaveLength(2)
+        expect(result.map((v) => v.skillName)).toContain('Right-Handed ○')
+        expect(result.map((v) => v.skillName)).toContain('Right-Handed ◎')
+    })
+
+    it('returns both variants when called with a ○ input', () => {
+        const result = findSkillVariantsByName(
+            'Right-Handed ○',
+            skillNames,
+            skillMeta,
+        )
+        expect(result).toHaveLength(2)
+        expect(result.map((v) => v.skillName)).toContain('Right-Handed ○')
+        expect(result.map((v) => v.skillName)).toContain('Right-Handed ◎')
+    })
 })
 
 describe('processCourseData', () => {
