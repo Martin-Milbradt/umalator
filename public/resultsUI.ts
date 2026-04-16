@@ -2,12 +2,10 @@ import { autoSave } from './configManager'
 import { callRenderSkills, callRenderUma } from './renderCallbacks'
 import {
     findSkillId,
-    getBasicVariant,
     getGroupVariantOnUma,
     getSkillCostWithDiscount,
     getSkillIconUrl,
     getSkillOrder,
-    getUpgradedVariant,
     isSkillOnUma,
     umaHasUpgradedVersion,
 } from './skillHelpers'
@@ -329,14 +327,6 @@ export function addSkillToUmaFromTable(skillName: string, cost: number): void {
             currentConfig.uma.skillPoints += existingCost
         }
 
-        // If existing was basic (higher order) and we're adding upgraded (lower order)
-        // The basic stays hidden, no need to return to table
-        // If existing was upgraded and we're adding basic, return upgraded to table
-        if (existingVariantOrder < newSkillOrder) {
-            // Existing is upgraded, new is basic - return upgraded to table with full stats
-            void returnSkillToResultsTable(existingVariant)
-        }
-
         // Replace the existing variant with the new skill
         const idx = currentConfig.uma.skills.indexOf(existingVariant)
         if (idx !== -1) {
@@ -355,22 +345,7 @@ export function addSkillToUmaFromTable(skillName: string, cost: number): void {
         currentConfig.uma.skillPoints -= cost
     }
 
-    // Update upgraded skill stats if adding basic skill (show incremental)
-    const basicVariant = getBasicVariant(skillName)
-    if (!basicVariant) {
-        // This is a basic skill (or has no variants), update upgraded skills
-        updateUpgradedSkillsForBasicSkill(skillName)
-    }
-
-    // Remove from results table
-    resultsMap.delete(skillName)
-    selectedSkills.delete(skillName)
-
-    // If adding upgraded skill, also hide basic from results
-    if (basicVariant) {
-        resultsMap.delete(basicVariant)
-        selectedSkills.delete(basicVariant)
-    }
+    refreshGroupResults(skillName)
 
     // Re-render
     refreshResultsCosts()
@@ -396,21 +371,7 @@ export function removeSkillFromUma(skillName: string): void {
         currentConfig.uma.skillPoints += skillCost
     }
 
-    // Return skill to results table (if it has a discount)
-    void returnSkillToResultsTable(skillName)
-
-    // Check if this was a basic skill - if so, restore upgraded skill full stats
-    const upgradedVariant = getUpgradedVariant(skillName)
-    if (upgradedVariant) {
-        // This is a basic skill (has an upgraded variant), restore upgraded skills
-        restoreUpgradedSkillsForBasicSkill(skillName)
-    }
-
-    // If this was an upgraded skill, also show basic skill in results again
-    const basicVariant = getBasicVariant(skillName)
-    if (basicVariant) {
-        void returnSkillToResultsTable(basicVariant)
-    }
+    refreshGroupResults(skillName)
 
     // Refresh costs since Uma skills changed
     refreshResultsCosts()
@@ -472,74 +433,56 @@ export function refreshResultsCosts(): void {
 }
 
 /**
- * When a basic skill is added/removed from Uma, mark upgraded skills for recalculation.
- * The frontend cache is keyed only by skill name (not Uma state), so we must invalidate it.
- * The server-side cache IS keyed by config hash (including Uma skills) and will return
- * fresh results for the new Uma state.
+ * Refresh the results table for every sibling in `skillName`'s group after a change
+ * to `currentConfig.uma.skills`. Call *after* updating `uma.skills`; reads the
+ * updated state to decide what should be shown.
+ *
+ * For each group member:
+ *   - Invalidate the frontend cache. It is keyed only by skill name, so any change
+ *     to the Uma's skills can invalidate the baseline the cached result was
+ *     simulated against.
+ *   - If the sibling is now on Uma or dominated by a more-upgraded Uma skill, leave
+ *     it out of the results map. The renderResultsTable filter hides such entries
+ *     anyway; skipping them here avoids a wasted re-simulation.
+ *   - Otherwise, ensure the sibling is in the results map via
+ *     `returnSkillToResultsTable`, which hydrates from cache or marks it pending.
+ *
+ * Safe to call on a skill with no group (no-op) and on a skill being added to or
+ * removed from Uma (the skill itself is treated like any other sibling).
  */
-export function recalculateUpgradedSkillsForBasicChange(
-    basicSkillName: string,
-): void {
+export function refreshGroupResults(skillName: string): void {
     const skillmeta = getSkillmeta()
     const skillnames = getSkillnames()
-    const currentConfig = getCurrentConfig()
     const calculatedResultsCache = getCalculatedResultsCache()
     const resultsMap = getResultsMap()
+    const selectedSkills = getSelectedSkills()
 
-    if (!skillmeta || !skillnames || !currentConfig?.skills) return
+    if (!skillmeta || !skillnames) return
 
-    const basicSkillId = findSkillId(basicSkillName)
-    if (!basicSkillId) return
+    const skillId = findSkillId(skillName)
+    if (!skillId) return
 
-    const basicMeta = skillmeta[basicSkillId]
-    if (!basicMeta?.groupId) return
+    const groupId = skillmeta[skillId]?.groupId
+    if (!groupId) {
+        calculatedResultsCache.delete(skillName)
+        return
+    }
 
-    const basicGroupId = basicMeta.groupId
-    const basicOrder = basicMeta.order ?? 0
+    for (const [siblingId, siblingMeta] of Object.entries(skillmeta)) {
+        if (siblingMeta.groupId !== groupId) continue
+        const siblingName = skillnames[siblingId]?.[0]
+        if (!siblingName) continue
 
-    // Find upgraded skills (lower order = upgraded) in the same group
-    for (const [upgradedSkillId, upgradedMeta] of Object.entries(skillmeta)) {
-        if (
-            upgradedMeta.groupId === basicGroupId &&
-            (upgradedMeta.order ?? 0) < basicOrder
-        ) {
-            const upgradedSkillNames = skillnames[upgradedSkillId]
-            if (!upgradedSkillNames) continue
+        calculatedResultsCache.delete(siblingName)
 
-            const upgradedSkillName = upgradedSkillNames[0]
-
-            // Only recalculate if the skill has a discount (is in the skill list)
-            const skillConfig = currentConfig.skills[upgradedSkillName]
-            if (
-                !skillConfig ||
-                skillConfig.discount === null ||
-                skillConfig.discount === undefined
-            ) {
-                continue
-            }
-
-            // Invalidate frontend cache (keyed only by skill name, not Uma state)
-            calculatedResultsCache.delete(upgradedSkillName)
-
-            // Mark as pending for recalculation - server will return fresh results
-            if (resultsMap.has(upgradedSkillName)) {
-                addPendingSkillToResults(
-                    upgradedSkillName,
-                    skillConfig.discount,
-                )
-            }
+        if (isSkillOnUma(siblingName) || umaHasUpgradedVersion(siblingName)) {
+            resultsMap.delete(siblingName)
+            selectedSkills.delete(siblingName)
+            continue
         }
+        void returnSkillToResultsTable(siblingName)
     }
 }
-
-// Semantic aliases for the same operation: both add and remove of a basic skill
-// require recalculating upgraded variants. When basic skill is added, upgraded skills
-// show incremental benefit; when removed, they show full standalone benefit.
-// The recalculation logic is identical - mark upgraded skills as pending for re-simulation.
-export const updateUpgradedSkillsForBasicSkill =
-    recalculateUpgradedSkillsForBasicChange
-export const restoreUpgradedSkillsForBasicSkill =
-    recalculateUpgradedSkillsForBasicChange
 
 /**
  * Add a skill back to the results table when removed from Uma.

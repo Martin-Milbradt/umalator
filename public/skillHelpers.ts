@@ -1,3 +1,4 @@
+import { applyDiscount } from '../utils'
 import { SKILLS_TO_IGNORE } from './constants'
 import {
     getCurrentConfig,
@@ -97,6 +98,32 @@ export function getOtherVariant(skillName: string): string | string[] | null {
 }
 
 /**
+ * Canonical skill-variant names that share discount / default state with `skillName`.
+ * For a ○/◎ pair, returns both variants. Always includes `skillName` itself. Does
+ * not include the stripped base name; callers that need to touch a legacy
+ * base-name config entry must handle it separately.
+ */
+export function getDiscountVariants(skillName: string): string[] {
+    const baseName = getBaseSkillName(skillName)
+    const variants = getVariantsForBaseName(baseName)
+    const names = new Set<string>([skillName])
+
+    if (variants.length === 2) {
+        for (const variant of variants) names.add(variant)
+    } else {
+        const otherVariant = getOtherVariant(skillName)
+        if (otherVariant) {
+            const others = Array.isArray(otherVariant)
+                ? otherVariant
+                : [otherVariant]
+            for (const variant of others) names.add(variant)
+        }
+    }
+
+    return [...names]
+}
+
+/**
  * Updates the default value for a skill and all its variants.
  * Handles both ○/◎ variant pairs consistently.
  */
@@ -108,27 +135,7 @@ export function updateSkillVariantsDefault(
     const currentConfig = getCurrentConfig()
     if (!currentConfig) return
 
-    const baseName = getBaseSkillName(skillName)
-    const variants = getVariantsForBaseName(baseName)
-
-    // Determine which skills to update - always include skillName
-    let skillsToUpdate: string[]
-    if (variants.length === 2) {
-        skillsToUpdate = [...new Set([skillName, ...variants])]
-    } else {
-        const otherVariant = getOtherVariant(skillName)
-        if (otherVariant) {
-            const variantsToAdd = Array.isArray(otherVariant)
-                ? otherVariant
-                : [otherVariant]
-            skillsToUpdate = [skillName, ...variantsToAdd]
-        } else {
-            skillsToUpdate = [skillName]
-        }
-    }
-
-    // Apply the operation to all relevant skills
-    for (const variantName of skillsToUpdate) {
+    for (const variantName of getDiscountVariants(skillName)) {
         if (!currentConfig.skills[variantName]) continue
 
         if (operation === 'remove') {
@@ -194,6 +201,14 @@ export function getSkillOrder(skillName: string): number {
     return skillmeta[skillId]?.order ?? 0
 }
 
+export function compareSkills(a: string, b: string): number {
+    const orderDiff = getSkillOrder(a) - getSkillOrder(b)
+    if (orderDiff !== 0) return orderDiff
+    const idA = findSkillId(a) ?? ''
+    const idB = findSkillId(b) ?? ''
+    return idA.localeCompare(idB)
+}
+
 /**
  * Check if Uma has an upgraded version of the given skill.
  * Upgraded skills have lower order numbers in the same groupId.
@@ -247,9 +262,14 @@ export function getGroupVariantOnUma(skillName: string): string | null {
     return null
 }
 
+// Debuff variants (× suffix) share the group ID but are not part of the upgrade chain.
+function isDebuffVariantName(name: string): boolean {
+    return name.endsWith(' ×')
+}
+
 /**
  * Get the basic variant (higher order) of a skill in the same group.
- * Returns null if no basic variant exists.
+ * Returns null if no basic variant exists. × debuff variants are ignored.
  */
 export function getBasicVariant(skillName: string): string | null {
     const skillmeta = getSkillmeta()
@@ -265,14 +285,13 @@ export function getBasicVariant(skillName: string): string | null {
     const currentGroupId = currentMeta.groupId
     const currentOrder = currentMeta.order ?? 0
 
-    // Find skill with higher order (basic version) in the same group
     for (const [otherId, otherMeta] of Object.entries(skillmeta)) {
         if (
             otherMeta.groupId === currentGroupId &&
             (otherMeta.order ?? 0) > currentOrder
         ) {
             const names = skillnames[otherId]
-            if (names?.[0]) {
+            if (names?.[0] && !isDebuffVariantName(names[0])) {
                 return names[0]
             }
         }
@@ -282,12 +301,15 @@ export function getBasicVariant(skillName: string): string | null {
 
 /**
  * Get the upgraded variant (lower order) of a skill in the same group.
- * Returns null if no upgraded variant exists.
+ * Returns null if no upgraded variant exists. × debuff variants are ignored
+ * both as lookup targets and as the input skill.
  */
 export function getUpgradedVariant(skillName: string): string | null {
     const skillmeta = getSkillmeta()
     const skillnames = getSkillnames()
     if (!skillmeta || !skillnames) return null
+
+    if (isDebuffVariantName(skillName)) return null
 
     const skillId = findSkillId(skillName)
     if (!skillId) return null
@@ -298,14 +320,13 @@ export function getUpgradedVariant(skillName: string): string | null {
     const currentGroupId = currentMeta.groupId
     const currentOrder = currentMeta.order ?? 0
 
-    // Find skill with lower order (upgraded version) in the same group
     for (const [otherId, otherMeta] of Object.entries(skillmeta)) {
         if (
             otherMeta.groupId === currentGroupId &&
             (otherMeta.order ?? 0) < currentOrder
         ) {
             const names = skillnames[otherId]
-            if (names?.[0]) {
+            if (names?.[0] && !isDebuffVariantName(names[0])) {
                 return names[0]
             }
         }
@@ -337,7 +358,7 @@ export function getSkillCostWithDiscount(skillName: string): number {
 
     const baseCost = getSkillBaseCost(skillName)
     const discount = currentConfig?.skills[skillName]?.discount ?? 0
-    let totalCost = Math.ceil(baseCost * (1 - discount / 100))
+    let totalCost = applyDiscount(baseCost, discount)
 
     if (!skillmeta || !skillnames) return totalCost
 
@@ -351,11 +372,24 @@ export function getSkillCostWithDiscount(skillName: string): number {
     const currentOrder = currentMeta.order ?? 0
     const umaSkills = currentConfig?.uma?.skills || []
 
+    // Find the most advanced (lowest order) skill the Uma has in this group
+    let umaGroupOrder = Infinity
+    for (const umaSkill of umaSkills) {
+        const umaSkillId = findSkillId(umaSkill)
+        if (!umaSkillId) continue
+        const umaMeta = skillmeta[umaSkillId]
+        if (umaMeta?.groupId === currentGroupId) {
+            umaGroupOrder = Math.min(umaGroupOrder, umaMeta.order ?? 0)
+        }
+    }
+
     // Find prerequisite skills (same groupId, higher order = basic versions)
     for (const [otherSkillId, otherMeta] of Object.entries(skillmeta)) {
+        const otherOrder = otherMeta.order ?? 0
         if (
             otherMeta.groupId === currentGroupId &&
-            (otherMeta.order ?? 0) > currentOrder
+            otherOrder > currentOrder &&
+            umaGroupOrder > otherOrder
         ) {
             const otherSkillNames = skillnames[otherSkillId]
             if (!otherSkillNames) continue
@@ -369,21 +403,11 @@ export function getSkillCostWithDiscount(skillName: string): number {
                 continue
             }
 
-            // Check if Uma already has this prerequisite
-            const umaHasPrereq = umaSkills.some((umaSkill) => {
-                const umaSkillId = findSkillId(umaSkill)
-                return umaSkillId === otherSkillId
-            })
-
-            if (!umaHasPrereq) {
-                // Add prerequisite cost with its discount
-                const prereqBaseCost = otherMeta.baseCost ?? 200
-                const prereqDiscount =
-                    currentConfig?.skills[primaryName]?.discount ?? 0
-                totalCost += Math.ceil(
-                    prereqBaseCost * (1 - prereqDiscount / 100),
-                )
-            }
+            // Add prerequisite cost with its discount
+            const prereqBaseCost = otherMeta.baseCost ?? 200
+            const prereqDiscount =
+                currentConfig?.skills[primaryName]?.discount ?? 0
+            totalCost += applyDiscount(prereqBaseCost, prereqDiscount)
         }
     }
 

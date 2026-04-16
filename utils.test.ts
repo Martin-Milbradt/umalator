@@ -6,6 +6,7 @@ import {
     type ThresholdStat,
 } from './uma-tools/uma-skill-tools/CourseData'
 import {
+    applyDiscount,
     buildSkillNameLookup,
     type CurrentSettings,
     calculateSkillCost,
@@ -839,23 +840,42 @@ describe('calculateSkillCost', () => {
         expect(result).toBe(170)
     })
 
-    it('rounds to nearest integer after discount', () => {
-        // 150 * 0.93 = 139.5 → round to 140 (not ceil to 140)
-        // 150 * 0.97 = 145.5 → round to 146
+    it('floors fractional cost after discount to match in-game display', () => {
+        // In-game observation: Late Surger Savvy ○ (110) at 35% = 71, not 72.
+        // 150 * 0.93 = 139.5 → 139, 150 * 0.97 = 145.5 → 145.
         const skillMeta2 = { skill: { baseCost: 150 } }
         const result1 = calculateSkillCost(
             'skill',
             { discount: 7 },
             { skillMeta: skillMeta2 },
         )
-        expect(result1).toBe(140) // round(139.5) = 140
+        expect(result1).toBe(139)
 
         const result2 = calculateSkillCost(
             'skill',
             { discount: 3 },
             { skillMeta: skillMeta2 },
         )
-        expect(result2).toBe(146) // round(145.5) = 146
+        expect(result2).toBe(145)
+    })
+
+    it('matches in-game cost for Late Surger Savvy at 35% discount', () => {
+        const skillMeta: Record<
+            string,
+            { baseCost: number; groupId?: string; order?: number }
+        > = {
+            '201541': { baseCost: 130, groupId: '20154', order: 21180 },
+            '201542': { baseCost: 110, groupId: '20154', order: 21190 },
+        }
+        const normal = calculateSkillCost(
+            '201542',
+            { discount: 35 },
+            { skillMeta },
+        )
+        expect(normal).toBe(71) // floor(110 * 0.65) = floor(71.5)
+
+        const rareOwnCost = applyDiscount(130, 35)
+        expect(rareOwnCost).toBe(84) // floor(130 * 0.65) = floor(84.5)
     })
 
     it('uses default cost of 200 for unknown skill', () => {
@@ -973,6 +993,56 @@ describe('calculateSkillCost', () => {
             context,
         )
         expect(result).toBe(110)
+    })
+
+    it('skips all prerequisites covered by an equipped higher-tier skill', () => {
+        // Flash Forward (order 20290) with Medium Straightaways ◎ (order 20300) equipped
+        // ◎ covers ○ (order 20310), so neither prerequisite should be charged
+        // Expected cost: 150 (just Flash Forward itself)
+        const skillMeta: Record<
+            string,
+            { baseCost: number; groupId?: string; order?: number }
+        > = {
+            '201101': {
+                baseCost: 110,
+                groupId: '20110',
+                order: 20300,
+            },
+            '201102': {
+                baseCost: 100,
+                groupId: '20110',
+                order: 20310,
+            },
+            '201103': {
+                baseCost: 150,
+                groupId: '20110',
+                order: 20290,
+            },
+        }
+        const skillNames: Record<string, string[]> = {
+            '201101': ['Medium Straightaways ◎'],
+            '201102': ['Medium Straightaways ○'],
+            '201103': ['Flash Forward'],
+        }
+        const skillIdToName: Record<string, string> = {
+            '201101': 'Medium Straightaways ◎',
+            '201102': 'Medium Straightaways ○',
+            '201103': 'Flash Forward',
+        }
+        const context = {
+            skillMeta,
+            skillNames,
+            skillIdToName,
+            skillNameToConfigKey: {} as Record<string, string>,
+            configSkills: {} as Record<string, { discount?: number | null }>,
+            baseUmaSkillIds: ['201101'], // Uma has ◎ equipped
+        }
+        const result = calculateSkillCost(
+            '201103',
+            { discount: 0 },
+            context,
+        )
+        expect(result).toBe(150)
     })
 })
 

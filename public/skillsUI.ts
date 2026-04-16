@@ -6,13 +6,14 @@ import {
     updateResultsForDiscountChange,
 } from './resultsUI'
 import {
+    compareSkills,
     deleteSkill,
     getBaseSkillName,
     getCanonicalSkillName,
+    getDiscountVariants,
     getOtherVariant,
     getSkillCostWithDiscount,
     getSkillIconUrl,
-    getSkillOrder,
     getVariantsForBaseName,
     updateSkillVariantsDefault,
 } from './skillHelpers'
@@ -21,6 +22,60 @@ import { getCurrentConfig } from './state'
 
 const squareClasses =
     'py-0.5 px-1 w-6 h-6 rounded text-[13px] cursor-pointer transition-colors'
+
+/**
+ * Set `discount` on `skillName` and every sibling variant that shares its hint
+ * (e.g. the ○/◎ pair). The results table is updated in lockstep for each
+ * variant so a single click produces a row for each skill the discount applies
+ * to, not just the clicked one.
+ */
+export function setDiscountForVariants(
+    skillName: string,
+    discount: number | null,
+): void {
+    const currentConfig = getCurrentConfig()
+    if (!currentConfig) return
+
+    if (!currentConfig.skills[skillName]) {
+        currentConfig.skills[skillName] = { discount: null }
+    }
+
+    const variants = getDiscountVariants(skillName)
+    const previous = new Map<string, number | null | undefined>()
+    for (const variantName of variants) {
+        previous.set(variantName, currentConfig.skills[variantName]?.discount)
+    }
+
+    for (const variantName of variants) {
+        if (currentConfig.skills[variantName]) {
+            currentConfig.skills[variantName].discount = discount
+        }
+    }
+
+    // Legacy base-name config entry: some configs carry a discount under the
+    // stripped name (e.g. "Medium Straightaways") alongside the variants.
+    // Mirror the discount there only if the entry already exists.
+    const baseName = getBaseSkillName(skillName)
+    const baseEntryExists = !!currentConfig.skills[baseName]
+    const baseIsDistinctSkill =
+        baseName !== skillName && !variants.includes(baseName)
+    if (baseEntryExists && baseIsDistinctSkill) {
+        const twoVariantPair = getVariantsForBaseName(baseName).length === 2
+        const inputIsBaseItself =
+            !skillName.endsWith(' ○') && !skillName.endsWith(' ◎')
+        if (twoVariantPair || inputIsBaseItself) {
+            currentConfig.skills[baseName].discount = discount
+        }
+    }
+
+    for (const variantName of variants) {
+        updateResultsForDiscountChange(
+            variantName,
+            previous.get(variantName),
+            discount,
+        )
+    }
+}
 
 export function renderSkills(): void {
     const currentConfig = getCurrentConfig()
@@ -99,14 +154,7 @@ export function renderSkills(): void {
         }
     })
 
-    // Pre-compute skill order to avoid O(n^2) lookups in sort comparator
-    const skillOrderCache = new Map<string, number>()
-    for (const name of skillsToRender) {
-        skillOrderCache.set(name, getSkillOrder(name))
-    }
-    const sortedSkillNames = Array.from(skillsToRender).sort((a, b) => {
-        return (skillOrderCache.get(a) || 0) - (skillOrderCache.get(b) || 0)
-    })
+    const sortedSkillNames = Array.from(skillsToRender).sort(compareSkills)
 
     // Filter out skills that cannot trigger under current settings
     const triggerableSkills = sortedSkillNames.filter(canSkillTriggerByName)
@@ -373,44 +421,7 @@ export function setupSkillsContainerDelegation(): void {
                 updateSkillVariantsDefault(skillName, 'set', currentDiscount)
             }
         } else {
-            currentConfig.skills[skillName].discount =
-                discount === null ? null : discount
-
-            const baseName = getBaseSkillName(skillName)
-            const variants = getVariantsForBaseName(baseName)
-            if (variants.length === 2) {
-                if (currentConfig.skills[baseName]) {
-                    currentConfig.skills[baseName].discount = discount
-                }
-                variants.forEach((variantName) => {
-                    if (currentConfig.skills[variantName]) {
-                        currentConfig.skills[variantName].discount = discount
-                    }
-                })
-            } else {
-                const otherVariant = getOtherVariant(skillName)
-                if (otherVariant) {
-                    const variantsToUpdate = Array.isArray(otherVariant)
-                        ? otherVariant
-                        : [otherVariant]
-                    variantsToUpdate.forEach((variantName) => {
-                        if (currentConfig.skills[variantName]) {
-                            currentConfig.skills[variantName].discount =
-                                discount
-                        }
-                    })
-                    if (
-                        currentConfig.skills[baseName] &&
-                        !skillName.endsWith(' ○') &&
-                        !skillName.endsWith(' ◎')
-                    ) {
-                        currentConfig.skills[baseName].discount = discount
-                    }
-                }
-            }
-
-            // Update results table based on discount change
-            updateResultsForDiscountChange(skillName, currentDiscount, discount)
+            setDiscountForVariants(skillName, discount)
         }
 
         renderSkills()
