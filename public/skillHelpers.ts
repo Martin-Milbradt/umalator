@@ -1,5 +1,7 @@
-import { applyDiscount } from '../utils'
-import { SKILLS_TO_IGNORE } from './constants'
+import {
+    applyDiscount,
+    calculateSkillCost,
+} from '../shared/skill-cost'
 import {
     getCurrentConfig,
     getSkillmeta,
@@ -262,14 +264,14 @@ export function getGroupVariantOnUma(skillName: string): string | null {
     return null
 }
 
-// Debuff variants (× suffix) share the group ID but are not part of the upgrade chain.
-function isDebuffVariantName(name: string): boolean {
+// Purple variants (× suffix) share the group ID but are not part of the upgrade chain.
+function isPurpleVariantName(name: string): boolean {
     return name.endsWith(' ×')
 }
 
 /**
  * Get the basic variant (higher order) of a skill in the same group.
- * Returns null if no basic variant exists. × debuff variants are ignored.
+ * Returns null if no basic variant exists. × purple variants are ignored.
  */
 export function getBasicVariant(skillName: string): string | null {
     const skillmeta = getSkillmeta()
@@ -291,7 +293,7 @@ export function getBasicVariant(skillName: string): string | null {
             (otherMeta.order ?? 0) > currentOrder
         ) {
             const names = skillnames[otherId]
-            if (names?.[0] && !isDebuffVariantName(names[0])) {
+            if (names?.[0] && !isPurpleVariantName(names[0])) {
                 return names[0]
             }
         }
@@ -301,7 +303,7 @@ export function getBasicVariant(skillName: string): string | null {
 
 /**
  * Get the upgraded variant (lower order) of a skill in the same group.
- * Returns null if no upgraded variant exists. × debuff variants are ignored
+ * Returns null if no upgraded variant exists. × purple variants are ignored
  * both as lookup targets and as the input skill.
  */
 export function getUpgradedVariant(skillName: string): string | null {
@@ -309,7 +311,7 @@ export function getUpgradedVariant(skillName: string): string | null {
     const skillnames = getSkillnames()
     if (!skillmeta || !skillnames) return null
 
-    if (isDebuffVariantName(skillName)) return null
+    if (isPurpleVariantName(skillName)) return null
 
     const skillId = findSkillId(skillName)
     if (!skillId) return null
@@ -326,7 +328,7 @@ export function getUpgradedVariant(skillName: string): string | null {
             (otherMeta.order ?? 0) < currentOrder
         ) {
             const names = skillnames[otherId]
-            if (names?.[0] && !isDebuffVariantName(names[0])) {
+            if (names?.[0] && !isPurpleVariantName(names[0])) {
                 return names[0]
             }
         }
@@ -343,75 +345,39 @@ export function getSkillBaseCost(skillName: string): number {
 }
 
 /**
- * Calculate skill cost including prerequisite costs.
- * For upgraded skills (◎), this adds the cost of prerequisite skills (○)
- * that Uma doesn't already have.
- *
- * NOTE: This logic is intentionally duplicated from utils.ts:calculateSkillCost
- * to avoid complex build steps for sharing server-side code with the frontend.
- * Keep both implementations in sync when modifying cost calculation logic.
+ * Calculate a skill's cost including the hints the Uma doesn't already cover.
+ * Thin adapter over shared/skill-cost: resolves name → ID and reads discounts
+ * from the live config.
  */
 export function getSkillCostWithDiscount(skillName: string): number {
     const currentConfig = getCurrentConfig()
     const skillmeta = getSkillmeta()
     const skillnames = getSkillnames()
-
-    const baseCost = getSkillBaseCost(skillName)
     const discount = currentConfig?.skills[skillName]?.discount ?? 0
-    let totalCost = applyDiscount(baseCost, discount)
 
-    if (!skillmeta || !skillnames) return totalCost
-
+    if (!skillmeta || !skillnames) {
+        return applyDiscount(getSkillBaseCost(skillName), discount)
+    }
     const skillId = findSkillId(skillName)
-    if (!skillId) return totalCost
+    if (!skillId) {
+        return applyDiscount(getSkillBaseCost(skillName), discount)
+    }
 
-    const currentMeta = skillmeta[skillId]
-    if (!currentMeta?.groupId) return totalCost
-
-    const currentGroupId = currentMeta.groupId
-    const currentOrder = currentMeta.order ?? 0
-    const umaSkills = currentConfig?.uma?.skills || []
-
-    // Find the most advanced (lowest order) skill the Uma has in this group
-    let umaGroupOrder = Infinity
-    for (const umaSkill of umaSkills) {
+    const umaSkillIds: string[] = []
+    for (const umaSkill of currentConfig?.uma?.skills ?? []) {
         const umaSkillId = findSkillId(umaSkill)
-        if (!umaSkillId) continue
-        const umaMeta = skillmeta[umaSkillId]
-        if (umaMeta?.groupId === currentGroupId) {
-            umaGroupOrder = Math.min(umaGroupOrder, umaMeta.order ?? 0)
-        }
+        if (umaSkillId) umaSkillIds.push(umaSkillId)
     }
 
-    // Find prerequisite skills (same groupId, higher order = basic versions)
-    for (const [otherSkillId, otherMeta] of Object.entries(skillmeta)) {
-        const otherOrder = otherMeta.order ?? 0
-        if (
-            otherMeta.groupId === currentGroupId &&
-            otherOrder > currentOrder &&
-            umaGroupOrder > otherOrder
-        ) {
-            const otherSkillNames = skillnames[otherSkillId]
-            if (!otherSkillNames) continue
-
-            // Skip negative/debuff skills (ending with " ×") and ignored skills
-            const primaryName = otherSkillNames[0]
-            if (
-                primaryName.endsWith(' ×') ||
-                SKILLS_TO_IGNORE.includes(primaryName)
-            ) {
-                continue
-            }
-
-            // Add prerequisite cost with its discount
-            const prereqBaseCost = otherMeta.baseCost ?? 200
-            const prereqDiscount =
-                currentConfig?.skills[primaryName]?.discount ?? 0
-            totalCost += applyDiscount(prereqBaseCost, prereqDiscount)
-        }
-    }
-
-    return totalCost
+    return calculateSkillCost({
+        skillId,
+        discount,
+        skillMeta: skillmeta,
+        skillNames: skillnames,
+        umaSkillIds,
+        getPrereqDiscount: (_prereqId, prereqName) =>
+            currentConfig?.skills[prereqName]?.discount ?? 0,
+    })
 }
 
 export function deleteSkill(skillName: string): void {

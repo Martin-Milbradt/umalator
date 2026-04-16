@@ -11,9 +11,9 @@ import {
     setSkillnames,
 } from './public/state'
 
-describe('variant lookups exclude × debuff variants', () => {
+describe('variant lookups exclude × purple variants', () => {
     beforeAll(() => {
-        // Winter Runner group: ◎ (upgrade) -> ○ (base) -> × (debuff, same group, higher order).
+        // Winter Runner group: ◎ (upgrade) -> ○ (base) -> × (purple, same group, higher order).
         // The × variant is not part of the upgrade chain; it shouldn't be treated as
         // a more basic form of ○.
         setSkillmeta({
@@ -40,7 +40,7 @@ describe('variant lookups exclude × debuff variants', () => {
         expect(findSkillId('Winter Runner ×')).toBe('200203')
     })
 
-    it('getBasicVariant(○) is null — the × debuff is not a prerequisite', () => {
+    it('getBasicVariant(○) is null — the × purple skill is not a prerequisite', () => {
         // Regression test for #44: when adding ○ to Uma, the caller uses
         // !getBasicVariant(○) to decide whether to invalidate the upgraded
         // variant's cache. Returning × here leaves the cache stale.

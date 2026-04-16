@@ -85,16 +85,3 @@ export const FIELD_MAX_VALUES: Partial<Record<StaticField, number>> = {
 
 export const DISTANCE_CATEGORIES = ['<Sprint>', '<Mile>', '<Medium>', '<Long>']
 export const RANDOM_LOCATION = '<Random>'
-
-// Skills to ignore when calculating prerequisite costs (negative/debuff skills)
-export const SKILLS_TO_IGNORE = [
-    '99 Problems',
-    'G1 Averseness',
-    'Gatekept',
-    'Inner Post Averseness',
-    'Outer Post Averseness',
-    'Paddock Fright',
-    'Wallflower',
-    "You're Not the Boss of Me!",
-    '♡ 3D Nail Art',
-]

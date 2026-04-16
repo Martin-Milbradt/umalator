@@ -447,7 +447,12 @@ export function calculateStatsFromRawResults(
 export interface SkillCostContext {
     skillMeta: Record<
         string,
-        { baseCost: number; groupId?: string; order?: number }
+        {
+            baseCost: number
+            groupId?: string
+            order?: number
+            score?: number
+        }
     >
     baseUmaSkillIds?: string[]
     skillNames?: Record<string, string[]>
@@ -456,10 +461,11 @@ export interface SkillCostContext {
     skillNameToConfigKey?: Record<string, string>
 }
 
-// Uses Math.floor to match in-game cost display (e.g. 110 * 0.65 = 71.5 → 71).
-export function applyDiscount(baseCost: number, discount: number): number {
-    return Math.floor(baseCost * (1 - discount / 100))
-}
+export { applyDiscount } from './shared/skill-cost'
+import {
+    applyDiscount as sharedApplyDiscount,
+    calculateSkillCost as sharedCalculateSkillCost,
+} from './shared/skill-cost'
 
 export function calculateSkillCost(
     skillId: string,
@@ -474,78 +480,33 @@ export function calculateSkillCost(
         skillIdToName,
         skillNameToConfigKey,
     } = context
-    const currentSkill = skillMeta[skillId]
-    const baseCost = currentSkill?.baseCost ?? 200
     const discount = skillConfig.discount ?? 0
-    let totalCost = applyDiscount(baseCost, discount)
 
-    const skillsToIgnore = [
-        '99 Problems',
-        'G1 Averseness',
-        'Gatekept',
-        'Inner Post Averseness',
-        'Outer Post Averseness',
-        'Paddock Fright',
-        'Wallflower',
-        "You're Not the Boss of Me!",
-        '♡ 3D Nail Art',
-    ]
-
-    if (currentSkill?.groupId && baseUmaSkillIds && skillNames) {
-        const currentGroupId = currentSkill.groupId
-        const currentOrder = currentSkill.order ?? 0
-
-        // Find the most advanced (lowest order) skill the Uma has in this group
-        let umaGroupOrder = Infinity
-        if (baseUmaSkillIds) {
-            for (const umaId of baseUmaSkillIds) {
-                const umaMeta = skillMeta[umaId]
-                if (umaMeta?.groupId === currentGroupId) {
-                    umaGroupOrder = Math.min(
-                        umaGroupOrder,
-                        umaMeta.order ?? 0,
-                    )
-                }
-            }
-        }
-
-        for (const [otherSkillId, otherSkillMeta] of Object.entries(
-            skillMeta,
-        )) {
-            const otherOrder = otherSkillMeta.order ?? 0
-            if (
-                otherSkillMeta.groupId === currentGroupId &&
-                otherOrder > currentOrder &&
-                umaGroupOrder > otherOrder
-            ) {
-                const otherSkillNames = skillNames[otherSkillId]
-                if (otherSkillNames) {
-                    const primaryName = otherSkillNames[0]
-                    if (
-                        primaryName.endsWith(' ×') ||
-                        skillsToIgnore.includes(primaryName)
-                    ) {
-                        continue
-                    }
-                }
-
-                let otherDiscount = 0
-                if (configSkills && skillIdToName && skillNameToConfigKey) {
-                    const skillName = skillIdToName[otherSkillId]
-                    if (skillName) {
-                        const configKey =
-                            skillNameToConfigKey[skillName] || skillName
-                        otherDiscount = configSkills[configKey]?.discount ?? 0
-                    }
-                }
-
-                const otherBaseCost = otherSkillMeta.baseCost ?? 200
-                totalCost += applyDiscount(otherBaseCost, otherDiscount)
-            }
-        }
+    // A caller that doesn't hand over Uma state or skill names can't resolve
+    // prerequisites; charge only the skill itself. Distinct from passing `[]`,
+    // which means "Uma has no group member" and still charges every prereq.
+    if (!baseUmaSkillIds || !skillNames) {
+        const baseCost = skillMeta[skillId]?.baseCost ?? 200
+        return sharedApplyDiscount(baseCost, discount)
     }
 
-    return totalCost
+    return sharedCalculateSkillCost({
+        skillId,
+        discount,
+        skillMeta,
+        skillNames,
+        umaSkillIds: baseUmaSkillIds,
+        getPrereqDiscount: (prereqId) => {
+            if (!configSkills || !skillIdToName || !skillNameToConfigKey) {
+                return 0
+            }
+            const canonicalName = skillIdToName[prereqId]
+            if (!canonicalName) return 0
+            const configKey =
+                skillNameToConfigKey[canonicalName] || canonicalName
+            return configSkills[configKey]?.discount ?? 0
+        },
+    })
 }
 
 export function findMatchingCoursesWithFilters(
