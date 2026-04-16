@@ -83,5 +83,12 @@ export const FIELD_MAX_VALUES: Partial<Record<StaticField, number>> = {
     weather: 4, // Sunny=1, Cloudy=2, Rainy=3, Snowy=4
 }
 
+// Per-field minimum for expansion. Only is_basis_distance is zero-indexed; the
+// rest start at 1. `is_basis_distance<1` and `<=0` would otherwise expand to []
+// and silently drop the skill from the pool.
+export const FIELD_MIN_VALUES: Partial<Record<StaticField, number>> = {
+    is_basis_distance: 0,
+}
+
 export const DISTANCE_CATEGORIES = ['<Sprint>', '<Mile>', '<Medium>', '<Long>']
 export const RANDOM_LOCATION = '<Random>'

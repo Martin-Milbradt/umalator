@@ -2,6 +2,7 @@ import { autoSave } from './configManager'
 import { callRenderSkills, registerRenderUma } from './renderCallbacks'
 import { refreshGroupResults, refreshResultsCosts } from './resultsUI'
 import {
+    adjustSkillPoints,
     compareSkills,
     getCanonicalSkillName,
     getGroupVariantOnUma,
@@ -252,14 +253,7 @@ export function renderUma(): void {
                 if (newValue && newValue !== skill) {
                     // Renaming skill - treat as remove old + add new
 
-                    // Refund old skill cost
-                    const oldCost = getSkillCostWithDiscount(skill)
-                    if (
-                        currentConfig?.uma?.skillPoints !== undefined &&
-                        currentConfig?.uma?.skillPoints !== null
-                    ) {
-                        currentConfig.uma.skillPoints += oldCost
-                    }
+                    adjustSkillPoints(getSkillCostWithDiscount(skill))
 
                     // Check if new skill already on Uma
                     if (skills.includes(newValue)) {
@@ -273,15 +267,9 @@ export function renderUma(): void {
                     const existingVariant = getGroupVariantOnUma(newValue)
                     let newSkills: string[]
                     if (existingVariant && existingVariant !== skill) {
-                        // Another variant already exists, refund its cost and swap.
-                        const existingCost =
-                            getSkillCostWithDiscount(existingVariant)
-                        if (
-                            currentConfig?.uma?.skillPoints !== undefined &&
-                            currentConfig?.uma?.skillPoints !== null
-                        ) {
-                            currentConfig.uma.skillPoints += existingCost
-                        }
+                        adjustSkillPoints(
+                            getSkillCostWithDiscount(existingVariant),
+                        )
                         newSkills = skills.filter(
                             (s, i) => i !== index && s !== existingVariant,
                         )
@@ -291,25 +279,11 @@ export function renderUma(): void {
                         newSkills[index] = newValue
                     }
 
-                    // Deduct new skill cost
-                    const newCost = getSkillCostWithDiscount(newValue)
-                    if (
-                        currentConfig?.uma?.skillPoints !== undefined &&
-                        currentConfig?.uma?.skillPoints !== null
-                    ) {
-                        currentConfig.uma.skillPoints -= newCost
-                    }
+                    adjustSkillPoints(-getSkillCostWithDiscount(newValue))
 
                     updateSkills(newSkills, [skill, newValue])
                 } else if (!newValue) {
-                    // Empty value removes the skill - refund cost
-                    if (
-                        currentConfig?.uma?.skillPoints !== undefined &&
-                        currentConfig?.uma?.skillPoints !== null
-                    ) {
-                        const skillCost = getSkillCostWithDiscount(skill)
-                        currentConfig.uma.skillPoints += skillCost
-                    }
+                    adjustSkillPoints(getSkillCostWithDiscount(skill))
                     const newSkills = skills.filter((_, i) => i !== index)
                     updateSkills(newSkills, [skill])
                 } else {
@@ -340,15 +314,7 @@ export function renderUma(): void {
         removeBtn.innerHTML = '&times;'
         removeBtn.addEventListener('click', (e) => {
             e.stopPropagation()
-            const currentConfig = getCurrentConfig()
-            // Refund skill cost
-            if (
-                currentConfig?.uma?.skillPoints !== undefined &&
-                currentConfig?.uma?.skillPoints !== null
-            ) {
-                const skillCost = getSkillCostWithDiscount(skill)
-                currentConfig.uma.skillPoints += skillCost
-            }
+            adjustSkillPoints(getSkillCostWithDiscount(skill))
             const newSkills = skills.filter((_, i) => i !== index)
             updateSkills(newSkills, [skill])
         })
@@ -390,7 +356,6 @@ export function renderUma(): void {
         addInput.placeholder = 'Skill name...'
 
         const finishAdd = () => {
-            const currentConfig = getCurrentConfig()
             const newSkill = getCanonicalSkillName(addInput.value.trim())
             if (newSkill) {
                 // Check if already on Uma
@@ -399,20 +364,12 @@ export function renderUma(): void {
                     return
                 }
 
-                // Check if a variant from the same group is on Uma
                 const existingVariant = getGroupVariantOnUma(newSkill)
-
                 let newSkills: string[]
                 if (existingVariant) {
-                    // Refund the existing variant's cost and swap it for newSkill.
-                    const existingCost =
-                        getSkillCostWithDiscount(existingVariant)
-                    if (
-                        currentConfig?.uma?.skillPoints !== undefined &&
-                        currentConfig?.uma?.skillPoints !== null
-                    ) {
-                        currentConfig.uma.skillPoints += existingCost
-                    }
+                    adjustSkillPoints(
+                        getSkillCostWithDiscount(existingVariant),
+                    )
                     const idx = skills.indexOf(existingVariant)
                     newSkills = [...skills]
                     newSkills[idx] = newSkill
@@ -420,14 +377,7 @@ export function renderUma(): void {
                     newSkills = [...skills, newSkill]
                 }
 
-                // Deduct new skill cost
-                const newSkillCost = getSkillCostWithDiscount(newSkill)
-                if (
-                    currentConfig?.uma?.skillPoints !== undefined &&
-                    currentConfig?.uma?.skillPoints !== null
-                ) {
-                    currentConfig.uma.skillPoints -= newSkillCost
-                }
+                adjustSkillPoints(-getSkillCostWithDiscount(newSkill))
 
                 updateSkills(newSkills, [newSkill])
             } else {
@@ -461,17 +411,8 @@ export function renderUma(): void {
         clearAllButton.textContent = '\u00D7'
         clearAllButton.title = 'Remove all skills'
         clearAllButton.addEventListener('click', () => {
-            const currentConfig = getCurrentConfig()
-            if (!currentConfig?.uma) return
-            if (
-                currentConfig.uma.skillPoints !== undefined &&
-                currentConfig.uma.skillPoints !== null
-            ) {
-                for (const skill of skills) {
-                    currentConfig.uma.skillPoints += getSkillCostWithDiscount(
-                        skill,
-                    )
-                }
+            for (const skill of skills) {
+                adjustSkillPoints(getSkillCostWithDiscount(skill))
             }
             updateSkills([], [...skills])
         })

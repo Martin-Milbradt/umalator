@@ -1,6 +1,7 @@
 import { autoSave } from './configManager'
 import { callRenderSkills, callRenderUma } from './renderCallbacks'
 import {
+    adjustSkillPoints,
     findSkillId,
     getGroupVariantOnUma,
     getSkillCostWithDiscount,
@@ -318,32 +319,16 @@ export function addSkillToUmaFromTable(skillName: string, cost: number): void {
     const newSkillOrder = getSkillOrder(skillName)
 
     if (existingVariant) {
-        // Refund the existing variant's cost
-        const existingCost = getSkillCostWithDiscount(existingVariant)
-        if (
-            currentConfig.uma.skillPoints !== undefined &&
-            currentConfig.uma.skillPoints !== null
-        ) {
-            currentConfig.uma.skillPoints += existingCost
-        }
-
-        // Replace the existing variant with the new skill
+        adjustSkillPoints(getSkillCostWithDiscount(existingVariant))
         const idx = currentConfig.uma.skills.indexOf(existingVariant)
         if (idx !== -1) {
             currentConfig.uma.skills[idx] = skillName
         }
     } else {
-        // No variant on Uma, just add the skill
         currentConfig.uma.skills.push(skillName)
     }
 
-    // Deduct from skill points
-    if (
-        currentConfig.uma.skillPoints !== undefined &&
-        currentConfig.uma.skillPoints !== null
-    ) {
-        currentConfig.uma.skillPoints -= cost
-    }
+    adjustSkillPoints(-cost)
 
     refreshGroupResults(skillName)
 
@@ -361,15 +346,9 @@ export function removeSkillFromUma(skillName: string): void {
     const skillIndex = currentConfig.uma.skills.indexOf(skillName)
     if (skillIndex === -1) return
 
-    // Refund skill cost
     const skillCost = getSkillCostWithDiscount(skillName)
     currentConfig.uma.skills.splice(skillIndex, 1)
-    if (
-        currentConfig.uma.skillPoints !== undefined &&
-        currentConfig.uma.skillPoints !== null
-    ) {
-        currentConfig.uma.skillPoints += skillCost
-    }
+    adjustSkillPoints(skillCost)
 
     refreshGroupResults(skillName)
 

@@ -439,7 +439,7 @@ export function calculateStatsFromRawResults(
     const upperIndex = Math.floor(sorted.length * (upperPercentile / 100))
     const ciLower = sorted[lowerIndex]
     const ciUpper = sorted[upperIndex]
-    const meanLengthPerCost = mean / cost
+    const meanLengthPerCost = cost > 0 ? mean / cost : 0
 
     return {
         skill: skillName,
@@ -799,6 +799,14 @@ const FIELD_MAX_VALUES: Partial<Record<StaticField, number>> = {
     weather: 4, // Sunny=1, Cloudy=2, Rainy=3, Snowy=4
 }
 
+// is_basis_distance is zero-indexed (0=non-basis, 1=basis); everything else
+// starts at 1. Without this per-field minimum, `is_basis_distance<1` and
+// `is_basis_distance<=0` both expanded to [] and silently dropped the skill
+// from the pool.
+const FIELD_MIN_VALUES: Partial<Record<StaticField, number>> = {
+    is_basis_distance: 0,
+}
+
 /**
  * Expand a comparison to an array of values based on operator.
  * For track_id, returns single value array since expansion is not meaningful.
@@ -815,6 +823,8 @@ function expandComparisonToValues(
         return [value]
     }
 
+    const minValue = FIELD_MIN_VALUES[field] ?? 1
+
     switch (operator) {
         case '==':
             return [value]
@@ -827,7 +837,7 @@ function expandComparisonToValues(
         }
         case '<=': {
             const values: number[] = []
-            for (let i = 1; i <= value; i++) {
+            for (let i = minValue; i <= value; i++) {
                 values.push(i)
             }
             return values
@@ -841,7 +851,7 @@ function expandComparisonToValues(
         }
         case '<': {
             const values: number[] = []
-            for (let i = 1; i < value; i++) {
+            for (let i = minValue; i < value; i++) {
                 values.push(i)
             }
             return values

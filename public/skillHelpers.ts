@@ -157,6 +157,10 @@ export function findSkillId(skillName: string): string | null {
     }
 
     const normalizedSkillName = normalizeSkillName(skillName)
+    // An input of just "◎" / "×" etc. normalizes to "" — with the bidirectional
+    // substring fallback below, "".includes("") would match every skill and
+    // return an arbitrary first entry. Reject before entering the loop.
+    if (!normalizedSkillName) return null
     for (const [id, names] of Object.entries(skillnames)) {
         if (Array.isArray(names)) {
             for (const name of names) {
@@ -267,6 +271,16 @@ export function getGroupVariantOnUma(skillName: string): string | null {
 // Purple variants (× suffix) share the group ID but are not part of the upgrade chain.
 function isPurpleVariantName(name: string): boolean {
     return name.endsWith(' ×')
+}
+
+/**
+ * Add `delta` to the Uma's skill-points budget, no-op if the user hasn't set a
+ * budget (null/undefined skillPoints). Use a positive delta to refund (remove a
+ * skill) and a negative delta to deduct (add a skill).
+ */
+export function adjustSkillPoints(delta: number): void {
+    const uma = getCurrentConfig()?.uma
+    if (uma?.skillPoints != null) uma.skillPoints += delta
 }
 
 /**

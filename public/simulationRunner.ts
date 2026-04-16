@@ -194,36 +194,6 @@ interface BaseUmaData {
     skills: string[]
 }
 
-function createBaseUmaData(props: {
-    speed: number
-    stamina: number
-    power: number
-    guts: number
-    wisdom: number
-    mood?: Mood
-    popularity?: number
-    strategy: string
-    distanceAptitude: string
-    surfaceAptitude: string
-    strategyAptitude: string
-    skills: string[]
-}): BaseUmaData {
-    return {
-        speed: props.speed,
-        stamina: props.stamina,
-        power: props.power,
-        guts: props.guts,
-        wisdom: props.wisdom,
-        mood: props.mood,
-        popularity: props.popularity,
-        strategy: props.strategy,
-        distanceAptitude: props.distanceAptitude,
-        surfaceAptitude: props.surfaceAptitude,
-        strategyAptitude: props.strategyAptitude,
-        skills: props.skills,
-    }
-}
-
 export async function processWithConcurrency<T>(
     items: (() => Promise<T>)[],
     limit: number,
@@ -421,7 +391,7 @@ export class BrowserSimulationRunner {
             }
         }
 
-        const baseUma = createBaseUmaData({
+        const baseUma: BaseUmaData = {
             speed: umaConfig.speed ?? 1200,
             stamina: umaConfig.stamina ?? 1200,
             power: umaConfig.power ?? 800,
@@ -433,7 +403,7 @@ export class BrowserSimulationRunner {
             surfaceAptitude: umaConfig.surfaceAptitude ?? 'A',
             strategyAptitude: umaConfig.styleAptitude ?? 'A',
             skills: umaSkillIds,
-        })
+        }
 
         const deterministic = config.deterministic ?? false
         const baseSimOptions = {

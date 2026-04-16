@@ -733,6 +733,14 @@ describe('calculateStatsFromRawResults', () => {
         expect(result.maxLength).toBe(42)
     })
 
+    it('returns meanLengthPerCost=0 when cost is zero (e.g. 100% discount)', () => {
+        // Division by zero would otherwise produce Infinity/NaN, which then
+        // poisons the sort-by-efficiency comparator in the results table.
+        const rawResults = [1, 2, 3]
+        const result = calculateStatsFromRawResults(rawResults, 0, 100, 'Free', 95)
+        expect(result.meanLengthPerCost).toBe(0)
+    })
+
     it('accumulated results produce correct mean (simulating tiered passes)', () => {
         // Simulate 5 batches of 100 results each (like tiered simulation passes)
         // Use seeded random for reproducibility
@@ -1753,6 +1761,43 @@ describe('extractSkillRestrictions', () => {
         }
         const result = extractSkillRestrictions(skillData)
         expect(result.runningStyles).toEqual([1, 2])
+    })
+
+    it('expands is_basis_distance<1 to [0] (zero-indexed field)', () => {
+        // Regression: previously "<" expansions started at 1, so
+        // is_basis_distance<1 produced [] and the skill was silently dropped
+        // from the pool. is_basis_distance is the only 0-based static field.
+        const skillData: SkillDataEntry = {
+            alternatives: [
+                {
+                    baseDuration: 50000,
+                    condition: 'is_basis_distance<1',
+                    effects: [],
+                    precondition: '',
+                },
+            ],
+            rarity: 1,
+            wisdomCheck: 0,
+        }
+        const result = extractSkillRestrictions(skillData)
+        expect(result.isBasisDistance).toEqual([0])
+    })
+
+    it('expands is_basis_distance<=0 to [0]', () => {
+        const skillData: SkillDataEntry = {
+            alternatives: [
+                {
+                    baseDuration: 50000,
+                    condition: 'is_basis_distance<=0',
+                    effects: [],
+                    precondition: '',
+                },
+            ],
+            rarity: 1,
+            wisdomCheck: 0,
+        }
+        const result = extractSkillRestrictions(skillData)
+        expect(result.isBasisDistance).toEqual([0])
     })
 
     it('returns empty for skill without restrictions', () => {

@@ -1,6 +1,7 @@
 import {
     CONDITION_MAP,
     FIELD_MAX_VALUES,
+    FIELD_MIN_VALUES,
     SEASON_MAP,
     STRATEGY_TO_RUNNING_STYLE,
     TRACK_NAME_TO_ID,
@@ -32,6 +33,8 @@ export function expandComparisonToValues(
         return [value]
     }
 
+    const minValue = FIELD_MIN_VALUES[field] ?? 1
+
     switch (operator) {
         case '==':
             return [value]
@@ -44,7 +47,7 @@ export function expandComparisonToValues(
         }
         case '<=': {
             const values: number[] = []
-            for (let i = 1; i <= value; i++) {
+            for (let i = minValue; i <= value; i++) {
                 values.push(i)
             }
             return values
@@ -58,7 +61,7 @@ export function expandComparisonToValues(
         }
         case '<': {
             const values: number[] = []
-            for (let i = 1; i < value; i++) {
+            for (let i = minValue; i < value; i++) {
                 values.push(i)
             }
             return values
