@@ -6,13 +6,13 @@ import {
     updateResultsForDiscountChange,
 } from './resultsUI'
 import {
+    compareSkills,
     deleteSkill,
     getBaseSkillName,
     getCanonicalSkillName,
     getOtherVariant,
     getSkillCostWithDiscount,
     getSkillIconUrl,
-    getSkillOrder,
     getVariantsForBaseName,
     updateSkillVariantsDefault,
 } from './skillHelpers'
@@ -99,14 +99,7 @@ export function renderSkills(): void {
         }
     })
 
-    // Pre-compute skill order to avoid O(n^2) lookups in sort comparator
-    const skillOrderCache = new Map<string, number>()
-    for (const name of skillsToRender) {
-        skillOrderCache.set(name, getSkillOrder(name))
-    }
-    const sortedSkillNames = Array.from(skillsToRender).sort((a, b) => {
-        return (skillOrderCache.get(a) || 0) - (skillOrderCache.get(b) || 0)
-    })
+    const sortedSkillNames = Array.from(skillsToRender).sort(compareSkills)
 
     // Filter out skills that cannot trigger under current settings
     const triggerableSkills = sortedSkillNames.filter(canSkillTriggerByName)

@@ -194,6 +194,14 @@ export function getSkillOrder(skillName: string): number {
     return skillmeta[skillId]?.order ?? 0
 }
 
+export function compareSkills(a: string, b: string): number {
+    const orderDiff = getSkillOrder(a) - getSkillOrder(b)
+    if (orderDiff !== 0) return orderDiff
+    const idA = findSkillId(a) ?? ''
+    const idB = findSkillId(b) ?? ''
+    return idA.localeCompare(idB)
+}
+
 /**
  * Check if Uma has an upgraded version of the given skill.
  * Upgraded skills have lower order numbers in the same groupId.
