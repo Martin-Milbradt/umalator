@@ -1,3 +1,4 @@
+import { applyDiscount } from '../utils'
 import { SKILLS_TO_IGNORE } from './constants'
 import {
     getCurrentConfig,
@@ -345,7 +346,7 @@ export function getSkillCostWithDiscount(skillName: string): number {
 
     const baseCost = getSkillBaseCost(skillName)
     const discount = currentConfig?.skills[skillName]?.discount ?? 0
-    let totalCost = Math.ceil(baseCost * (1 - discount / 100))
+    let totalCost = applyDiscount(baseCost, discount)
 
     if (!skillmeta || !skillnames) return totalCost
 
@@ -394,9 +395,7 @@ export function getSkillCostWithDiscount(skillName: string): number {
             const prereqBaseCost = otherMeta.baseCost ?? 200
             const prereqDiscount =
                 currentConfig?.skills[primaryName]?.discount ?? 0
-            totalCost += Math.ceil(
-                prereqBaseCost * (1 - prereqDiscount / 100),
-            )
+            totalCost += applyDiscount(prereqBaseCost, prereqDiscount)
         }
     }
 

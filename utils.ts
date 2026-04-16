@@ -456,6 +456,11 @@ export interface SkillCostContext {
     skillNameToConfigKey?: Record<string, string>
 }
 
+// Uses Math.floor to match in-game cost display (e.g. 110 * 0.65 = 71.5 → 71).
+export function applyDiscount(baseCost: number, discount: number): number {
+    return Math.floor(baseCost * (1 - discount / 100))
+}
+
 export function calculateSkillCost(
     skillId: string,
     skillConfig: { discount?: number | null },
@@ -472,7 +477,7 @@ export function calculateSkillCost(
     const currentSkill = skillMeta[skillId]
     const baseCost = currentSkill?.baseCost ?? 200
     const discount = skillConfig.discount ?? 0
-    let totalCost = Math.round(baseCost * (1 - discount / 100))
+    let totalCost = applyDiscount(baseCost, discount)
 
     const skillsToIgnore = [
         '99 Problems',
@@ -535,9 +540,7 @@ export function calculateSkillCost(
                 }
 
                 const otherBaseCost = otherSkillMeta.baseCost ?? 200
-                totalCost += Math.round(
-                    otherBaseCost * (1 - otherDiscount / 100),
-                )
+                totalCost += applyDiscount(otherBaseCost, otherDiscount)
             }
         }
     }
