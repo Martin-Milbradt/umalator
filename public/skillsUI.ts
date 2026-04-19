@@ -17,11 +17,14 @@ import {
     getSkillIconUrl,
     getVariantsForBaseName,
     isSkillOnUma,
+    isValidSkillName,
     umaHasUpgradedVersion,
     updateSkillVariantsDefault,
 } from './skillHelpers'
+import { attachSkillAutocomplete } from './skillAutocomplete'
 import { canSkillTriggerByName } from './skillTrigger'
 import { getCurrentConfig, getResultsMap, getSelectedSkills } from './state'
+import { showToast } from './toast'
 
 const squareClasses =
     'py-0.5 px-1 w-6 h-6 rounded text-[13px] cursor-pointer transition-colors'
@@ -350,7 +353,13 @@ export function renderSkills(): void {
                     autoSave()
                 } else {
                     const canonicalName = getCanonicalSkillName(inputName)
-                    if (
+                    if (!isValidSkillName(canonicalName)) {
+                        showToast({
+                            type: 'error',
+                            message: `Unknown skill: "${inputName}"`,
+                        })
+                        restoreSpan()
+                    } else if (
                         canonicalName !== originalName &&
                         !currentConfig.skills[canonicalName]
                     ) {
@@ -371,6 +380,14 @@ export function renderSkills(): void {
                 }
             }
 
+            const parent = spanTarget.parentNode
+            if (parent) {
+                parent.replaceChild(skillNameInput, spanTarget)
+            }
+            // Attach autocomplete BEFORE the input's own keydown listener so
+            // its Enter/Escape handlers can stopImmediatePropagation and beat
+            // the rename input's blur-on-Enter behavior.
+            attachSkillAutocomplete(skillNameInput, 'regular')
             skillNameInput.addEventListener('blur', handleBlur)
             skillNameInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
@@ -380,11 +397,6 @@ export function renderSkills(): void {
                     restoreSpan()
                 }
             })
-
-            const parent = spanTarget.parentNode
-            if (parent) {
-                parent.replaceChild(skillNameInput, spanTarget)
-            }
             skillNameInput.focus()
             skillNameInput.select()
         })

@@ -63,6 +63,29 @@ export function getCanonicalSkillName(inputName: string): string {
     return canonical || inputName
 }
 
+/**
+ * Whether `name` is a real skill the simulation will recognize. True if it
+ * matches a canonical skill name (case-insensitive) or a base name with known
+ * ○/◎ variants (e.g. "Long Corners"). False for typos like "Trium" so callers
+ * can reject the input instead of writing it to the config. If skill data
+ * hasn't loaded yet this returns true to avoid spurious rejections.
+ */
+export function isValidSkillName(name: string): boolean {
+    const trimmed = name.trim()
+    if (!trimmed) return false
+    const skillNameLookup = getSkillNameLookup()
+    const variantCache = getVariantCache()
+    if (!skillNameLookup || !variantCache) return true
+    const lower = trimmed.toLowerCase()
+    if (skillNameLookup.has(lower)) return true
+    // Base names like "Long Corners" don't appear in the canonical-name
+    // lookup but are valid because renderSkills expands them into variants.
+    for (const baseName of variantCache.keys()) {
+        if (baseName.toLowerCase() === lower) return true
+    }
+    return false
+}
+
 export function getBaseSkillName(skillName: string): string {
     return skillName.replace(/[◎○]$/, '').trim()
 }

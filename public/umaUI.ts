@@ -8,8 +8,11 @@ import {
     getGroupVariantOnUma,
     getSkillCostWithDiscount,
     getSkillIconUrl,
+    isValidSkillName,
 } from './skillHelpers'
+import { attachSkillAutocomplete } from './skillAutocomplete'
 import { getCalculatedResultsCache, getCurrentConfig } from './state'
+import { showToast } from './toast'
 import type { Uma } from './types'
 
 function calculateDropdownWidth(options: string[]): number {
@@ -154,6 +157,9 @@ export function renderUma(): void {
             ) {
                 input.classList.add('text-red-400', 'border-red-500')
             }
+            if (field.key === 'unique') {
+                attachSkillAutocomplete(input as HTMLInputElement, 'unique')
+            }
         }
 
         input.dataset.key = field.key
@@ -249,7 +255,16 @@ export function renderUma(): void {
 
             const finishEdit = () => {
                 const currentConfig = getCurrentConfig()
-                const newValue = getCanonicalSkillName(editInput.value.trim())
+                const trimmed = editInput.value.trim()
+                if (trimmed && !isValidSkillName(trimmed)) {
+                    showToast({
+                        type: 'error',
+                        message: `Unknown skill: "${trimmed}"`,
+                    })
+                    renderUma()
+                    return
+                }
+                const newValue = getCanonicalSkillName(trimmed)
                 if (newValue && newValue !== skill) {
                     // Renaming skill - treat as remove old + add new
 
@@ -291,6 +306,10 @@ export function renderUma(): void {
                 }
             }
 
+            pill.replaceWith(editInput)
+            // Attach autocomplete first so its keydown handler (Enter/Escape)
+            // runs before the input's own blur-on-Enter handler.
+            attachSkillAutocomplete(editInput, 'regular')
             editInput.addEventListener('blur', finishEdit)
             editInput.addEventListener('keydown', (ke) => {
                 if (ke.key === 'Enter') {
@@ -301,8 +320,6 @@ export function renderUma(): void {
                     renderUma()
                 }
             })
-
-            pill.replaceWith(editInput)
             editInput.focus()
             editInput.select()
         })
@@ -356,7 +373,16 @@ export function renderUma(): void {
         addInput.placeholder = 'Skill name...'
 
         const finishAdd = () => {
-            const newSkill = getCanonicalSkillName(addInput.value.trim())
+            const trimmed = addInput.value.trim()
+            if (trimmed && !isValidSkillName(trimmed)) {
+                showToast({
+                    type: 'error',
+                    message: `Unknown skill: "${trimmed}"`,
+                })
+                renderUma()
+                return
+            }
+            const newSkill = getCanonicalSkillName(trimmed)
             if (newSkill) {
                 // Check if already on Uma
                 if (skills.includes(newSkill)) {
@@ -385,6 +411,9 @@ export function renderUma(): void {
             }
         }
 
+        addButton.replaceWith(addInput)
+        // Attach autocomplete first so its keydown wins over the blur-on-Enter handler.
+        attachSkillAutocomplete(addInput, 'regular')
         addInput.addEventListener('blur', finishAdd)
         addInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
@@ -395,8 +424,6 @@ export function renderUma(): void {
                 renderUma()
             }
         })
-
-        addButton.replaceWith(addInput)
         addInput.focus()
     })
 

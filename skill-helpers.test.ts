@@ -1,9 +1,11 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import {
     buildSkillNameLookup,
+    buildVariantCache,
     findSkillId,
     getBasicVariant,
     getUpgradedVariant,
+    isValidSkillName,
 } from './public/skillHelpers'
 import {
     setSkillmeta,
@@ -61,5 +63,50 @@ describe('variant lookups exclude × purple variants', () => {
 
     it('getUpgradedVariant(×) is null — × is not upgraded to anything', () => {
         expect(getUpgradedVariant('Winter Runner ×')).toBeNull()
+    })
+})
+
+describe('isValidSkillName (regression for "Trium" silent accept)', () => {
+    beforeAll(() => {
+        setSkillmeta({
+            '100061': { baseCost: 100, groupId: 'g1', order: 1 },
+            '200352': { baseCost: 170, groupId: 'g2', order: 2 },
+            '201181': { baseCost: 130, groupId: 'g3', order: 3 },
+            '201182': { baseCost: 100, groupId: 'g3', order: 4 },
+        })
+        setSkillnames({
+            '100061': ['Triumphant Pulse'],
+            '200352': ['Corner Recovery ○'],
+            '201181': ['Long Corners ◎'],
+            '201182': ['Long Corners ○'],
+        })
+        setSkillNameToId({
+            'Triumphant Pulse': '100061',
+            'Corner Recovery ○': '200352',
+            'Long Corners ◎': '201181',
+            'Long Corners ○': '201182',
+        })
+        buildSkillNameLookup()
+        buildVariantCache()
+    })
+
+    it('rejects partial / unknown names like "Trium"', () => {
+        expect(isValidSkillName('Trium')).toBe(false)
+    })
+
+    it('accepts canonical names case-insensitively', () => {
+        expect(isValidSkillName('Triumphant Pulse')).toBe(true)
+        expect(isValidSkillName('triumphant pulse')).toBe(true)
+        expect(isValidSkillName('Corner Recovery ○')).toBe(true)
+    })
+
+    it('accepts base names of variant pairs (renderSkills expands them)', () => {
+        expect(isValidSkillName('Long Corners')).toBe(true)
+        expect(isValidSkillName('long corners')).toBe(true)
+    })
+
+    it('rejects empty / whitespace input', () => {
+        expect(isValidSkillName('')).toBe(false)
+        expect(isValidSkillName('   ')).toBe(false)
     })
 })
