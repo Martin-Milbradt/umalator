@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="6" fill="#0c4a6e"/>
+  <!-- Flag pole -->
+  <rect x="6" y="5" width="1.6" height="22" fill="#e4e4e7" rx="0.5"/>
+  <!-- Flag background -->
+  <rect x="7.6" y="6" width="18" height="12" fill="#f1f5f9"/>
+  <!-- Checkered pattern: 6 cols x 4 rows, 3px each -->
+  <g fill="#18181b">
+    <rect x="7.6" y="6" width="3" height="3"/>
+    <rect x="13.6" y="6" width="3" height="3"/>
+    <rect x="19.6" y="6" width="3" height="3"/>
+    <rect x="10.6" y="9" width="3" height="3"/>
+    <rect x="16.6" y="9" width="3" height="3"/>
+    <rect x="22.6" y="9" width="3" height="3"/>
+    <rect x="7.6" y="12" width="3" height="3"/>
+    <rect x="13.6" y="12" width="3" height="3"/>
+    <rect x="19.6" y="12" width="3" height="3"/>
+    <rect x="10.6" y="15" width="3" height="3"/>
+    <rect x="16.6" y="15" width="3" height="3"/>
+    <rect x="22.6" y="15" width="3" height="3"/>
+  </g>
+</svg>

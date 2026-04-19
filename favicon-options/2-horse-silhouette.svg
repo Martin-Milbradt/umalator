@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="6" fill="#0284c7"/>
+  <!-- Stylized galloping horse silhouette -->
+  <path d="M5 22
+           C 6 20, 8 19, 10 19
+           L 12 16
+           C 13 14, 15 13, 17 13
+           L 19 11
+           L 21 9
+           L 23 7
+           L 24 9
+           L 22 11
+           L 24 13
+           L 26 14
+           L 27 17
+           L 25 18
+           L 23 17
+           L 21 19
+           L 22 22
+           L 20 22
+           L 19 20
+           L 16 20
+           L 14 22
+           L 12 22
+           L 11 20
+           L 9 21
+           L 7 23
+           Z"
+        fill="#f0f9ff"/>
+</svg>

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="6" fill="#18181b"/>
+  <!-- Carrot body -->
+  <path d="M10 14 L22 14 L17 28 Z"
+        fill="#f97316" stroke="#c2410c" stroke-width="0.5"/>
+  <!-- Carrot lines (texture) -->
+  <line x1="13" y1="17" x2="14" y2="17" stroke="#c2410c" stroke-width="0.6"/>
+  <line x1="17" y1="20" x2="18" y2="20" stroke="#c2410c" stroke-width="0.6"/>
+  <line x1="14" y1="23" x2="15" y2="23" stroke="#c2410c" stroke-width="0.6"/>
+  <!-- Leaves -->
+  <path d="M14 14 L11 6 L13 9 L14 4 L15 9 L17 5 L17 9 L19 6 L18 11 L21 8 L18 14 Z"
+        fill="#22c55e" stroke="#15803d" stroke-width="0.4"/>
+</svg>
