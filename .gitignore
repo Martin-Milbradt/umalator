@@ -4,7 +4,8 @@ public/app.js
 public/index.css
 public/style.css
 dist/
-static/
+static/*
+!static/favicon.svg
 settings.local.json
 tsconfig.tsbuildinfo
 .prettierrc
