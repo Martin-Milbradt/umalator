@@ -1,6 +1,7 @@
 import { autoSave } from './configManager'
 import { callRenderUma, registerRenderSkills } from './renderCallbacks'
 import {
+    addPendingSkillToResults,
     addSkillToUmaFromTable,
     removeSkillFromUma,
     updateResultsForDiscountChange,
@@ -15,13 +16,42 @@ import {
     getSkillCostWithDiscount,
     getSkillIconUrl,
     getVariantsForBaseName,
+    isSkillOnUma,
+    umaHasUpgradedVersion,
     updateSkillVariantsDefault,
 } from './skillHelpers'
 import { canSkillTriggerByName } from './skillTrigger'
-import { getCurrentConfig } from './state'
+import { getCurrentConfig, getResultsMap, getSelectedSkills } from './state'
 
 const squareClasses =
     'py-0.5 px-1 w-6 h-6 rounded text-[13px] cursor-pointer transition-colors'
+
+function pruneFromResults(skillName: string): void {
+    getResultsMap().delete(skillName)
+    getSelectedSkills().delete(skillName)
+}
+
+/**
+ * After a rename, schedule auto-calculation for the new skill (and its
+ * sibling variants, which renderSkills() may have just auto-created). Mirrors
+ * the discount-button flow so a fresh "+" → rename behaves like the user had
+ * picked the skill from the start.
+ */
+export function triggerCalculationForRenamedSkill(
+    skillName: string,
+    discount: number | null | undefined,
+): void {
+    if (discount === null || discount === undefined) return
+    const currentConfig = getCurrentConfig()
+    if (!currentConfig) return
+    for (const variantName of getDiscountVariants(skillName)) {
+        if (!currentConfig.skills[variantName]) continue
+        if (isSkillOnUma(variantName) || umaHasUpgradedVersion(variantName)) {
+            continue
+        }
+        addPendingSkillToResults(variantName, discount)
+    }
+}
 
 /**
  * Set `discount` on `skillName` and every sibling variant that shares its hint
@@ -314,6 +344,7 @@ export function renderSkills(): void {
                 const inputName = skillNameInput.value.trim()
                 if (!inputName) {
                     deleteSkill(originalName)
+                    pruneFromResults(originalName)
                     renderSkills()
                     callRenderUma()
                     autoSave()
@@ -325,9 +356,14 @@ export function renderSkills(): void {
                     ) {
                         const skillData = currentConfig.skills[originalName]
                         deleteSkill(originalName)
+                        pruneFromResults(originalName)
                         currentConfig.skills[canonicalName] = skillData
                         renderSkills()
                         callRenderUma()
+                        triggerCalculationForRenamedSkill(
+                            canonicalName,
+                            skillData.discount,
+                        )
                         autoSave()
                     } else {
                         restoreSpan()

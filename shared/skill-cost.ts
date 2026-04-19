@@ -3,8 +3,12 @@
 // browser-only or node-only APIs — this module must stay runtime-neutral.
 
 // Math.floor matches the in-game cost display (e.g. 110 * 0.65 = 71.5 → 71).
+// Use integer-then-divide instead of `1 - discount/100` because 1 - 0.3 = 0.7
+// is not exact in IEEE 754: 170 * 0.7 = 118.99999... would floor to 118 even
+// though the game displays 119. (100 - discount) and the multiplication stay
+// in integer space, so the floor only fires on real fractional results.
 export function applyDiscount(baseCost: number, discount: number): number {
-    return Math.floor(baseCost * (1 - discount / 100))
+    return Math.floor((baseCost * (100 - discount)) / 100)
 }
 
 export interface SkillCostMeta {
