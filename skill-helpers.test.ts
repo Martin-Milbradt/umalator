@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import {
     buildSkillNameLookup,
     buildVariantCache,
+    compareSkills,
     findSkillId,
     getBasicVariant,
     getUpgradedVariant,
@@ -108,5 +109,36 @@ describe('isValidSkillName (regression for "Trium" silent accept)', () => {
     it('rejects empty / whitespace input', () => {
         expect(isValidSkillName('')).toBe(false)
         expect(isValidSkillName('   ')).toBe(false)
+    })
+})
+
+describe('compareSkills matches in-game order', () => {
+    beforeAll(() => {
+        // Real meta/ids for Angling and Scheming (100201) and Red Shift/LP1211-M
+        // (100041). Both are uniques with order=10, so the tiebreak on skill ID
+        // decides. In-game puts Angling first (higher numeric ID → earlier).
+        setSkillmeta({
+            '100041': { baseCost: 0, groupId: '10004', order: 10 },
+            '100201': { baseCost: 0, groupId: '10020', order: 10 },
+        })
+        setSkillnames({
+            '100041': ['Red Shift/LP1211-M'],
+            '100201': ['Angling and Scheming'],
+        })
+        setSkillNameToId({
+            'Red Shift/LP1211-M': '100041',
+            'Angling and Scheming': '100201',
+        })
+        buildSkillNameLookup()
+    })
+
+    it('sorts "Angling and Scheming" before "Red Shift/LP1211-M"', () => {
+        const sorted = ['Red Shift/LP1211-M', 'Angling and Scheming'].sort(
+            compareSkills,
+        )
+        expect(sorted).toEqual([
+            'Angling and Scheming',
+            'Red Shift/LP1211-M',
+        ])
     })
 })

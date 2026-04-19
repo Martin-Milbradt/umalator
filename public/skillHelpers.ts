@@ -235,7 +235,9 @@ export function compareSkills(a: string, b: string): number {
     if (orderDiff !== 0) return orderDiff
     const idA = findSkillId(a) ?? ''
     const idB = findSkillId(b) ?? ''
-    return idA.localeCompare(idB)
+    // Match in-game skill-picker tiebreak: higher numeric ID first.
+    // See uma-tools/components/SkillList.tsx (`+b - +a`).
+    return Number(idB) - Number(idA)
 }
 
 /**
