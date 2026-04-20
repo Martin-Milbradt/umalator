@@ -20,21 +20,41 @@
 
         <div class="flex h-screen">
             <div
-                class="p-2.5 overflow-y-auto bg-zinc-800 border-r border-zinc-700 w-[800px]"
+                class="flex flex-col bg-zinc-800 border-r border-zinc-700 w-[800px] h-screen"
             >
-                <h3
-                    class="mt-0 mb-2.5 text-teal-400 text-base flex items-center gap-2"
-                >
-                    <button
-                        id="add-skill-button"
-                        class="bg-sky-600 text-white border-none rounded w-6 h-6 text-lg leading-none cursor-pointer flex items-center justify-center p-0 transition-colors hover:bg-sky-700 active:bg-sky-800"
-                        title="Add new skill"
+                <div class="px-2.5 pt-2.5 pb-2 shrink-0 bg-zinc-800 border-b border-zinc-700">
+                    <h3
+                        class="mt-0 mb-0 text-teal-400 text-base flex items-center gap-2 flex-wrap"
                     >
-                        +
-                    </button>
-                    Skills
-                </h3>
-                <div id="skills-container"></div>
+                        <button
+                            id="add-skill-button"
+                            class="bg-sky-600 text-white border-none rounded w-6 h-6 text-lg leading-none cursor-pointer flex items-center justify-center p-0 transition-colors hover:bg-sky-700 active:bg-sky-800"
+                            title="Add new skill"
+                        >
+                            +
+                        </button>
+                        <span>Skills</span>
+                        <span class="flex items-center gap-1.5 ml-auto text-[13px] font-normal">
+                            <button
+                                id="filter-owned-button"
+                                class="bg-zinc-700 text-zinc-200 border border-zinc-600 rounded h-7 px-2 cursor-pointer transition-colors hover:bg-zinc-600"
+                                title="Toggle: hide skills already on the uma"
+                                data-active="false"
+                            >
+                                Owned
+                            </button>
+                            <button
+                                id="filter-available-button"
+                                class="bg-zinc-700 text-zinc-200 border border-zinc-600 rounded h-7 px-2 cursor-pointer transition-colors hover:bg-zinc-600"
+                                title="Cycle: off → only with hints → only without hints"
+                                data-state="off"
+                            >
+                                Available: off
+                            </button>
+                        </span>
+                    </h3>
+                </div>
+                <div id="skills-container" class="flex-1 overflow-y-auto px-2.5 py-2"></div>
             </div>
 
             <div class="w-full p-2.5 flex flex-col bg-zinc-900 overflow-y-auto">

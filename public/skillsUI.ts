@@ -29,6 +29,26 @@ import { showToast } from './toast'
 const squareClasses =
     'py-0.5 px-1 w-6 h-6 rounded text-[13px] cursor-pointer transition-colors'
 
+type AvailableFilter = 'off' | 'withHints' | 'withoutHints'
+
+let filterHideOwned = false
+let filterAvailable: AvailableFilter = 'off'
+
+function skillHasHint(skillName: string): boolean {
+    const currentConfig = getCurrentConfig()
+    const discount = currentConfig?.skills[skillName]?.discount
+    return discount !== null && discount !== undefined
+}
+
+function passesFilters(skillName: string): boolean {
+    if (filterHideOwned && isSkillOnUma(skillName)) return false
+    if (filterAvailable === 'withHints' && !skillHasHint(skillName)) return false
+    if (filterAvailable === 'withoutHints' && skillHasHint(skillName)) {
+        return false
+    }
+    return true
+}
+
 function pruneFromResults(skillName: string): void {
     getResultsMap().delete(skillName)
     getSelectedSkills().delete(skillName)
@@ -189,8 +209,11 @@ export function renderSkills(): void {
 
     const sortedSkillNames = Array.from(skillsToRender).sort(compareSkills)
 
-    // Filter out skills that cannot trigger under current settings
-    const triggerableSkills = sortedSkillNames.filter(canSkillTriggerByName)
+    // Filter out skills that cannot trigger under current settings,
+    // then apply the user-controlled Owned / Available filters.
+    const triggerableSkills = sortedSkillNames
+        .filter(canSkillTriggerByName)
+        .filter(passesFilters)
 
     triggerableSkills.forEach((skillName) => {
         const skill = skills[skillName]
@@ -475,6 +498,58 @@ export function setupSkillsContainerDelegation(): void {
         renderSkills()
         autoSave()
     })
+}
+
+function updateOwnedButton(button: HTMLButtonElement): void {
+    button.dataset.active = filterHideOwned ? 'true' : 'false'
+    button.className = filterHideOwned
+        ? 'bg-sky-600 text-white border border-sky-600 rounded h-7 px-2 cursor-pointer transition-colors hover:bg-sky-700'
+        : 'bg-zinc-700 text-zinc-200 border border-zinc-600 rounded h-7 px-2 cursor-pointer transition-colors hover:bg-zinc-600'
+}
+
+function updateAvailableButton(button: HTMLButtonElement): void {
+    const label =
+        filterAvailable === 'off'
+            ? 'Available: off'
+            : filterAvailable === 'withHints'
+              ? 'Available: with hints'
+              : 'Available: without hints'
+    button.textContent = label
+    button.dataset.state = filterAvailable
+    button.className =
+        filterAvailable === 'off'
+            ? 'bg-zinc-700 text-zinc-200 border border-zinc-600 rounded h-7 px-2 cursor-pointer transition-colors hover:bg-zinc-600'
+            : 'bg-sky-600 text-white border border-sky-600 rounded h-7 px-2 cursor-pointer transition-colors hover:bg-sky-700'
+}
+
+export function setupSkillFilters(): void {
+    const ownedButton = document.getElementById(
+        'filter-owned-button',
+    ) as HTMLButtonElement | null
+    const availableButton = document.getElementById(
+        'filter-available-button',
+    ) as HTMLButtonElement | null
+    if (ownedButton) {
+        updateOwnedButton(ownedButton)
+        ownedButton.addEventListener('click', () => {
+            filterHideOwned = !filterHideOwned
+            updateOwnedButton(ownedButton)
+            renderSkills()
+        })
+    }
+    if (availableButton) {
+        updateAvailableButton(availableButton)
+        availableButton.addEventListener('click', () => {
+            filterAvailable =
+                filterAvailable === 'off'
+                    ? 'withHints'
+                    : filterAvailable === 'withHints'
+                      ? 'withoutHints'
+                      : 'off'
+            updateAvailableButton(availableButton)
+            renderSkills()
+        })
+    }
 }
 
 // Register the render callback

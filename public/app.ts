@@ -22,7 +22,11 @@ import {
     buildVariantCache,
     getCanonicalSkillName,
 } from './skillHelpers'
-import { renderSkills, setupSkillsContainerDelegation } from './skillsUI'
+import {
+    renderSkills,
+    setupSkillFilters,
+    setupSkillsContainerDelegation,
+} from './skillsUI'
 import {
     getCalculatedResultsCache,
     getCurrentConfig,
@@ -269,6 +273,7 @@ if (addSkillButton) {
 
 // Set up event delegation for skills container
 setupSkillsContainerDelegation()
+setupSkillFilters()
 
 // Set up results table sorting and select-all checkbox
 setupResultsTableSorting()
