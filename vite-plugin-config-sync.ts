@@ -1,4 +1,10 @@
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import {
+    existsSync,
+    readdirSync,
+    readFileSync,
+    unlinkSync,
+    writeFileSync,
+} from 'node:fs'
 import { join } from 'node:path'
 import type { Plugin } from 'vite'
 
@@ -51,6 +57,16 @@ export function configSyncPlugin(): Plugin {
                         res.setHeader('Content-Type', 'application/json')
                         res.end(JSON.stringify({ ok: true }))
                     })
+                    return
+                }
+
+                if (req.method === 'DELETE') {
+                    const path = join(configDir, filename)
+                    if (existsSync(path)) {
+                        unlinkSync(path)
+                    }
+                    res.setHeader('Content-Type', 'application/json')
+                    res.end(JSON.stringify({ ok: true }))
                     return
                 }
 

@@ -44,6 +44,32 @@ export async function listConfigs(): Promise<string[]> {
     })
 }
 
+export async function listAllConfigs(): Promise<
+    Array<{ name: string; config: Config }>
+> {
+    const db = await openDb()
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readonly')
+        const store = tx.objectStore(STORE_NAME)
+        const request = store.openCursor()
+        const results: Array<{ name: string; config: Config }> = []
+        request.onsuccess = () => {
+            const cursor = request.result
+            if (cursor) {
+                results.push({
+                    name: cursor.key as string,
+                    config: cursor.value as Config,
+                })
+                cursor.continue()
+            } else {
+                results.sort((a, b) => a.name.localeCompare(b.name))
+                resolve(results)
+            }
+        }
+        request.onerror = () => reject(request.error)
+    })
+}
+
 export async function loadConfig(name: string): Promise<Config> {
     const db = await openDb()
     return new Promise((resolve, reject) => {
@@ -105,21 +131,41 @@ export function exportConfig(name: string, config: Config): void {
     URL.revokeObjectURL(url)
 }
 
+export async function exportAllConfigs(): Promise<number> {
+    const all = await listAllConfigs()
+    for (let i = 0; i < all.length; i++) {
+        exportConfig(all[i].name, all[i].config)
+        // Small stagger so browsers don't drop simultaneous downloads.
+        if (i < all.length - 1) {
+            await new Promise((r) => setTimeout(r, 120))
+        }
+    }
+    return all.length
+}
+
+export function validateConfigData(data: unknown): Config {
+    if (
+        typeof data !== 'object' ||
+        data === null ||
+        Array.isArray(data) ||
+        !('skills' in data)
+    ) {
+        throw new Error('Invalid config: must have a "skills" object')
+    }
+    const skills = (data as Config).skills
+    if (typeof skills !== 'object' || skills === null || Array.isArray(skills)) {
+        throw new Error('Invalid config: must have a "skills" object')
+    }
+    return data as Config
+}
+
 export function importConfig(file: File): Promise<{ name: string; config: Config }> {
     return new Promise((resolve, reject) => {
         const reader = new FileReader()
         reader.onload = async () => {
             try {
                 const data = JSON.parse(reader.result as string) as unknown
-                if (
-                    typeof data !== 'object' ||
-                    data === null ||
-                    !('skills' in data) ||
-                    typeof (data as Config).skills !== 'object'
-                ) {
-                    throw new Error('Invalid config: must have a "skills" object')
-                }
-                const config = data as Config
+                const config = validateConfigData(data)
                 const name = file.name.endsWith('.json')
                     ? file.name
                     : `${file.name}.json`

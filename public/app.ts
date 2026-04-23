@@ -5,12 +5,17 @@ import './api'
 
 import { runCalculations } from './api'
 import {
+    deleteConfig,
     duplicateConfig,
+    exportAllConfigs,
     exportConfig,
     importConfig,
     seedDefaultConfig,
 } from './configStore'
-import { syncConfigsFromFilesystem } from './devConfigSync'
+import {
+    deleteConfigFromFilesystem,
+    syncConfigsFromFilesystem,
+} from './devConfigSync'
 import { autoSave, loadConfig, loadConfigFiles } from './configManager'
 import {
     renderResultsTable,
@@ -279,10 +284,46 @@ setupSkillFilters()
 setupResultsTableSorting()
 setupSelectAllCheckbox()
 
-// Set up export config button
-const exportButton = document.getElementById('export-config-button')
-if (exportButton) {
-    exportButton.addEventListener('click', async () => {
+// Set up config menu (Export Current / Export All / Import)
+const configMenuButton = document.getElementById('config-menu-button')
+const configMenu = document.getElementById('config-menu')
+const exportCurrentButton = document.getElementById('export-current-button')
+const exportAllButton = document.getElementById('export-all-button')
+const importMenuButton = document.getElementById('import-menu-button')
+const deleteCurrentButton = document.getElementById('delete-current-button')
+const importInput = document.getElementById(
+    'import-config-input',
+) as HTMLInputElement
+
+function setConfigMenuOpen(open: boolean): void {
+    if (!configMenu || !configMenuButton) return
+    configMenu.classList.toggle('hidden', !open)
+    configMenuButton.setAttribute('aria-expanded', String(open))
+}
+
+if (configMenuButton && configMenu) {
+    configMenuButton.addEventListener('click', (e) => {
+        e.stopPropagation()
+        setConfigMenuOpen(configMenu.classList.contains('hidden'))
+    })
+    document.addEventListener('click', (e) => {
+        if (configMenu.classList.contains('hidden')) return
+        const target = e.target as Node
+        if (
+            !configMenu.contains(target) &&
+            !configMenuButton.contains(target)
+        ) {
+            setConfigMenuOpen(false)
+        }
+    })
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') setConfigMenuOpen(false)
+    })
+}
+
+if (exportCurrentButton) {
+    exportCurrentButton.addEventListener('click', () => {
+        setConfigMenuOpen(false)
         const currentConfigFile = getCurrentConfigFile()
         const currentConfig = getCurrentConfig()
         if (!currentConfigFile || !currentConfig) return
@@ -290,26 +331,97 @@ if (exportButton) {
     })
 }
 
-// Set up import config button
-const importButton = document.getElementById('import-config-button')
-const importInput = document.getElementById(
-    'import-config-input',
-) as HTMLInputElement
-if (importButton && importInput) {
-    importButton.addEventListener('click', () => importInput.click())
-    importInput.addEventListener('change', async () => {
-        const file = importInput.files?.[0]
-        if (!file) return
+if (exportAllButton) {
+    exportAllButton.addEventListener('click', async () => {
+        setConfigMenuOpen(false)
         try {
-            const { name } = await importConfig(file)
-            await loadConfigFiles()
-            await loadConfig(name)
-            showToast({ type: 'info', message: `Imported ${name}` })
+            const count = await exportAllConfigs()
+            if (count === 0) {
+                showToast({ type: 'info', message: 'No configs to export' })
+            } else {
+                showToast({
+                    type: 'info',
+                    message: `Exported ${count} config${count === 1 ? '' : 's'}`,
+                })
+            }
         } catch (error) {
             const err = error as Error
-            showToast({ type: 'error', message: `Import failed: ${err.message}` })
+            showToast({
+                type: 'error',
+                message: `Export failed: ${err.message}`,
+            })
         }
+    })
+}
+
+if (importMenuButton && importInput) {
+    importMenuButton.addEventListener('click', () => {
+        setConfigMenuOpen(false)
+        importInput.click()
+    })
+    importInput.addEventListener('change', async () => {
+        const files = Array.from(importInput.files ?? [])
+        if (files.length === 0) return
+
+        const imported: string[] = []
+        const failed: Array<{ name: string; message: string }> = []
+        for (const file of files) {
+            try {
+                const { name } = await importConfig(file)
+                imported.push(name)
+            } catch (error) {
+                failed.push({
+                    name: file.name,
+                    message: (error as Error).message,
+                })
+            }
+        }
+
+        if (imported.length > 0) {
+            await loadConfigFiles()
+            await loadConfig(imported[imported.length - 1])
+        }
+
+        if (imported.length > 0) {
+            showToast({
+                type: 'info',
+                message:
+                    imported.length === 1
+                        ? `Imported ${imported[0]}`
+                        : `Imported ${imported.length} configs`,
+            })
+        }
+        for (const f of failed) {
+            showToast({
+                type: 'error',
+                message: `Import failed (${f.name}): ${f.message}`,
+            })
+        }
+
         importInput.value = ''
+    })
+}
+
+if (deleteCurrentButton) {
+    deleteCurrentButton.addEventListener('click', async () => {
+        setConfigMenuOpen(false)
+        const currentConfigFile = getCurrentConfigFile()
+        if (!currentConfigFile) return
+        if (!confirm(`Delete config "${currentConfigFile}"? This cannot be undone.`)) {
+            return
+        }
+        try {
+            await deleteConfig(currentConfigFile)
+            deleteConfigFromFilesystem(currentConfigFile)
+            showToast({ type: 'info', message: `Deleted ${currentConfigFile}` })
+            await loadConfigFiles()
+        } catch (error) {
+            const err = error as Error
+            showToast({
+                type: 'error',
+                message: `Delete failed: ${err.message}`,
+            })
+        }
     })
 }
 

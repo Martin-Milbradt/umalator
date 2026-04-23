@@ -42,3 +42,10 @@ export function writeConfigToFilesystem(
         body: JSON.stringify(config, null, 4),
     })
 }
+
+/** Delete a config from the filesystem (dev only). */
+export function deleteConfigFromFilesystem(name: string): void {
+    if (!import.meta.env.DEV) return
+
+    fetch(`/__dev/configs/${encodeURIComponent(name)}`, { method: 'DELETE' })
+}
