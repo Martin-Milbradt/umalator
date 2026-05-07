@@ -60,7 +60,9 @@ A legacy Express server (`server.ts`) is available for local server-side mode vi
 | `configStore.ts` | IndexedDB CRUD for configs |
 | `configManager.ts` | Config loading, auto-save, UI sync |
 | `api.ts` | Simulation API (creates runner, handles progress) |
+| `tour.ts` | Interactive onboarding tour (driver.js) |
 | `index.html` | Tailwind CSS dark theme UI |
+| `help.html` | Standalone help/docs page (second Vite entry) |
 
 ### Data Files
 
@@ -80,6 +82,7 @@ Static JSON files from uma-tools, copied to `static/data/` at build time and ser
 - **Uma Editor**: Configure uma stats, strategy, aptitudes, mood, and active skills
 - **Interactive Results**: Sort, multi-select, and track skill points in the results table
 - **Auto-save**: Changes persist automatically (500ms debounce)
+- **Help dropdown**: Opens an in-app docs page (`/help.html`), runs an interactive tour over the live UI (auto-launches once on first visit), links to GitHub Issues for bug reports, and to the [Discord server](https://discord.gg/DvXMyg8J) for questions
 
 ## Race Check
 

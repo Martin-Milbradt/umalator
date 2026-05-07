@@ -7,7 +7,7 @@ Check whether the `uma-tools` and `uma-skill-tools` git submodules can be update
 umalator depends on two nested git submodules:
 
 - **`uma-tools/`** (remote: `https://github.com/alpha123/uma-tools.git`) contains the simulation engine, data files, and type definitions
-- **`uma-tools/uma-skill-tools/`** (remote: `https://github.com/alpha123/uma-skill-tools`) contains the race simulation core. Pinned to commit `24f0a88` for the `otherHorse()` API.
+- **`uma-tools/uma-skill-tools/`** (remote: `https://github.com/alpha123/uma-skill-tools`) contains the race simulation core. Pinned to commit `24f0a88`, one commit ahead of upstream `master`. The pin carries two unmerged changes we depend on: the `otherHorse()` API used by `uma-tools/umalator/compare.ts`, and the move of `mood`/`popularity` from `RaceParameters` onto `HorseParameters`. Note that the `uma-tools` parent records an older `uma-skill-tools` commit (`6ba5ca0`); `start_web.ps1` and CI re-checkout `24f0a88` after `submodule update`.
 
 ### What umalator imports from these submodules
 

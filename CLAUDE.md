@@ -60,13 +60,15 @@ npx tsx race-check.ts --races path/to/races.json --sims 200
 
 ### Frontend (`public/`)
 
-- `app.ts` - Main entry point: data loading, event handlers, config management UI
+- `app.ts` - Main entry point: data loading, event handlers, config management UI, Help dropdown wiring
 - `simulationRunner.ts` - Browser Web Worker orchestration (parallel simulation via `navigator.hardwareConcurrency`)
 - `configStore.ts` - IndexedDB CRUD for config persistence
 - `configManager.ts` - Config loading, auto-save (500ms debounce), UI sync
 - `devConfigSync.ts` - Dev-only bidirectional sync between `configs/` directory and IndexedDB
 - `api.ts` - Creates `BrowserSimulationRunner`, handles progress callbacks
-- `index.html` - Tailwind CSS dark theme UI
+- `tour.ts` - Interactive onboarding tour (driver.js); `startTour()` is called from the Help dropdown, `maybeAutoStartTour()` runs once on first visit gated by `localStorage["umalator:tour-seen"]`
+- `index.html` - Tailwind CSS dark theme UI; top bar includes Configs and Help dropdowns
+- `help.html` - Standalone docs page; second Vite entry (configured in `vite.config.ts`), linked from Help → About / Documentation
 
 ### Configuration
 
@@ -82,7 +84,8 @@ npx tsx race-check.ts --races path/to/races.json --sims 200
 - `./uma-tools` is a git submodule (clone with `--recursive`)
 - `./uma-tools/uma-skill-tools/` is derived from <https://github.com/alpha123/uma-skill-tools> - understanding this code helps when working on simulation logic, but **never modify it**; pull latest from upstream instead
 - `uma-skill-tools` is pinned to commit `24f0a88`, which is one commit ahead of upstream `master` (`8b3f5e2` as of 2026-05). The pin carries two changes we depend on that haven't merged upstream: the `otherHorse()` API used by `uma-tools/umalator/compare.ts`, and the move of `mood`/`popularity` from `RaceParameters` onto `HorseParameters`. The parent `uma-tools` submodule still records an older `uma-skill-tools` commit (`6ba5ca0`), so a vanilla `git submodule update --recursive` lands ~9 commits before the pin — CI and `start_web.ps1` re-checkout `24f0a88` after init for that reason. Verify locally: `git -C uma-tools/uma-skill-tools rev-parse HEAD`
-- Ignore type checking errors from `./uma-tools` package. Our own files also surface type errors around `RaceParameters.mood`/`popularity` (`simulation.worker.ts`, `simulation-runner.ts`, tests): the umalator config schema still treats `mood` as a race parameter, but the simulation worker correctly re-attaches it to the horse via `createHorseState({ ...baseUma, mood })`, so runtime behavior is correct. The TS errors are pure type-shape mismatches, not bugs.
+- Ignore type checking errors from `./uma-tools` package. Our own files type-check cleanly; `mood` and `popularity` flow through `baseUma` (HorseParameters) end-to-end, matching the post-24f0a88 API.
+- `driver.js` (npm dependency) powers the onboarding tour in `public/tour.ts`. CSS is imported in the same file (`driver.js/dist/driver.css`).
 
 ### Build Pipeline
 
