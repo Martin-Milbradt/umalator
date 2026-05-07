@@ -209,9 +209,11 @@ export function renderUma(): void {
         return wrapper
     }
 
-    // Skills section (first row)
+    // Skills section (first row). min-h matches the equipped-skill pill height
+    // so the row stays the same size whether a pill is present or not.
     const skillsDiv = document.createElement('div')
-    skillsDiv.className = 'flex flex-wrap items-center gap-1.5 mb-2'
+    skillsDiv.className =
+        'flex flex-wrap items-center gap-1.5 mb-2 min-h-[30px]'
     const skillsLabel = document.createElement('span')
     skillsLabel.className = 'text-zinc-300 text-[13px] whitespace-nowrap'
     skillsLabel.textContent = 'Skills:'
@@ -369,7 +371,7 @@ export function renderUma(): void {
         const addInput = document.createElement('input')
         addInput.type = 'text'
         addInput.className =
-            'bg-zinc-800 text-zinc-200 text-[13px] px-1 py-1 rounded border border-sky-500 outline-none min-w-[100px]'
+            'bg-zinc-800 text-zinc-200 text-[13px] h-6 px-1 rounded border border-sky-500 outline-none min-w-[100px] box-border'
         addInput.placeholder = 'Skill name...'
 
         const finishAdd = () => {

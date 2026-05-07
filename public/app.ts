@@ -46,11 +46,14 @@ import {
     setTrackNames,
 } from './state'
 import { showToast } from './toast'
+import { maybeAutoStartTour, startTour } from './tour'
 import { renderTrack } from './trackUI'
 import type { CourseData, SkillData, SkillMeta, SkillNames } from './types'
 import { renderUma } from './umaUI'
 
 const BASE_URL = import.meta.env.BASE_URL ?? '/'
+const GITHUB_ISSUES_URL = 'https://github.com/Martin-Milbradt/umalator/issues/new'
+const DISCORD_INVITE_URL = 'https://discord.gg/DvXMyg8J'
 
 // Load skill names on init
 ;(async function loadSkillnamesOnInit() {
@@ -425,8 +428,73 @@ if (deleteCurrentButton) {
     })
 }
 
+// Set up help menu (About / Tour / Issue / Contact)
+const helpMenuButton = document.getElementById('help-menu-button')
+const helpMenu = document.getElementById('help-menu')
+const helpAboutButton = document.getElementById('help-about-button')
+const helpTourButton = document.getElementById('help-tour-button')
+const helpIssueButton = document.getElementById('help-issue-button')
+const helpContactButton = document.getElementById('help-contact-button')
+
+function setHelpMenuOpen(open: boolean): void {
+    if (!helpMenu || !helpMenuButton) return
+    helpMenu.classList.toggle('hidden', !open)
+    helpMenuButton.setAttribute('aria-expanded', String(open))
+}
+
+if (helpMenuButton && helpMenu) {
+    helpMenuButton.addEventListener('click', (e) => {
+        e.stopPropagation()
+        setHelpMenuOpen(helpMenu.classList.contains('hidden'))
+    })
+    document.addEventListener('click', (e) => {
+        if (helpMenu.classList.contains('hidden')) return
+        const target = e.target as Node
+        if (
+            !helpMenu.contains(target) &&
+            !helpMenuButton.contains(target)
+        ) {
+            setHelpMenuOpen(false)
+        }
+    })
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') setHelpMenuOpen(false)
+    })
+}
+
+if (helpAboutButton) {
+    helpAboutButton.addEventListener('click', () => {
+        setHelpMenuOpen(false)
+        window.location.href = `${BASE_URL}help.html`
+    })
+}
+
+if (helpTourButton) {
+    helpTourButton.addEventListener('click', () => {
+        setHelpMenuOpen(false)
+        startTour()
+    })
+}
+
+if (helpIssueButton) {
+    helpIssueButton.addEventListener('click', () => {
+        setHelpMenuOpen(false)
+        window.open(GITHUB_ISSUES_URL, '_blank', 'noopener')
+    })
+}
+
+if (helpContactButton) {
+    helpContactButton.addEventListener('click', () => {
+        setHelpMenuOpen(false)
+        window.open(DISCORD_INVITE_URL, '_blank', 'noopener')
+    })
+}
+
 // In dev: sync configs from filesystem; in prod: seed default config
 const initConfigs = import.meta.env.DEV
     ? syncConfigsFromFilesystem()
     : seedDefaultConfig()
-initConfigs.then(() => loadConfigFiles()).catch(() => loadConfigFiles())
+initConfigs
+    .then(() => loadConfigFiles())
+    .catch(() => loadConfigFiles())
+    .finally(() => maybeAutoStartTour())

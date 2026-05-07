@@ -21,9 +21,13 @@ export default defineConfig({
         emptyOutDir: true,
         minify: false,
         rollupOptions: {
-            input: resolve(__dirname, 'public/index.html'),
+            input: {
+                index: resolve(__dirname, 'public/index.html'),
+                help: resolve(__dirname, 'public/help.html'),
+            },
             output: {
-                entryFileNames: 'app.js',
+                entryFileNames: (chunk) =>
+                    chunk.name === 'index' ? 'app.js' : '[name].js',
                 chunkFileNames: '[name].js',
                 assetFileNames: '[name][extname]',
             },

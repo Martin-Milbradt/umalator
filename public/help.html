@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <title>Umalator — Help</title>
+
+        <link rel="stylesheet" crossorigin href="/index.css" />
+    </head>
+    <body
+        class="m-0 p-0 box-border font-sans bg-zinc-900 text-zinc-200 min-h-screen"
+    >
+        <main class="max-w-3xl mx-auto px-6 py-8">
+            <div class="mb-6">
+                <a
+                    href="./index.html"
+                    class="text-teal-400 hover:text-teal-300 text-sm"
+                    >&larr; Back to Umalator</a
+                >
+            </div>
+
+            <h1 class="text-teal-400 text-3xl font-semibold mb-2">Umalator</h1>
+            <p class="text-zinc-400 mb-8">
+                Skill efficiency calculator for Uma Musume.
+            </p>
+
+            <section class="mb-8">
+                <h2
+                    class="text-teal-400 text-xl font-semibold mb-2 border-b border-zinc-700 pb-1"
+                >
+                    What is Umalator?
+                </h2>
+                <p class="leading-relaxed">
+                    Umalator estimates how much length each skill is worth on a
+                    given uma and race setup. It runs simulations using the
+                    same engine as
+                    <a
+                        href="https://github.com/alpha123/uma-skill-tools"
+                        class="text-teal-400 hover:text-teal-300"
+                        target="_blank"
+                        rel="noopener"
+                        >uma-skill-tools</a
+                    >
+                    and reports the mean length each skill adds, divided by its
+                    base SP cost. The default sort is by Mean / Cost
+                    (efficiency), so the most cost-effective skills bubble to
+                    the top.
+                </p>
+            </section>
+
+            <section class="mb-8">
+                <h2
+                    class="text-teal-400 text-xl font-semibold mb-2 border-b border-zinc-700 pb-1"
+                >
+                    How simulations work
+                </h2>
+                <ul class="list-disc pl-6 space-y-1 leading-relaxed">
+                    <li>
+                        <strong>500 simulations per skill</strong> are run in a
+                        single pass using browser Web Workers
+                        (parallelized to <code>navigator.hardwareConcurrency</code>).
+                    </li>
+                    <li>
+                        Variance comes from skill trigger position sampling,
+                        RNG advancement between sims, and wisdom-stat
+                        activation rolls.
+                    </li>
+                    <li>
+                        When any track field is set to a random value (mood,
+                        weather, season, ground, distance category),
+                        simulations are batched per unique combination so
+                        internal variance is preserved.
+                    </li>
+                    <li>
+                        Results report Mean, Median, Min-Max, and a 95%
+                        confidence interval. Mean / Cost is the efficiency
+                        score.
+                    </li>
+                </ul>
+            </section>
+
+            <section class="mb-8">
+                <h2
+                    class="text-teal-400 text-xl font-semibold mb-2 border-b border-zinc-700 pb-1"
+                >
+                    Skills panel
+                </h2>
+                <ul class="list-disc pl-6 space-y-1 leading-relaxed">
+                    <li>
+                        Click <strong>+</strong> to add a skill. Skills are
+                        referenced by their global English name; the calculator
+                        handles ○ and ◎ variants automatically.
+                    </li>
+                    <li>
+                        <strong>Owned</strong>: hides skills already on the
+                        uma.
+                    </li>
+                    <li>
+                        <strong>Available</strong>: cycles between
+                        only-with-hints, only-without-hints, and off.
+                    </li>
+                    <li>
+                        Each skill row shows the base cost, your current
+                        discount, and a trash icon to remove it.
+                    </li>
+                </ul>
+            </section>
+
+            <section class="mb-8">
+                <h2
+                    class="text-teal-400 text-xl font-semibold mb-2 border-b border-zinc-700 pb-1"
+                >
+                    Configs
+                </h2>
+                <ul class="list-disc pl-6 space-y-1 leading-relaxed">
+                    <li>
+                        A config bundles your skill list, uma settings, and
+                        track settings into one named JSON document.
+                    </li>
+                    <li>
+                        Configs are stored in <strong>IndexedDB</strong> per
+                        browser. Edits auto-save with a 500&nbsp;ms debounce.
+                    </li>
+                    <li>
+                        The <strong>Configs</strong> dropdown lets you import,
+                        export the current one, export all, or delete the
+                        current one.
+                    </li>
+                    <li>
+                        Use the <strong>+</strong> next to the dropdown to
+                        duplicate the active config under a new name.
+                    </li>
+                </ul>
+            </section>
+
+            <section class="mb-8">
+                <h2
+                    class="text-teal-400 text-xl font-semibold mb-2 border-b border-zinc-700 pb-1"
+                >
+                    Race / Uma settings
+                </h2>
+                <p class="leading-relaxed mb-2">
+                    Configure the runner (stats, aptitudes, strategy, equipped
+                    skills) and the race (track, distance, mood, weather,
+                    season, ground).
+                </p>
+                <ul class="list-disc pl-6 space-y-1 leading-relaxed">
+                    <li>
+                        Special value <code>&lt;Random&gt;</code> samples
+                        uniformly across all valid options for that field
+                        across simulations.
+                    </li>
+                    <li>
+                        Distance can be set to
+                        <code>&lt;Sprint&gt;</code>,
+                        <code>&lt;Mile&gt;</code>,
+                        <code>&lt;Medium&gt;</code>, or
+                        <code>&lt;Long&gt;</code> to sample randomly within
+                        that category.
+                    </li>
+                </ul>
+            </section>
+
+            <section class="mb-8">
+                <h2
+                    class="text-teal-400 text-xl font-semibold mb-2 border-b border-zinc-700 pb-1"
+                >
+                    Reading results
+                </h2>
+                <ul class="list-disc pl-6 space-y-1 leading-relaxed">
+                    <li><strong>Cost</strong>: base SP cost of the skill.</li>
+                    <li>
+                        <strong>Disc</strong>: your discount; the effective
+                        cost is Cost &minus; Disc.
+                    </li>
+                    <li>
+                        <strong>Mean / Median</strong>: average and median
+                        length gain (m) across the simulations.
+                    </li>
+                    <li>
+                        <strong>Mean / Cost</strong>: efficiency. The default
+                        sort key.
+                    </li>
+                    <li>
+                        <strong>Min-Max</strong>, <strong>95% CI</strong>:
+                        spread of outcomes.
+                    </li>
+                    <li>
+                        Click any header to sort. Tick rows to see a selection
+                        total in the status bar above the table.
+                    </li>
+                </ul>
+            </section>
+
+            <section class="mb-8">
+                <h2
+                    class="text-teal-400 text-xl font-semibold mb-2 border-b border-zinc-700 pb-1"
+                >
+                    Tips
+                </h2>
+                <ul class="list-disc pl-6 space-y-1 leading-relaxed">
+                    <li>
+                        Configs are per-browser. Use Export &rarr; Import to
+                        move them between machines.
+                    </li>
+                    <li>
+                        For comparing aliases / variants, add both rows and
+                        check the selection total.
+                    </li>
+                    <li>
+                        Re-run the tour from
+                        <strong>Help &rarr; Take a Tour</strong> at any time.
+                    </li>
+                </ul>
+            </section>
+
+            <section class="mb-8">
+                <h2
+                    class="text-teal-400 text-xl font-semibold mb-2 border-b border-zinc-700 pb-1"
+                >
+                    Source / Issues / Contact
+                </h2>
+                <ul class="list-disc pl-6 space-y-1 leading-relaxed">
+                    <li>
+                        Source:
+                        <a
+                            href="https://github.com/Martin-Milbradt/umalator"
+                            class="text-teal-400 hover:text-teal-300"
+                            target="_blank"
+                            rel="noopener"
+                            >github.com/Martin-Milbradt/umalator</a
+                        >
+                    </li>
+                    <li>
+                        Bugs / feature requests:
+                        <a
+                            href="https://github.com/Martin-Milbradt/umalator/issues/new"
+                            class="text-teal-400 hover:text-teal-300"
+                            target="_blank"
+                            rel="noopener"
+                            >open an issue</a
+                        >
+                    </li>
+                    <li>
+                        Chat / questions:
+                        <a
+                            href="https://discord.gg/DvXMyg8J"
+                            class="text-teal-400 hover:text-teal-300"
+                            target="_blank"
+                            rel="noopener"
+                            >Discord server</a
+                        >
+                    </li>
+                </ul>
+            </section>
+
+            <div class="mt-10 mb-4">
+                <a
+                    href="./index.html"
+                    class="text-teal-400 hover:text-teal-300 text-sm"
+                    >&larr; Back to Umalator</a
+                >
+            </div>
+        </main>
+    </body>
+</html>

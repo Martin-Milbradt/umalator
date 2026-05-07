@@ -15,6 +15,7 @@
     "web": "npm run build:frontend && tsx server.ts"
   },
   "dependencies": {
+    "driver.js": "^1.4.0",
     "esbuild": "^0.27.2",
     "express": "^4.18.0",
     "immutable": "^4.3.0"

@@ -199,6 +199,14 @@ export function attachSkillAutocomplete(
                 highlighted <= 0 ? suggestions.length - 1 : highlighted - 1
             renderItems()
         } else if (e.key === 'Enter') {
+            // If the user cleared the input, defer to the parent's Enter
+            // handler (which will blur with empty value and delete the row).
+            // Without this, Enter would commit the auto-highlighted first
+            // suggestion shown for an empty query, hijacking the delete.
+            if (input.value.trim() === '') {
+                closeList()
+                return
+            }
             if (highlighted >= 0 && suggestions[highlighted]) {
                 e.preventDefault()
                 // Block sibling listeners (e.g. the rename input's own Enter

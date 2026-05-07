@@ -116,6 +116,52 @@
                             </button>
                         </div>
                     </div>
+                    <div class="relative">
+                        <button
+                            id="help-menu-button"
+                            class="bg-zinc-600 text-white border-none rounded h-9 px-2 text-sm cursor-pointer transition-colors hover:bg-zinc-500 active:bg-zinc-700 flex items-center gap-1"
+                            title="Help, tour, and contact"
+                            aria-haspopup="true"
+                            aria-expanded="false"
+                        >
+                            Help
+                            <span class="text-xs leading-none">&#9662;</span>
+                        </button>
+                        <div
+                            id="help-menu"
+                            class="hidden absolute right-0 top-full mt-1 bg-zinc-700 border border-zinc-600 rounded shadow-lg z-20 min-w-[180px] overflow-hidden"
+                            role="menu"
+                        >
+                            <button
+                                id="help-about-button"
+                                class="block w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-600"
+                                role="menuitem"
+                            >
+                                About / Documentation
+                            </button>
+                            <button
+                                id="help-tour-button"
+                                class="block w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-600"
+                                role="menuitem"
+                            >
+                                Take a Tour
+                            </button>
+                            <button
+                                id="help-issue-button"
+                                class="block w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-600 border-t border-zinc-600"
+                                role="menuitem"
+                            >
+                                Report Issue
+                            </button>
+                            <button
+                                id="help-contact-button"
+                                class="block w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-600"
+                                role="menuitem"
+                            >
+                                Contact (Discord)
+                            </button>
+                        </div>
+                    </div>
                     <input
                         id="import-config-input"
                         type="file"

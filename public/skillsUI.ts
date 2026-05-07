@@ -231,7 +231,7 @@ export function renderSkills(): void {
         const currentDiscount = skill.discount
         const discountOptions: (number | null)[] = [null, 0, 10, 20, 30, 35, 40]
         const discountButtonGroup = document.createElement('div')
-        discountButtonGroup.className = 'flex gap-1 items-center'
+        discountButtonGroup.className = 'discount-options flex gap-1 items-center'
         discountButtonGroup.dataset.skill = skillName
 
         discountOptions.forEach((value) => {
@@ -251,7 +251,7 @@ export function renderSkills(): void {
         })
 
         const lockButton = document.createElement('button')
-        lockButton.className = `${squareClasses} bg-transparent text-zinc-500 border-none hover:text-zinc-200 hover:bg-zinc-700`
+        lockButton.className = `lock-btn ${squareClasses} bg-transparent text-zinc-500 border-none hover:text-zinc-200 hover:bg-zinc-700`
         lockButton.dataset.skill = skillName
         const skillDefault = skill.default
         const isDefaultActive =
@@ -300,14 +300,14 @@ export function renderSkills(): void {
         const hasDiscount =
             skill.discount !== null && skill.discount !== undefined
         if (isInUmaSkills) {
-            addToUmaButton.className = `${squareClasses} bg-red-600 text-white border-none hover:bg-red-700`
+            addToUmaButton.className = `add-to-uma-btn ${squareClasses} bg-red-600 text-white border-none hover:bg-red-700`
             addToUmaButton.textContent = '-'
             addToUmaButton.title = 'Remove from Uma skills'
         } else {
             if (hasDiscount) {
-                addToUmaButton.className = `${squareClasses} bg-sky-600 text-white border-none hover:bg-sky-700`
+                addToUmaButton.className = `add-to-uma-btn ${squareClasses} bg-sky-600 text-white border-none hover:bg-sky-700`
             } else {
-                addToUmaButton.className = `${squareClasses} opacity-40 bg-zinc-700 text-zinc-400 border border-zinc-600 hover:bg-zinc-600 hover:border-zinc-500`
+                addToUmaButton.className = `add-to-uma-btn ${squareClasses} opacity-40 bg-zinc-700 text-zinc-400 border border-zinc-600 hover:bg-zinc-600 hover:border-zinc-500`
             }
             addToUmaButton.textContent = '+'
             addToUmaButton.title = 'Add to Uma skills'

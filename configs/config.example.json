@@ -2,6 +2,9 @@
   "confidenceInterval": 90,
   "deterministic": false,
   "skills": {
+    "Concentration": {
+      "discount": 30
+    },
     "Left-Handed": {
       "default": 0,
       "discount": 10
@@ -28,7 +31,7 @@
     "guts": 399,
     "mood": 0,
     "power": 984,
-    "skills": [],
+    "skills": ["Concentration"],
     "speed": 1200,
     "stamina": 900,
     "strategy": "End Closer",
