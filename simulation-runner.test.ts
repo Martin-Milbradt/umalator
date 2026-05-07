@@ -137,13 +137,11 @@ describe('simulation worker integration', () => {
                 skillName,
                 courses: [course],
                 racedef: {
-                    mood: 2,
                     groundCondition: 2, // Good
                     weather: 1, // Sunny
                     season: 1, // Spring
                     time: 0,
                     grade: 100, // G1
-                    popularity: 1,
                     skillId: '',
                     numUmas: 18,
                 },
@@ -153,6 +151,7 @@ describe('simulation worker integration', () => {
                     power: 1000,
                     guts: 450,
                     wisdom: 550,
+                    mood: 2,
                     strategy: 'Nige',
                     distanceAptitude: 'A',
                     surfaceAptitude: 'A',
@@ -215,14 +214,15 @@ describe('simulation worker integration', () => {
                 skillId,
                 skillName,
                 courses: [course],
+                // Random mood (matches config uma.mood: null) - useRandomMood
+                // below makes the worker sample from the full mood pool, so
+                // baseUma.mood is left undefined.
                 racedef: {
-                    mood: null, // Random mood (matches config uma.mood: null)
                     groundCondition: 1, // Firm
                     weather: 1, // Sunny
                     season: 4, // Winter
                     time: 0,
                     grade: 100, // G1
-                    popularity: 1,
                     skillId: '',
                     numUmas: 9,
                 },
@@ -383,13 +383,11 @@ describe('simulation worker integration', () => {
             skillName: 'Nimble Navigator',
             courses: [nakayama2500, suzuka2000],
             racedef: {
-                mood: 2,
                 groundCondition: 2,
                 weather: 1,
                 season: 1,
                 time: 0,
                 grade: 100,
-                popularity: 1,
                 skillId: '',
                 numUmas: 18,
             },
@@ -399,6 +397,7 @@ describe('simulation worker integration', () => {
                 power: 1000,
                 guts: 450,
                 wisdom: 550,
+                mood: 2,
                 strategy: 'Nige',
                 distanceAptitude: 'A',
                 surfaceAptitude: 'A',

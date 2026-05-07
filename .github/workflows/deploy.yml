@@ -22,9 +22,12 @@ jobs:
         with:
           submodules: recursive
 
-      # uma-tools compare.ts requires otherHorse() which is at a specific
-      # uma-skill-tools commit not yet on master.
-      - name: Pin uma-skill-tools to otherHorse commit
+      # 24f0a88 is one commit ahead of uma-skill-tools master. We depend
+      # on two unmerged changes from it: (1) the otherHorse() API used by
+      # uma-tools/umalator/compare.ts, and (2) mood/popularity moved from
+      # RaceParameters onto HorseParameters. The uma-tools submodule
+      # records an older uma-skill-tools commit, so we re-pin here.
+      - name: Pin uma-skill-tools to 24f0a88
         run: cd uma-tools/uma-skill-tools && git fetch origin 24f0a8862106dd4aaeea55e90e975acc9ca5d019 && git checkout 24f0a8862106dd4aaeea55e90e975acc9ca5d019
 
       - uses: actions/setup-node@v4

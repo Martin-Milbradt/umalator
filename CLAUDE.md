@@ -81,8 +81,8 @@ npx tsx race-check.ts --races path/to/races.json --sims 200
 
 - `./uma-tools` is a git submodule (clone with `--recursive`)
 - `./uma-tools/uma-skill-tools/` is derived from <https://github.com/alpha123/uma-skill-tools> - understanding this code helps when working on simulation logic, but **never modify it**; pull latest from upstream instead
-- `uma-skill-tools` is pinned to commit `24f0a88` (has `otherHorse()` API not yet on upstream master). CI and `start_web.ps1` auto-checkout this commit. For local dev, verify the pin: `git -C uma-tools/uma-skill-tools rev-parse HEAD`
-- Ignore type checking errors from `./uma-tools` package
+- `uma-skill-tools` is pinned to commit `24f0a88`, which is one commit ahead of upstream `master` (`8b3f5e2` as of 2026-05). The pin carries two changes we depend on that haven't merged upstream: the `otherHorse()` API used by `uma-tools/umalator/compare.ts`, and the move of `mood`/`popularity` from `RaceParameters` onto `HorseParameters`. The parent `uma-tools` submodule still records an older `uma-skill-tools` commit (`6ba5ca0`), so a vanilla `git submodule update --recursive` lands ~9 commits before the pin — CI and `start_web.ps1` re-checkout `24f0a88` after init for that reason. Verify locally: `git -C uma-tools/uma-skill-tools rev-parse HEAD`
+- Ignore type checking errors from `./uma-tools` package. Our own files also surface type errors around `RaceParameters.mood`/`popularity` (`simulation.worker.ts`, `simulation-runner.ts`, tests): the umalator config schema still treats `mood` as a race parameter, but the simulation worker correctly re-attaches it to the horse via `createHorseState({ ...baseUma, mood })`, so runtime behavior is correct. The TS errors are pure type-shape mismatches, not bugs.
 
 ### Build Pipeline
 

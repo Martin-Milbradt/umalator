@@ -32,6 +32,7 @@ describe('random weather consistency', () => {
         power: 1000,
         guts: 450,
         wisdom: 550,
+        mood: 2 as const,
         strategy: 'Nige' as const,
         distanceAptitude: 'A' as const,
         surfaceAptitude: 'A' as const,
@@ -86,13 +87,11 @@ describe('random weather consistency', () => {
             skillName: "It's On!",
             courses: [hanshin1600],
             racedef: {
-                mood: 2,
                 groundCondition: 2,
                 weather: 1, // Sunny (fixed)
                 season: 1,
                 time: 0,
                 grade: 100,
-                popularity: 1,
                 skillId: '',
                 numUmas: 18,
             },

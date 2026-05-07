@@ -55,9 +55,12 @@ if (-not (Test-Path $umaToolsPath)) {
 }
 
 # Update submodules to the commits pinned in the parent repo.
-# uma-skill-tools needs a specific commit (24f0a88) with the otherHorse() API
-# that is not yet on uma-skill-tools master. The CI workflow and this script
-# both override uma-skill-tools to that commit after checkout.
+# uma-skill-tools needs a specific commit (24f0a88) which is one commit
+# ahead of upstream master. We depend on two unmerged changes from it:
+#   1. the otherHorse() API used by uma-tools/umalator/compare.ts
+#   2. mood/popularity moved from RaceParameters onto HorseParameters
+# The uma-tools submodule itself records an older uma-skill-tools
+# commit, so we re-checkout 24f0a88 here (and in CI) after init.
 Write-Host "Updating submodules..."
 git submodule update --init uma-tools
 if (Test-Path $umaToolsPath) {

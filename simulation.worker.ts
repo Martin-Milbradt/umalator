@@ -10,9 +10,10 @@ import type { SimulationTask, HorseStateData } from './types'
 
 /**
  * Creates a HorseState object compatible with uma-tools runComparison.
+ * mood and popularity live here (HorseParameters) since uma-skill-tools 24f0a88.
  */
 function createHorseState(
-    props: HorseStateData & { mood?: Mood },
+    props: HorseStateData,
     skillIds: string[],
 ): HorseState {
     return {
@@ -31,7 +32,10 @@ function createHorseState(
         surfaceAptitude: props.surfaceAptitude as HorseState['surfaceAptitude'],
         strategyAptitude:
             props.strategyAptitude as HorseState['strategyAptitude'],
-        aptitudes: (props.aptitudes ?? ['S','S','S','S','A','A','A','A','A','A']) as HorseState['aptitudes'],
+        // Cast through unknown: HorseState['aptitudes'] is typed as
+        // `Aptitude[10]` upstream which TS interprets as the indexed type
+        // `Aptitude`, not a 10-tuple. The runtime shape is correct.
+        aptitudes: (props.aptitudes ?? ['S','S','S','S','A','A','A','A','A','A']) as unknown as HorseState['aptitudes'],
         skills: SkillSet(skillIds),
         samplePolicies: new Map(),
     }
@@ -111,7 +115,7 @@ export function runSkillSimulation(task: SimulationTask) {
         const totalCombos = numTracks * combosPerTrack
         const moodPool: Mood[] = task.useRandomMood
             ? [-2, -1, 0, 1, 2]
-            : [task.racedef.mood as Mood]
+            : [(task.baseUma.mood ?? 2) as Mood]
         const seasonPool = task.useRandomSeason
             ? (task.weightedSeasons ?? [task.racedef.season])
             : [task.racedef.season]
@@ -171,7 +175,6 @@ export function runSkillSimulation(task: SimulationTask) {
                         ? (conditionProbs.get(condition) ?? 0.25)
                         : 1)
 
-                // mood is set on horse objects, not racedef (uma-skill-tools 24f0a88+)
                 const baseUma = createHorseState({ ...task.baseUma, mood }, baseSkillIds)
                 const umaWithSkill = createHorseState({ ...task.baseUma, mood }, filteredSkillIds)
                 const racedefForSim = {

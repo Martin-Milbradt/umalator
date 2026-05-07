@@ -359,14 +359,14 @@ export class SimulationRunner {
         const strategyName = parseStrategyName(umaConfig.strategy)
         const conditions = parseRaceConditions(config.track, umaConfig)
 
+        // mood and popularity live on HorseParameters (baseUma) since
+        // uma-skill-tools 24f0a88; they are no longer part of RaceParameters.
         const racedef: RaceParameters = {
-            mood: conditions.mood.value,
             groundCondition: conditions.groundCondition.value,
             weather: conditions.weather.value,
             season: conditions.season.value,
             time: Time.NoTime,
             grade: Grade.G1,
-            popularity: 1,
             skillId: '',
             orderRange: numUmas ? [1, numUmas] : undefined,
             numUmas: numUmas,
