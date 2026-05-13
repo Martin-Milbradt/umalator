@@ -41,7 +41,8 @@ function skillHasHint(skillName: string): boolean {
 }
 
 function passesFilters(skillName: string): boolean {
-    if (filterHideOwned && isSkillOnUma(skillName)) return false
+    if (filterHideOwned && (isSkillOnUma(skillName) || umaHasUpgradedVersion(skillName)))
+        return false
     if (filterAvailable === 'withHints' && !skillHasHint(skillName)) return false
     if (filterAvailable === 'withoutHints' && skillHasHint(skillName)) {
         return false

@@ -162,6 +162,7 @@ function resetUmaSkills(): void {
         currentConfig.uma = {}
     }
     currentConfig.uma.skills = []
+    delete currentConfig.uma.skillPoints
 
     if (currentConfig.skills) {
         const skills = currentConfig.skills
