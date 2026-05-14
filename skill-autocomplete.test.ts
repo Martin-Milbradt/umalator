@@ -141,4 +141,18 @@ describe('filterSkillSuggestions', () => {
         )
         expect(results).toEqual([])
     })
+
+    it('omits skills passed via exclude', () => {
+        const results = filterSkillSuggestions(
+            'corner',
+            'regular',
+            SKILLNAMES,
+            SKILLMETA,
+            8,
+            ['Corner Recovery ○'],
+        )
+        expect(results).not.toContain('Corner Recovery ○')
+        expect(results).toContain('Corner Recovery ×')
+        expect(results).toContain('Sprint Corners ○')
+    })
 })

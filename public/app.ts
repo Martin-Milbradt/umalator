@@ -244,7 +244,29 @@ if (resetButton) {
 }
 
 // Set up add skill button
-const addSkillButton = document.getElementById('add-skill-button')
+const addSkillButton = document.getElementById(
+    'add-skill-button',
+) as HTMLButtonElement | null
+
+// Pressing "+" anywhere outside an input/select triggers the add-skill button.
+// Matches the button's label so it's mnemonic. Inputs/selects keep "+" for
+// typing.
+document.addEventListener('keydown', (e) => {
+    if (e.key !== '+' || e.ctrlKey || e.altKey || e.metaKey) return
+    const active = document.activeElement as HTMLElement | null
+    if (
+        active &&
+        (active.tagName === 'INPUT' ||
+            active.tagName === 'TEXTAREA' ||
+            active.tagName === 'SELECT' ||
+            active.isContentEditable)
+    ) {
+        return
+    }
+    e.preventDefault()
+    addSkillButton?.click()
+})
+
 if (addSkillButton) {
     addSkillButton.addEventListener('click', () => {
         const currentConfig = getCurrentConfig()
@@ -264,17 +286,14 @@ if (addSkillButton) {
         }
         renderSkills()
 
-        setTimeout(() => {
-            const skillItem = document.querySelector(
-                `[data-skill="${finalName}"]`,
-            )
-            if (skillItem) {
-                const editButton = skillItem.querySelector('.edit-skill-button')
-                if (editButton) {
-                    ;(editButton as HTMLElement).click()
-                }
-            }
-        }, 100)
+        // Open the rename input immediately so the user can type the real name.
+        // The name-span click handler creates an <input>, selects its text, and
+        // focuses it — typing replaces the "New Skill" placeholder.
+        const skillRow = document.querySelector(`[data-skill="${finalName}"]`)
+        const nameSpan = skillRow?.querySelector(
+            '.skill-name-span',
+        ) as HTMLElement | null
+        nameSpan?.click()
 
         autoSave()
     })
@@ -288,56 +307,23 @@ setupSkillFilters()
 setupResultsTableSorting()
 setupSelectAllCheckbox()
 
-// Set up config menu (Export Current / Export All / Import)
-const configMenuButton = document.getElementById('config-menu-button')
-const configMenu = document.getElementById('config-menu')
-const exportCurrentButton = document.getElementById('export-current-button')
-const exportAllButton = document.getElementById('export-all-button')
-const importMenuButton = document.getElementById('import-menu-button')
-const deleteCurrentButton = document.getElementById('delete-current-button')
+// Configs and Help are native action <select>s: picking an option fires the
+// corresponding action, then the select resets to its placeholder.
+const configMenu = document.getElementById('config-menu') as HTMLSelectElement | null
+const helpMenu = document.getElementById('help-menu') as HTMLSelectElement | null
 const importInput = document.getElementById(
     'import-config-input',
 ) as HTMLInputElement
 
-function setConfigMenuOpen(open: boolean): void {
-    if (!configMenu || !configMenuButton) return
-    configMenu.classList.toggle('hidden', !open)
-    configMenuButton.setAttribute('aria-expanded', String(open))
-}
-
-if (configMenuButton && configMenu) {
-    configMenuButton.addEventListener('click', (e) => {
-        e.stopPropagation()
-        setConfigMenuOpen(configMenu.classList.contains('hidden'))
-    })
-    document.addEventListener('click', (e) => {
-        if (configMenu.classList.contains('hidden')) return
-        const target = e.target as Node
-        if (
-            !configMenu.contains(target) &&
-            !configMenuButton.contains(target)
-        ) {
-            setConfigMenuOpen(false)
-        }
-    })
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') setConfigMenuOpen(false)
-    })
-}
-
-if (exportCurrentButton) {
-    exportCurrentButton.addEventListener('click', () => {
-        setConfigMenuOpen(false)
+async function handleConfigMenuAction(action: string): Promise<void> {
+    if (action === 'export-current') {
         const currentConfigFile = getCurrentConfigFile()
         const currentConfig = getCurrentConfig()
         if (!currentConfigFile || !currentConfig) return
         exportConfig(currentConfigFile, currentConfig)
-    })
-}
-
-if (exportAllButton) {
-    exportAllButton.addEventListener('click', async () => {
-        setConfigMenuOpen(false)
+        return
+    }
+    if (action === 'export-all') {
         try {
             const count = await exportAllConfigs()
             if (count === 0) {
@@ -349,20 +335,46 @@ if (exportAllButton) {
                 })
             }
         } catch (error) {
-            const err = error as Error
             showToast({
                 type: 'error',
-                message: `Export failed: ${err.message}`,
+                message: `Export failed: ${(error as Error).message}`,
             })
         }
+        return
+    }
+    if (action === 'import') {
+        importInput?.click()
+        return
+    }
+    if (action === 'delete-current') {
+        const currentConfigFile = getCurrentConfigFile()
+        if (!currentConfigFile) return
+        if (!confirm(`Delete config "${currentConfigFile}"? This cannot be undone.`)) {
+            return
+        }
+        try {
+            await deleteConfig(currentConfigFile)
+            deleteConfigFromFilesystem(currentConfigFile)
+            showToast({ type: 'info', message: `Deleted ${currentConfigFile}` })
+            await loadConfigFiles()
+        } catch (error) {
+            showToast({
+                type: 'error',
+                message: `Delete failed: ${(error as Error).message}`,
+            })
+        }
+    }
+}
+
+if (configMenu) {
+    configMenu.addEventListener('change', async () => {
+        const action = configMenu.value
+        configMenu.value = ''
+        if (action) await handleConfigMenuAction(action)
     })
 }
 
-if (importMenuButton && importInput) {
-    importMenuButton.addEventListener('click', () => {
-        setConfigMenuOpen(false)
-        importInput.click()
-    })
+if (importInput) {
     importInput.addEventListener('change', async () => {
         const files = Array.from(importInput.files ?? [])
         if (files.length === 0) return
@@ -406,88 +418,23 @@ if (importMenuButton && importInput) {
     })
 }
 
-if (deleteCurrentButton) {
-    deleteCurrentButton.addEventListener('click', async () => {
-        setConfigMenuOpen(false)
-        const currentConfigFile = getCurrentConfigFile()
-        if (!currentConfigFile) return
-        if (!confirm(`Delete config "${currentConfigFile}"? This cannot be undone.`)) {
-            return
-        }
-        try {
-            await deleteConfig(currentConfigFile)
-            deleteConfigFromFilesystem(currentConfigFile)
-            showToast({ type: 'info', message: `Deleted ${currentConfigFile}` })
-            await loadConfigFiles()
-        } catch (error) {
-            const err = error as Error
-            showToast({
-                type: 'error',
-                message: `Delete failed: ${err.message}`,
-            })
-        }
-    })
-}
-
-// Set up help menu (About / Tour / Issue / Contact)
-const helpMenuButton = document.getElementById('help-menu-button')
-const helpMenu = document.getElementById('help-menu')
-const helpAboutButton = document.getElementById('help-about-button')
-const helpTourButton = document.getElementById('help-tour-button')
-const helpIssueButton = document.getElementById('help-issue-button')
-const helpContactButton = document.getElementById('help-contact-button')
-
-function setHelpMenuOpen(open: boolean): void {
-    if (!helpMenu || !helpMenuButton) return
-    helpMenu.classList.toggle('hidden', !open)
-    helpMenuButton.setAttribute('aria-expanded', String(open))
-}
-
-if (helpMenuButton && helpMenu) {
-    helpMenuButton.addEventListener('click', (e) => {
-        e.stopPropagation()
-        setHelpMenuOpen(helpMenu.classList.contains('hidden'))
-    })
-    document.addEventListener('click', (e) => {
-        if (helpMenu.classList.contains('hidden')) return
-        const target = e.target as Node
-        if (
-            !helpMenu.contains(target) &&
-            !helpMenuButton.contains(target)
-        ) {
-            setHelpMenuOpen(false)
-        }
-    })
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') setHelpMenuOpen(false)
-    })
-}
-
-if (helpAboutButton) {
-    helpAboutButton.addEventListener('click', () => {
-        setHelpMenuOpen(false)
+function handleHelpMenuAction(action: string): void {
+    if (action === 'about') {
         window.location.href = `${BASE_URL}help.html`
-    })
-}
-
-if (helpTourButton) {
-    helpTourButton.addEventListener('click', () => {
-        setHelpMenuOpen(false)
+    } else if (action === 'tour') {
         startTour()
-    })
-}
-
-if (helpIssueButton) {
-    helpIssueButton.addEventListener('click', () => {
-        setHelpMenuOpen(false)
+    } else if (action === 'issue') {
         window.open(GITHUB_ISSUES_URL, '_blank', 'noopener')
-    })
+    } else if (action === 'contact') {
+        window.open(DISCORD_INVITE_URL, '_blank', 'noopener')
+    }
 }
 
-if (helpContactButton) {
-    helpContactButton.addEventListener('click', () => {
-        setHelpMenuOpen(false)
-        window.open(DISCORD_INVITE_URL, '_blank', 'noopener')
+if (helpMenu) {
+    helpMenu.addEventListener('change', () => {
+        const action = helpMenu.value
+        helpMenu.value = ''
+        if (action) handleHelpMenuAction(action)
     })
 }
 

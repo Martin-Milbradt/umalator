@@ -35,7 +35,7 @@ function buildTour() {
                 popover: {
                     title: 'Add skills',
                     description:
-                        'Add skills you want to evaluate. Each skill gets simulated to estimate the mean length it gains.',
+                        'Add skills you want to evaluate. Each skill gets simulated to estimate the mean length it gains. Hotkey: + (outside any input).',
                     side: 'right',
                 },
             },
@@ -71,7 +71,7 @@ function buildTour() {
                 popover: {
                     title: 'Filter the skill list',
                     description:
-                        'Owned hides skills already on the uma. Available cycles between only-with-hints, only-without-hints, and off.',
+                        'Owned hides skills already on the uma. The Available dropdown picks Filtered (matches current distance/style), Hint, No Hint, or Unfiltered (every skill in the config).',
                     side: 'bottom',
                 },
             },
@@ -94,7 +94,7 @@ function buildTour() {
                 },
             },
             {
-                element: '#config-menu-button',
+                element: '#config-menu',
                 popover: {
                     title: 'Import / Export / Delete',
                     description:
@@ -139,7 +139,7 @@ function buildTour() {
                 },
             },
             {
-                element: '#help-menu-button',
+                element: '#help-menu',
                 popover: {
                     title: 'Help is here anytime',
                     description:

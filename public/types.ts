@@ -30,10 +30,18 @@ export interface Uma {
     skillPoints?: number | null
 }
 
+export type AvailableFilter = 'filtered' | 'hint' | 'noHint' | 'unfiltered'
+
+export interface Filters {
+    hideOwned?: boolean
+    available?: AvailableFilter
+}
+
 export interface Config {
     skills: Record<string, Skill>
     track?: Track
     uma?: Uma
+    filters?: Filters
 }
 
 // Results from simulation

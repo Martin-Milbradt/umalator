@@ -26,9 +26,11 @@ export function filterSkillSuggestions(
     skillnames: SkillNames | null,
     skillmeta: SkillMeta | null,
     limit: number = DEFAULT_LIMIT,
+    exclude: Iterable<string> | null = null,
 ): string[] {
     if (!skillnames) return []
     const normalizedQuery = query.toLowerCase().trim()
+    const excludeSet = exclude ? new Set(exclude) : null
 
     const prefix: string[] = []
     const substring: string[] = []
@@ -38,6 +40,7 @@ export function filterSkillSuggestions(
         const canonical = names?.[0]
         if (!canonical) continue
         if (!passesMode(skillmeta?.[id]?.baseCost, mode)) continue
+        if (excludeSet?.has(canonical)) continue
 
         if (!normalizedQuery) {
             all.push(canonical)
@@ -67,6 +70,8 @@ interface AttachOptions {
     getNames?: () => SkillNames | null
     getMeta?: () => SkillMeta | null
     limit?: number
+    /** Names to suppress from suggestions (e.g. skills already in the list). */
+    getExclude?: () => Iterable<string> | null
 }
 
 const ITEM_BASE_CLASSES =
@@ -94,6 +99,7 @@ export function attachSkillAutocomplete(
     const getNames = options.getNames ?? getSkillnames
     const getMeta = options.getMeta ?? getSkillmeta
     const limit = options.limit ?? DEFAULT_LIMIT
+    const getExclude = options.getExclude
 
     const list = document.createElement('ul')
     list.className = LIST_CLASSES
@@ -102,6 +108,10 @@ export function attachSkillAutocomplete(
 
     let suggestions: string[] = []
     let highlighted = -1
+    // Tracks whether the user actively chose a suggestion (arrow keys or
+    // mouse hover). Reset on each keystroke so deleting all text returns to
+    // the "auto-highlight is just a default" state.
+    let userPickedSuggestion = false
     let detached = false
 
     const positionList = () => {
@@ -128,6 +138,7 @@ export function attachSkillAutocomplete(
                     : ITEM_BASE_CLASSES
             item.addEventListener('mouseenter', () => {
                 highlighted = index
+                userPickedSuggestion = true
                 renderItems()
             })
             // mousedown fires before blur, so we can commit before the
@@ -148,6 +159,7 @@ export function attachSkillAutocomplete(
             getNames(),
             getMeta(),
             limit,
+            getExclude?.() ?? null,
         )
         if (suggestions.length === 0) {
             closeList()
@@ -177,6 +189,7 @@ export function attachSkillAutocomplete(
     const onInput = () => {
         // Reset to 0 so the first suggestion is highlighted after each keystroke.
         highlighted = 0
+        userPickedSuggestion = false
         refresh()
     }
     const onFocus = () => refresh()
@@ -190,6 +203,7 @@ export function attachSkillAutocomplete(
             e.stopImmediatePropagation()
             if (suggestions.length === 0) return
             highlighted = (highlighted + 1) % suggestions.length
+            userPickedSuggestion = true
             renderItems()
         } else if (e.key === 'ArrowUp') {
             e.preventDefault()
@@ -197,13 +211,17 @@ export function attachSkillAutocomplete(
             if (suggestions.length === 0) return
             highlighted =
                 highlighted <= 0 ? suggestions.length - 1 : highlighted - 1
+            userPickedSuggestion = true
             renderItems()
         } else if (e.key === 'Enter') {
-            // If the user cleared the input, defer to the parent's Enter
+            // If the user cleared the input AND hasn't actively picked a
+            // suggestion (arrow keys / hover), defer to the parent's Enter
             // handler (which will blur with empty value and delete the row).
-            // Without this, Enter would commit the auto-highlighted first
-            // suggestion shown for an empty query, hijacking the delete.
-            if (input.value.trim() === '') {
+            // The auto-highlight on suggestion 0 alone doesn't count as a pick:
+            // without this defer, Enter would commit the top result and hijack
+            // the delete. But once the user has navigated, Enter commits even
+            // with empty input.
+            if (input.value.trim() === '' && !userPickedSuggestion) {
                 closeList()
                 return
             }

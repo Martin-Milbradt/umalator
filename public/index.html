@@ -28,8 +28,8 @@
                     >
                         <button
                             id="add-skill-button"
-                            class="bg-sky-600 text-white border-none rounded w-6 h-6 text-lg leading-none cursor-pointer flex items-center justify-center p-0 transition-colors hover:bg-sky-700 active:bg-sky-800"
-                            title="Add new skill"
+                            class="bg-sky-600 text-white border-none rounded h-7 w-7 text-[13px] leading-none cursor-pointer flex items-center justify-center p-0 transition-colors hover:bg-sky-700 active:bg-sky-800"
+                            title="Add new skill (hotkey: +)"
                         >
                             +
                         </button>
@@ -43,14 +43,15 @@
                             >
                                 Owned
                             </button>
-                            <button
-                                id="filter-available-button"
-                                class="bg-zinc-700 text-zinc-200 border border-zinc-600 rounded h-7 px-2 cursor-pointer transition-colors hover:bg-zinc-600"
-                                title="Cycle: off → only with hints → only without hints"
-                                data-state="off"
+                            <select
+                                id="filter-available-select"
+                                class="py-1 px-1.5 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] focus:outline-none focus:border-sky-500"
                             >
-                                Available: off
-                            </button>
+                                <option value="filtered" title="Skills that match the current distance, style, etc.">Filtered</option>
+                                <option value="hint" title="Filtered, restricted to skills that have a hint set.">Hint</option>
+                                <option value="noHint" title="Filtered, restricted to skills with no hint set.">No Hint</option>
+                                <option value="unfiltered" title="Every skill in the config, even ones that cannot trigger under current settings.">Unfiltered</option>
+                            </select>
                         </span>
                     </h3>
                 </div>
@@ -61,107 +62,37 @@
                 <div class="flex items-center gap-2.5 mb-2.5">
                     <select
                         id="config-select"
-                        class="flex-1 p-2 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-sm focus:outline-none focus:border-sky-500"
+                        class="flex-1 py-1 px-1.5 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] focus:outline-none focus:border-sky-500"
                     ></select>
                     <button
                         id="duplicate-config-button"
-                        class="bg-sky-600 text-white border-none rounded h-9 w-9 text-lg leading-none cursor-pointer flex items-center justify-center p-0 transition-colors hover:bg-sky-700 active:bg-sky-800"
+                        class="bg-sky-600 text-white border-none rounded h-7 w-7 text-[13px] leading-none cursor-pointer flex items-center justify-center p-0 transition-colors hover:bg-sky-700 active:bg-sky-800"
                         title="Duplicate config file"
                     >
                         +
                     </button>
-                    <div class="relative">
-                        <button
-                            id="config-menu-button"
-                            class="bg-zinc-600 text-white border-none rounded h-9 px-2 text-sm cursor-pointer transition-colors hover:bg-zinc-500 active:bg-zinc-700 flex items-center gap-1"
-                            title="Import/export configs"
-                            aria-haspopup="true"
-                            aria-expanded="false"
-                        >
-                            Configs
-                            <span class="text-xs leading-none">&#9662;</span>
-                        </button>
-                        <div
-                            id="config-menu"
-                            class="hidden absolute right-0 top-full mt-1 bg-zinc-700 border border-zinc-600 rounded shadow-lg z-20 min-w-[160px] overflow-hidden"
-                            role="menu"
-                        >
-                            <button
-                                id="export-current-button"
-                                class="block w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-600"
-                                role="menuitem"
-                            >
-                                Export Current
-                            </button>
-                            <button
-                                id="export-all-button"
-                                class="block w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-600"
-                                role="menuitem"
-                            >
-                                Export All
-                            </button>
-                            <button
-                                id="import-menu-button"
-                                class="block w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-600"
-                                role="menuitem"
-                            >
-                                Import
-                            </button>
-                            <button
-                                id="delete-current-button"
-                                class="block w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-900/40 border-t border-zinc-600"
-                                role="menuitem"
-                            >
-                                Delete Current
-                            </button>
-                        </div>
-                    </div>
-                    <div class="relative">
-                        <button
-                            id="help-menu-button"
-                            class="bg-zinc-600 text-white border-none rounded h-9 px-2 text-sm cursor-pointer transition-colors hover:bg-zinc-500 active:bg-zinc-700 flex items-center gap-1"
-                            title="Help, tour, and contact"
-                            aria-haspopup="true"
-                            aria-expanded="false"
-                        >
-                            Help
-                            <span class="text-xs leading-none">&#9662;</span>
-                        </button>
-                        <div
-                            id="help-menu"
-                            class="hidden absolute right-0 top-full mt-1 bg-zinc-700 border border-zinc-600 rounded shadow-lg z-20 min-w-[180px] overflow-hidden"
-                            role="menu"
-                        >
-                            <button
-                                id="help-about-button"
-                                class="block w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-600"
-                                role="menuitem"
-                            >
-                                About / Documentation
-                            </button>
-                            <button
-                                id="help-tour-button"
-                                class="block w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-600"
-                                role="menuitem"
-                            >
-                                Take a Tour
-                            </button>
-                            <button
-                                id="help-issue-button"
-                                class="block w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-600 border-t border-zinc-600"
-                                role="menuitem"
-                            >
-                                Report Issue
-                            </button>
-                            <button
-                                id="help-contact-button"
-                                class="block w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-600"
-                                role="menuitem"
-                            >
-                                Contact (Discord)
-                            </button>
-                        </div>
-                    </div>
+                    <select
+                        id="config-menu"
+                        class="py-1 px-1.5 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] focus:outline-none focus:border-sky-500"
+                        title="Import/export configs"
+                    >
+                        <option value="" disabled selected hidden>Configs</option>
+                        <option value="export-current">Export Current</option>
+                        <option value="export-all">Export All</option>
+                        <option value="import">Import</option>
+                        <option value="delete-current">Delete Current</option>
+                    </select>
+                    <select
+                        id="help-menu"
+                        class="py-1 px-1.5 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] focus:outline-none focus:border-sky-500"
+                        title="Help, tour, and contact"
+                    >
+                        <option value="" disabled selected hidden>Help</option>
+                        <option value="about">About / Documentation</option>
+                        <option value="tour">Take a Tour</option>
+                        <option value="issue">Report Issue</option>
+                        <option value="contact">Contact (Discord)</option>
+                    </select>
                     <input
                         id="import-config-input"
                         type="file"
@@ -171,13 +102,13 @@
                     />
                     <button
                         id="run-button"
-                        class="h-9 px-4 text-white border-none rounded-md text-base font-semibold cursor-pointer transition-colors bg-sky-600 hover:bg-sky-700 active:bg-sky-800 disabled:bg-zinc-600 disabled:cursor-not-allowed flex items-center"
+                        class="h-7 px-3 text-white border-none rounded text-[13px] cursor-pointer transition-colors bg-sky-600 hover:bg-sky-700 active:bg-sky-800 disabled:bg-zinc-600 disabled:cursor-not-allowed flex items-center"
                     >
                         Run Calculations
                     </button>
                     <button
                         id="reset-button"
-                        class="h-9 px-4 text-white border-none rounded-md text-base font-semibold cursor-pointer transition-colors bg-red-600 hover:bg-red-700 active:bg-red-800 flex items-center"
+                        class="h-7 px-3 text-white border-none rounded text-[13px] cursor-pointer transition-colors bg-red-600 hover:bg-red-700 active:bg-red-800 flex items-center"
                     >
                         Reset
                     </button>

@@ -26,13 +26,35 @@ import { canSkillTriggerByName } from './skillTrigger'
 import { getCurrentConfig, getResultsMap, getSelectedSkills } from './state'
 import { showToast } from './toast'
 
+import type { AvailableFilter } from './types'
+
 const squareClasses =
     'py-0.5 px-1 w-6 h-6 rounded text-[13px] cursor-pointer transition-colors'
 
-type AvailableFilter = 'off' | 'withHints' | 'withoutHints'
+// Filter state lives on the loaded config so it persists with the rest of the
+// settings. Missing fields fall back to the defaults ("Owned" off, Available
+// "Filtered") so older configs and freshly-imported ones behave naturally.
+function getHideOwned(): boolean {
+    return getCurrentConfig()?.filters?.hideOwned ?? false
+}
 
-let filterHideOwned = false
-let filterAvailable: AvailableFilter = 'off'
+function getAvailableFilter(): AvailableFilter {
+    return getCurrentConfig()?.filters?.available ?? 'filtered'
+}
+
+function setHideOwned(value: boolean): void {
+    const config = getCurrentConfig()
+    if (!config) return
+    if (!config.filters) config.filters = {}
+    config.filters.hideOwned = value
+}
+
+function setAvailableFilter(value: AvailableFilter): void {
+    const config = getCurrentConfig()
+    if (!config) return
+    if (!config.filters) config.filters = {}
+    config.filters.available = value
+}
 
 function skillHasHint(skillName: string): boolean {
     const currentConfig = getCurrentConfig()
@@ -41,12 +63,12 @@ function skillHasHint(skillName: string): boolean {
 }
 
 function passesFilters(skillName: string): boolean {
-    if (filterHideOwned && (isSkillOnUma(skillName) || umaHasUpgradedVersion(skillName)))
+    const hideOwned = getHideOwned()
+    const available = getAvailableFilter()
+    if (hideOwned && (isSkillOnUma(skillName) || umaHasUpgradedVersion(skillName)))
         return false
-    if (filterAvailable === 'withHints' && !skillHasHint(skillName)) return false
-    if (filterAvailable === 'withoutHints' && skillHasHint(skillName)) {
-        return false
-    }
+    if (available === 'hint' && !skillHasHint(skillName)) return false
+    if (available === 'noHint' && skillHasHint(skillName)) return false
     return true
 }
 
@@ -210,11 +232,16 @@ export function renderSkills(): void {
 
     const sortedSkillNames = Array.from(skillsToRender).sort(compareSkills)
 
-    // Filter out skills that cannot trigger under current settings,
-    // then apply the user-controlled Owned / Available filters.
-    const triggerableSkills = sortedSkillNames
-        .filter(canSkillTriggerByName)
-        .filter(passesFilters)
+    // Filter out skills that cannot trigger under current settings (skipped
+    // when the user picks Unfiltered), then apply Owned / Hint filters.
+    const triggerableSkills =
+        getAvailableFilter() === 'unfiltered'
+            ? sortedSkillNames.filter(passesFilters)
+            : sortedSkillNames.filter(canSkillTriggerByName).filter(passesFilters)
+
+    // Keep the filter controls in sync with the loaded config so switching
+    // configs reflects each one's saved Owned/Available state.
+    syncFilterControls()
 
     triggerableSkills.forEach((skillName) => {
         const skill = skills[skillName]
@@ -343,7 +370,7 @@ export function renderSkills(): void {
         })
 
         const skillNameSpan = document.createElement('span')
-        skillNameSpan.className = 'flex-1 cursor-pointer hover:text-teal-400'
+        skillNameSpan.className = 'skill-name-span flex-1 cursor-pointer hover:text-teal-400'
         skillNameSpan.textContent = skillName
         skillNameSpan.title = 'Click to edit skill name'
         skillNameSpan.dataset.skill = skillName
@@ -363,18 +390,29 @@ export function renderSkills(): void {
             skillNameInput.style.width = `${spanTarget.offsetWidth}px`
             skillNameInput.style.minWidth = '100px'
 
+            // Esc with empty/placeholder value deletes the skill directly and
+            // sets this flag so the blur (fired by renderSkills removing the
+            // input) doesn't re-run the canonicalization path on the stale value.
+            let cancelled = false
+
             const restoreSpan = () => {
                 renderSkills()
             }
 
+            const deleteAndCancel = () => {
+                cancelled = true
+                deleteSkill(originalName)
+                pruneFromResults(originalName)
+                renderSkills()
+                callRenderUma()
+                autoSave()
+            }
+
             const handleBlur = () => {
+                if (cancelled) return
                 const inputName = skillNameInput.value.trim()
                 if (!inputName) {
-                    deleteSkill(originalName)
-                    pruneFromResults(originalName)
-                    renderSkills()
-                    callRenderUma()
-                    autoSave()
+                    deleteAndCancel()
                 } else {
                     const canonicalName = getCanonicalSkillName(inputName)
                     if (!isValidSkillName(canonicalName)) {
@@ -411,14 +449,23 @@ export function renderSkills(): void {
             // Attach autocomplete BEFORE the input's own keydown listener so
             // its Enter/Escape handlers can stopImmediatePropagation and beat
             // the rename input's blur-on-Enter behavior.
-            attachSkillAutocomplete(skillNameInput, 'regular')
+            attachSkillAutocomplete(skillNameInput, 'regular', {
+                getExclude: () =>
+                    Object.keys(getCurrentConfig()?.skills ?? {}),
+            })
             skillNameInput.addEventListener('blur', handleBlur)
             skillNameInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault()
                     skillNameInput.blur()
                 } else if (e.key === 'Escape') {
-                    restoreSpan()
+                    const value = skillNameInput.value.trim()
+                    const isPlaceholder = /^New Skill( \d+)?$/.test(value)
+                    if (!value || isPlaceholder) {
+                        deleteAndCancel()
+                    } else {
+                        restoreSpan()
+                    }
                 }
             })
             skillNameInput.focus()
@@ -502,53 +549,51 @@ export function setupSkillsContainerDelegation(): void {
 }
 
 function updateOwnedButton(button: HTMLButtonElement): void {
-    button.dataset.active = filterHideOwned ? 'true' : 'false'
-    button.className = filterHideOwned
+    const hideOwned = getHideOwned()
+    button.dataset.active = hideOwned ? 'true' : 'false'
+    button.className = hideOwned
         ? 'bg-sky-600 text-white border border-sky-600 rounded h-7 px-2 cursor-pointer transition-colors hover:bg-sky-700'
         : 'bg-zinc-700 text-zinc-200 border border-zinc-600 rounded h-7 px-2 cursor-pointer transition-colors hover:bg-zinc-600'
 }
 
-function updateAvailableButton(button: HTMLButtonElement): void {
-    const label =
-        filterAvailable === 'off'
-            ? 'Available: off'
-            : filterAvailable === 'withHints'
-              ? 'Available: with hints'
-              : 'Available: without hints'
-    button.textContent = label
-    button.dataset.state = filterAvailable
-    button.className =
-        filterAvailable === 'off'
-            ? 'bg-zinc-700 text-zinc-200 border border-zinc-600 rounded h-7 px-2 cursor-pointer transition-colors hover:bg-zinc-600'
-            : 'bg-sky-600 text-white border border-sky-600 rounded h-7 px-2 cursor-pointer transition-colors hover:bg-sky-700'
+function updateAvailableSelect(select: HTMLSelectElement): void {
+    select.value = getAvailableFilter()
+}
+
+function syncFilterControls(): void {
+    const ownedButton = document.getElementById(
+        'filter-owned-button',
+    ) as HTMLButtonElement | null
+    if (ownedButton) updateOwnedButton(ownedButton)
+    const availableSelect = document.getElementById(
+        'filter-available-select',
+    ) as HTMLSelectElement | null
+    if (availableSelect) updateAvailableSelect(availableSelect)
 }
 
 export function setupSkillFilters(): void {
     const ownedButton = document.getElementById(
         'filter-owned-button',
     ) as HTMLButtonElement | null
-    const availableButton = document.getElementById(
-        'filter-available-button',
-    ) as HTMLButtonElement | null
+    const availableSelect = document.getElementById(
+        'filter-available-select',
+    ) as HTMLSelectElement | null
     if (ownedButton) {
         updateOwnedButton(ownedButton)
         ownedButton.addEventListener('click', () => {
-            filterHideOwned = !filterHideOwned
+            setHideOwned(!getHideOwned())
             updateOwnedButton(ownedButton)
             renderSkills()
+            autoSave()
         })
     }
-    if (availableButton) {
-        updateAvailableButton(availableButton)
-        availableButton.addEventListener('click', () => {
-            filterAvailable =
-                filterAvailable === 'off'
-                    ? 'withHints'
-                    : filterAvailable === 'withHints'
-                      ? 'withoutHints'
-                      : 'off'
-            updateAvailableButton(availableButton)
+    if (availableSelect) {
+        updateAvailableSelect(availableSelect)
+        availableSelect.addEventListener('change', () => {
+            setAvailableFilter(availableSelect.value as AvailableFilter)
+            updateAvailableSelect(availableSelect)
             renderSkills()
+            autoSave()
         })
     }
 }

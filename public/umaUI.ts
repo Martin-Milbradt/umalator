@@ -311,7 +311,9 @@ export function renderUma(): void {
             pill.replaceWith(editInput)
             // Attach autocomplete first so its keydown handler (Enter/Escape)
             // runs before the input's own blur-on-Enter handler.
-            attachSkillAutocomplete(editInput, 'regular')
+            attachSkillAutocomplete(editInput, 'regular', {
+                getExclude: () => getCurrentConfig()?.uma?.skills ?? [],
+            })
             editInput.addEventListener('blur', finishEdit)
             editInput.addEventListener('keydown', (ke) => {
                 if (ke.key === 'Enter') {
@@ -415,7 +417,9 @@ export function renderUma(): void {
 
         addButton.replaceWith(addInput)
         // Attach autocomplete first so its keydown wins over the blur-on-Enter handler.
-        attachSkillAutocomplete(addInput, 'regular')
+        attachSkillAutocomplete(addInput, 'regular', {
+            getExclude: () => getCurrentConfig()?.uma?.skills ?? [],
+        })
         addInput.addEventListener('blur', finishAdd)
         addInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
