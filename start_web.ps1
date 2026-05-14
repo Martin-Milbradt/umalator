@@ -81,9 +81,12 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-# Start Express server + Vite dev server in a new window
+# Start Express server + Vite dev server in a new window using whichever
+# PowerShell ran this script (so a pwsh launcher spawns pwsh, not the old
+# Windows PowerShell, while still working for contributors without pwsh).
 $startCommand = "Set-Location '$PSScriptRoot'; npm run dev:server"
-Start-Process powershell -ArgumentList "-NoExit", "-Command", $startCommand
+$shellExe = (Get-Process -Id $PID).Path
+Start-Process $shellExe -ArgumentList "-NoExit", "-Command", $startCommand
 
 Start-Sleep 2
 
