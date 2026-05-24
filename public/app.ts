@@ -15,6 +15,11 @@ import {
     saveConfig,
     seedDefaultConfig,
 } from './configStore'
+import {
+    isUmalatorEnvelope,
+    unwrapUmalatorEnvelope,
+    wrapConfigForClipboard,
+} from './clipboardFormat'
 import { convertMoomulatorConfig } from './moomulatorImport'
 import {
     deleteConfigFromFilesystem,
@@ -326,8 +331,20 @@ interface ImportDialogResult {
     templateName: string | null
 }
 
+interface ImportDialogOptions {
+    /** Pre-fill the name input. */
+    prefillName?: string
+    /**
+     * Initial template selection. `null` (and undefined) leaves the dropdown
+     * on "(None)"; a string selects that filename if it exists in the list.
+     * If neither prefill is provided, defaults to the currently open config.
+     */
+    defaultTemplate?: string | null
+}
+
 function showImportClipboardDialog(
     existingConfigs: string[],
+    options: ImportDialogOptions = {},
 ): Promise<ImportDialogResult | null> {
     const modal = document.getElementById('import-clipboard-modal')
     const nameInput = document.getElementById(
@@ -353,7 +370,7 @@ function showImportClipboardDialog(
         return Promise.resolve(null)
     }
 
-    nameInput.value = ''
+    nameInput.value = options.prefillName ?? ''
     templateSelect.innerHTML = ''
     const noneOption = document.createElement('option')
     noneOption.value = ''
@@ -365,10 +382,19 @@ function showImportClipboardDialog(
         opt.textContent = name
         templateSelect.appendChild(opt)
     }
-    // Default to the currently open config if there is one.
-    const currentFile = getCurrentConfigFile()
-    if (currentFile && existingConfigs.includes(currentFile)) {
-        templateSelect.value = currentFile
+    if (options.defaultTemplate === null) {
+        templateSelect.value = ''
+    } else if (
+        typeof options.defaultTemplate === 'string' &&
+        existingConfigs.includes(options.defaultTemplate)
+    ) {
+        templateSelect.value = options.defaultTemplate
+    } else {
+        // No explicit default: fall back to the currently open config.
+        const currentFile = getCurrentConfigFile()
+        if (currentFile && existingConfigs.includes(currentFile)) {
+            templateSelect.value = currentFile
+        }
     }
 
     modal.classList.remove('hidden')
@@ -436,6 +462,55 @@ function showImportClipboardDialog(
     })
 }
 
+async function exportCurrentToClipboard(): Promise<void> {
+    const currentConfigFile = getCurrentConfigFile()
+    const currentConfig = getCurrentConfig()
+    if (!currentConfigFile || !currentConfig) {
+        showToast({ type: 'error', message: 'No config to export' })
+        return
+    }
+    if (!navigator.clipboard?.writeText) {
+        showToast({
+            type: 'error',
+            message: 'Clipboard write not supported in this browser',
+        })
+        return
+    }
+    const payload = wrapConfigForClipboard(currentConfigFile, currentConfig)
+    try {
+        await navigator.clipboard.writeText(payload)
+    } catch (error) {
+        showToast({
+            type: 'error',
+            message: `Clipboard write failed: ${(error as Error).message}`,
+        })
+        return
+    }
+    showToast({
+        type: 'info',
+        message: `Copied ${currentConfigFile} to clipboard`,
+    })
+}
+
+async function saveImportedConfig(
+    filename: string,
+    config: Config,
+    summary: string,
+): Promise<void> {
+    try {
+        await saveConfig(filename, config)
+    } catch (error) {
+        showToast({
+            type: 'error',
+            message: `Save failed: ${(error as Error).message}`,
+        })
+        return
+    }
+    await loadConfigFiles()
+    await loadConfig(filename)
+    showToast({ type: 'info', message: summary })
+}
+
 async function importFromClipboard(): Promise<void> {
     if (!navigator.clipboard?.readText) {
         showToast({
@@ -467,6 +542,36 @@ async function importFromClipboard(): Promise<void> {
         return
     }
 
+    const existing = await listConfigs()
+
+    // Native umalator envelope: round-trip the config as-is. Template
+    // selection is irrelevant for a complete config; we pre-fill the name
+    // from the envelope and default the template dropdown to "(None)".
+    if (isUmalatorEnvelope(parsed)) {
+        let envelope: { name: string; config: Config }
+        try {
+            envelope = unwrapUmalatorEnvelope(parsed)
+        } catch (error) {
+            showToast({
+                type: 'error',
+                message: `Import failed: ${(error as Error).message}`,
+            })
+            return
+        }
+        const choice = await showImportClipboardDialog(existing, {
+            prefillName: envelope.name,
+            defaultTemplate: null,
+        })
+        if (!choice) return
+        await saveImportedConfig(
+            choice.filename,
+            envelope.config,
+            `Imported ${choice.filename}`,
+        )
+        return
+    }
+
+    // Otherwise treat as moomulator-shaped data.
     const skillnames = getSkillnames()
     const skillmeta = getSkillmeta()
     if (!skillnames || !skillmeta) {
@@ -477,7 +582,6 @@ async function importFromClipboard(): Promise<void> {
         return
     }
 
-    const existing = await listConfigs()
     const choice = await showImportClipboardDialog(existing)
     if (!choice) return
 
@@ -510,27 +614,12 @@ async function importFromClipboard(): Promise<void> {
         return
     }
 
-    const filename = choice.filename
-
-    try {
-        await saveConfig(filename, result.config)
-    } catch (error) {
-        showToast({
-            type: 'error',
-            message: `Save failed: ${(error as Error).message}`,
-        })
-        return
-    }
-
-    await loadConfigFiles()
-    await loadConfig(filename)
-
     const unknownCount = result.unknownSkillIds.length
     const summary =
         unknownCount > 0
-            ? `Imported ${filename} (${unknownCount} unknown skill${unknownCount === 1 ? '' : 's'} skipped)`
-            : `Imported ${filename}`
-    showToast({ type: 'info', message: summary })
+            ? `Imported ${choice.filename} (${unknownCount} unknown skill${unknownCount === 1 ? '' : 's'} skipped)`
+            : `Imported ${choice.filename}`
+    await saveImportedConfig(choice.filename, result.config, summary)
 }
 
 async function handleConfigMenuAction(action: string): Promise<void> {
@@ -558,6 +647,10 @@ async function handleConfigMenuAction(action: string): Promise<void> {
                 message: `Export failed: ${(error as Error).message}`,
             })
         }
+        return
+    }
+    if (action === 'export-clipboard') {
+        await exportCurrentToClipboard()
         return
     }
     if (action === 'import') {
