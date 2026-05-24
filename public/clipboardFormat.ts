@@ -7,11 +7,9 @@ import { validateConfigData } from './configStore'
 import type { Config } from './types'
 
 export const UMALATOR_FORMAT_ID = 'umalator-config'
-export const UMALATOR_FORMAT_VERSION = 1
 
 export interface UmalatorEnvelope {
     format: typeof UMALATOR_FORMAT_ID
-    version: number
     name: string
     config: Config
 }
@@ -19,7 +17,6 @@ export interface UmalatorEnvelope {
 export function wrapConfigForClipboard(name: string, config: Config): string {
     const envelope: UmalatorEnvelope = {
         format: UMALATOR_FORMAT_ID,
-        version: UMALATOR_FORMAT_VERSION,
         name,
         config,
     }

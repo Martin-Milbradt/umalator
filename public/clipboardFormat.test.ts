@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
     isUmalatorEnvelope,
     UMALATOR_FORMAT_ID,
-    UMALATOR_FORMAT_VERSION,
     unwrapUmalatorEnvelope,
     wrapConfigForClipboard,
 } from './clipboardFormat'
@@ -23,9 +22,9 @@ describe('clipboard envelope', () => {
         const parsed = JSON.parse(payload)
         expect(parsed).toMatchObject({
             format: UMALATOR_FORMAT_ID,
-            version: UMALATOR_FORMAT_VERSION,
             name: 'CM14.json',
         })
+        expect(parsed).not.toHaveProperty('version')
         const { name, config } = unwrapUmalatorEnvelope(parsed)
         expect(name).toBe('CM14.json')
         expect(config).toEqual(sampleConfig)
