@@ -10,8 +10,12 @@ import {
     exportAllConfigs,
     exportConfig,
     importConfig,
+    listConfigs,
+    loadConfig as loadConfigFromStore,
+    saveConfig,
     seedDefaultConfig,
 } from './configStore'
+import { convertMoomulatorConfig } from './moomulatorImport'
 import {
     deleteConfigFromFilesystem,
     syncConfigsFromFilesystem,
@@ -38,6 +42,8 @@ import {
     getCurrentConfigFile,
     getResultsMap,
     getSelectedSkills,
+    getSkillmeta,
+    getSkillnames,
     setCourseData,
     setSkillData,
     setSkillmeta,
@@ -48,7 +54,7 @@ import {
 import { showToast } from './toast'
 import { maybeAutoStartTour, startTour } from './tour'
 import { renderTrack } from './trackUI'
-import type { CourseData, SkillData, SkillMeta, SkillNames } from './types'
+import type { Config, CourseData, SkillData, SkillMeta, SkillNames } from './types'
 import { renderUma } from './umaUI'
 
 const BASE_URL = import.meta.env.BASE_URL ?? '/'
@@ -315,6 +321,218 @@ const importInput = document.getElementById(
     'import-config-input',
 ) as HTMLInputElement
 
+interface ImportDialogResult {
+    filename: string
+    templateName: string | null
+}
+
+function showImportClipboardDialog(
+    existingConfigs: string[],
+): Promise<ImportDialogResult | null> {
+    const modal = document.getElementById('import-clipboard-modal')
+    const nameInput = document.getElementById(
+        'import-clipboard-name',
+    ) as HTMLInputElement | null
+    const templateSelect = document.getElementById(
+        'import-clipboard-template',
+    ) as HTMLSelectElement | null
+    const confirmButton = document.getElementById(
+        'import-clipboard-confirm',
+    ) as HTMLButtonElement | null
+    const cancelButton = document.getElementById(
+        'import-clipboard-cancel',
+    ) as HTMLButtonElement | null
+
+    if (
+        !modal ||
+        !nameInput ||
+        !templateSelect ||
+        !confirmButton ||
+        !cancelButton
+    ) {
+        return Promise.resolve(null)
+    }
+
+    nameInput.value = ''
+    templateSelect.innerHTML = ''
+    const noneOption = document.createElement('option')
+    noneOption.value = ''
+    noneOption.textContent = '(None — empty skills & track)'
+    templateSelect.appendChild(noneOption)
+    for (const name of existingConfigs) {
+        const opt = document.createElement('option')
+        opt.value = name
+        opt.textContent = name
+        templateSelect.appendChild(opt)
+    }
+    // Default to the currently open config if there is one.
+    const currentFile = getCurrentConfigFile()
+    if (currentFile && existingConfigs.includes(currentFile)) {
+        templateSelect.value = currentFile
+    }
+
+    modal.classList.remove('hidden')
+    setTimeout(() => nameInput.focus(), 0)
+
+    return new Promise((resolve) => {
+        function cleanup(): void {
+            modal?.classList.add('hidden')
+            confirmButton?.removeEventListener('click', onConfirm)
+            cancelButton?.removeEventListener('click', onCancel)
+            nameInput?.removeEventListener('keydown', onKey)
+            modal?.removeEventListener('click', onBackdrop)
+        }
+        function onConfirm(): void {
+            const rawName = nameInput?.value.trim() ?? ''
+            const templateName = templateSelect?.value || null
+
+            let filename: string
+            if (rawName) {
+                filename = rawName.toLowerCase().endsWith('.json')
+                    ? rawName
+                    : `${rawName}.json`
+            } else if (templateName) {
+                // Empty name: target is the template itself.
+                filename = templateName
+            } else {
+                showToast({
+                    type: 'error',
+                    message: 'Enter a name or pick a template to overwrite',
+                })
+                nameInput?.focus()
+                return
+            }
+
+            if (existingConfigs.includes(filename)) {
+                const ok = confirm(
+                    `Overwrite existing config "${filename}"?`,
+                )
+                if (!ok) return
+            }
+
+            cleanup()
+            resolve({ filename, templateName })
+        }
+        function onCancel(): void {
+            cleanup()
+            resolve(null)
+        }
+        function onKey(e: KeyboardEvent): void {
+            if (e.key === 'Enter') {
+                e.preventDefault()
+                onConfirm()
+            } else if (e.key === 'Escape') {
+                e.preventDefault()
+                onCancel()
+            }
+        }
+        function onBackdrop(e: MouseEvent): void {
+            if (e.target === modal) onCancel()
+        }
+        confirmButton.addEventListener('click', onConfirm)
+        cancelButton.addEventListener('click', onCancel)
+        nameInput.addEventListener('keydown', onKey)
+        modal.addEventListener('click', onBackdrop)
+    })
+}
+
+async function importFromClipboard(): Promise<void> {
+    if (!navigator.clipboard?.readText) {
+        showToast({
+            type: 'error',
+            message: 'Clipboard read not supported in this browser',
+        })
+        return
+    }
+
+    let text: string
+    try {
+        text = await navigator.clipboard.readText()
+    } catch (error) {
+        showToast({
+            type: 'error',
+            message: `Clipboard read failed: ${(error as Error).message}`,
+        })
+        return
+    }
+
+    let parsed: unknown
+    try {
+        parsed = JSON.parse(text)
+    } catch {
+        showToast({
+            type: 'error',
+            message: 'Clipboard does not contain valid JSON',
+        })
+        return
+    }
+
+    const skillnames = getSkillnames()
+    const skillmeta = getSkillmeta()
+    if (!skillnames || !skillmeta) {
+        showToast({
+            type: 'error',
+            message: 'Skill data not loaded yet — try again in a moment',
+        })
+        return
+    }
+
+    const existing = await listConfigs()
+    const choice = await showImportClipboardDialog(existing)
+    if (!choice) return
+
+    let template: Config | null = null
+    if (choice.templateName) {
+        try {
+            template = await loadConfigFromStore(choice.templateName)
+        } catch (error) {
+            showToast({
+                type: 'error',
+                message: `Template load failed: ${(error as Error).message}`,
+            })
+            return
+        }
+    }
+
+    let result: ReturnType<typeof convertMoomulatorConfig>
+    try {
+        result = convertMoomulatorConfig(
+            parsed,
+            skillnames,
+            skillmeta,
+            template,
+        )
+    } catch (error) {
+        showToast({
+            type: 'error',
+            message: `Import failed: ${(error as Error).message}`,
+        })
+        return
+    }
+
+    const filename = choice.filename
+
+    try {
+        await saveConfig(filename, result.config)
+    } catch (error) {
+        showToast({
+            type: 'error',
+            message: `Save failed: ${(error as Error).message}`,
+        })
+        return
+    }
+
+    await loadConfigFiles()
+    await loadConfig(filename)
+
+    const unknownCount = result.unknownSkillIds.length
+    const summary =
+        unknownCount > 0
+            ? `Imported ${filename} (${unknownCount} unknown skill${unknownCount === 1 ? '' : 's'} skipped)`
+            : `Imported ${filename}`
+    showToast({ type: 'info', message: summary })
+}
+
 async function handleConfigMenuAction(action: string): Promise<void> {
     if (action === 'export-current') {
         const currentConfigFile = getCurrentConfigFile()
@@ -344,6 +562,10 @@ async function handleConfigMenuAction(action: string): Promise<void> {
     }
     if (action === 'import') {
         importInput?.click()
+        return
+    }
+    if (action === 'import-clipboard') {
+        await importFromClipboard()
         return
     }
     if (action === 'delete-current') {

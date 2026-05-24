@@ -18,6 +18,50 @@
             aria-live="polite"
         ></div>
 
+        <div
+            id="import-clipboard-modal"
+            class="hidden fixed inset-0 z-40 bg-black/60 flex items-center justify-center"
+        >
+            <div class="bg-zinc-800 border border-zinc-700 rounded-md p-4 w-96 max-w-[90vw] shadow-xl">
+                <h2 class="text-zinc-200 text-base font-semibold mb-3">
+                    Import from Clipboard
+                </h2>
+                <label class="block mb-3">
+                    <span class="text-zinc-400 text-xs">Config name</span>
+                    <input
+                        id="import-clipboard-name"
+                        type="text"
+                        class="mt-1 w-full px-2 py-1 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] focus:outline-none focus:border-sky-500"
+                    />
+                </label>
+                <label class="block mb-4">
+                    <span class="text-zinc-400 text-xs"
+                        >Template (copy skills & track from)</span
+                    >
+                    <select
+                        id="import-clipboard-template"
+                        class="mt-1 w-full px-2 py-1 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] focus:outline-none focus:border-sky-500"
+                    ></select>
+                </label>
+                <div class="flex justify-end gap-2">
+                    <button
+                        id="import-clipboard-cancel"
+                        type="button"
+                        class="px-3 py-1 rounded text-[13px] bg-zinc-700 hover:bg-zinc-600 text-zinc-200"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        id="import-clipboard-confirm"
+                        type="button"
+                        class="px-3 py-1 rounded text-[13px] bg-sky-600 hover:bg-sky-700 text-white"
+                    >
+                        Import
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <div class="flex h-screen">
             <div
                 class="flex flex-col bg-zinc-800 border-r border-zinc-700 w-[800px] h-screen"
@@ -80,6 +124,7 @@
                         <option value="export-current">Export Current</option>
                         <option value="export-all">Export All</option>
                         <option value="import">Import</option>
+                        <option value="import-clipboard">Import from Clipboard</option>
                         <option value="delete-current">Delete Current</option>
                     </select>
                     <select
