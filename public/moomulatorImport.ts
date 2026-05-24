@@ -32,6 +32,67 @@ const STRATEGY_MAP: Record<string, string> = {
 
 const APTITUDES = new Set(['S', 'A', 'B', 'C', 'D', 'E', 'F', 'G'])
 
+function findSkillIdByName(
+    name: string,
+    skillnames: SkillNames,
+): string | null {
+    for (const [id, names] of Object.entries(skillnames)) {
+        if (names[0] === name) return id
+    }
+    return null
+}
+
+/**
+ * Higher-order sibling in the same groupId — the "basic" (white) version of a
+ * gold/upgrade. Matches `getBasicVariant` in skillHelpers; gold → white only,
+ * never the other direction. × purple variants are skipped.
+ */
+function findBasicVariant(
+    name: string,
+    skillnames: SkillNames,
+    skillmeta: SkillMeta,
+): string | null {
+    if (name.endsWith(' ×')) return null
+    const id = findSkillIdByName(name, skillnames)
+    if (!id) return null
+    const meta = skillmeta[id]
+    if (!meta?.groupId) return null
+    const currentOrder = meta.order ?? 0
+    for (const [otherId, otherMeta] of Object.entries(skillmeta)) {
+        if (
+            otherMeta.groupId === meta.groupId &&
+            (otherMeta.order ?? 0) > currentOrder
+        ) {
+            const otherName = skillnames[otherId]?.[0]
+            if (otherName && !otherName.endsWith(' ×')) return otherName
+        }
+    }
+    return null
+}
+
+function stripHintSuffix(name: string): string | null {
+    return / [○◎]$/.test(name) ? name.replace(/ [○◎]$/, '') : null
+}
+
+/**
+ * For an owned skill, returns the names that should also be available:
+ * - the stripped base name for ○/◎ hint variants (UI group entry that
+ *   `renderSkills` expands into both hint tiers)
+ * - the white/basic version of a gold/upgrade (same groupId, higher order)
+ */
+function expandToAvailable(
+    name: string,
+    skillnames: SkillNames,
+    skillmeta: SkillMeta,
+): string[] {
+    const out: string[] = [name]
+    const stripped = stripHintSuffix(name)
+    if (stripped) out.push(stripped)
+    const basic = findBasicVariant(name, skillnames, skillmeta)
+    if (basic) out.push(basic)
+    return out
+}
+
 export function convertMoomulatorConfig(
     data: unknown,
     skillnames: SkillNames,
@@ -111,9 +172,11 @@ export function convertMoomulatorConfig(
         }
     }
     const ownedNames = unique ? [unique, ...skills] : skills
-    for (const name of ownedNames) {
-        if (!(name in availableSkills)) {
-            availableSkills[name] = { discount: 0 }
+    for (const ownedName of ownedNames) {
+        for (const name of expandToAvailable(ownedName, skillnames, skillmeta)) {
+            if (!(name in availableSkills)) {
+                availableSkills[name] = { discount: 0 }
+            }
         }
     }
 

@@ -7,13 +7,23 @@ const skillnames: SkillNames = {
     '200172': ['Spring Runner ○'],
     '200331': ['Professor of Curvature'],
     '900061': ['Triumphant Pulse'],
+    // Hint-only family: no un-suffixed real skill, just ○ / ◎.
+    '201551': ['End Closer Savvy ◎'],
+    '201552': ['End Closer Savvy ○'],
+    // Gold/white pair: same groupId, white has higher order.
+    '200641': ['Encroaching Shadow'],
+    '200642': ['Straightaway Spurt'],
 }
 
 const skillmeta: SkillMeta = {
     '100501': { baseCost: 0 },
-    '200172': { baseCost: 90 },
-    '200331': { baseCost: 170 },
-    '900061': { baseCost: 200 },
+    '200172': { baseCost: 90, groupId: '20017', order: 1520 },
+    '200331': { baseCost: 170, groupId: '20033', order: 100 },
+    '900061': { baseCost: 200, groupId: '90006', order: 30 },
+    '201551': { baseCost: 130, groupId: '20155', order: 21200 },
+    '201552': { baseCost: 110, groupId: '20155', order: 21210 },
+    '200641': { baseCost: 180, groupId: '20064', order: 2500 },
+    '200642': { baseCost: 180, groupId: '20064', order: 2510 },
 }
 
 describe('convertMoomulatorConfig', () => {
@@ -99,7 +109,7 @@ describe('convertMoomulatorConfig', () => {
         expect(config.uma?.surfaceAptitude).toBe('A')
     })
 
-    it('adds every owned skill (including unique) to available at 0% discount', () => {
+    it('adds every owned skill (including unique) to available at 0% discount, plus cascades', () => {
         const { config } = convertMoomulatorConfig(
             { skills: ['100501', '200172', '900061'] },
             skillnames,
@@ -108,7 +118,45 @@ describe('convertMoomulatorConfig', () => {
         expect(config.skills).toEqual({
             Nemesis: { discount: 0 },
             'Spring Runner ○': { discount: 0 },
+            // Cascade: hint ○ adds the stripped base name as a UI group entry.
+            'Spring Runner': { discount: 0 },
             'Triumphant Pulse': { discount: 0 },
+        })
+    })
+
+    it('adds the stripped base name when the owned skill is a ○/◎ hint variant', () => {
+        const { config } = convertMoomulatorConfig(
+            { skills: ['201552'] }, // End Closer Savvy ○
+            skillnames,
+            skillmeta,
+        )
+        expect(config.skills).toEqual({
+            'End Closer Savvy ○': { discount: 0 },
+            'End Closer Savvy': { discount: 0 },
+        })
+    })
+
+    it('adds the white sibling when the owned skill is a gold/upgrade (group basic variant)', () => {
+        const { config } = convertMoomulatorConfig(
+            { skills: ['200641'] }, // Encroaching Shadow (gold)
+            skillnames,
+            skillmeta,
+        )
+        expect(config.skills).toEqual({
+            'Encroaching Shadow': { discount: 0 },
+            // White version in the same group — discoverable via groupId/order.
+            'Straightaway Spurt': { discount: 0 },
+        })
+    })
+
+    it('does not add the gold version when only the white is owned', () => {
+        const { config } = convertMoomulatorConfig(
+            { skills: ['200642'] }, // Straightaway Spurt (white)
+            skillnames,
+            skillmeta,
+        )
+        expect(config.skills).toEqual({
+            'Straightaway Spurt': { discount: 0 },
         })
     })
 
@@ -130,6 +178,8 @@ describe('convertMoomulatorConfig', () => {
         expect(config.skills).toEqual({
             'Spring Runner ○': { discount: 30 },
             'Some Other Skill': { discount: 10 },
+            // Cascade-added base name for Spring Runner ○ — template had no entry.
+            'Spring Runner': { discount: 0 },
             'Professor of Curvature': { discount: 0 },
         })
         expect(config.track).toEqual({ distance: 2400, trackName: 'Tokyo' })
@@ -143,7 +193,10 @@ describe('convertMoomulatorConfig', () => {
             skillmeta,
             null,
         )
-        expect(config.skills).toEqual({ 'Spring Runner ○': { discount: 0 } })
+        expect(config.skills).toEqual({
+            'Spring Runner ○': { discount: 0 },
+            'Spring Runner': { discount: 0 },
+        })
         expect(config.track).toBeUndefined()
     })
 
@@ -187,6 +240,7 @@ describe('convertMoomulatorConfig', () => {
             skills: {
                 Nemesis: { discount: 0 },
                 'Spring Runner ○': { discount: 0 },
+                'Spring Runner': { discount: 0 },
                 'Professor of Curvature': { discount: 0 },
                 'Triumphant Pulse': { discount: 0 },
             },
