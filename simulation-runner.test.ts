@@ -173,7 +173,6 @@ describe('simulation worker integration', () => {
                     skillCheckChanceUma2: false,
                 },
                 numSimulations,
-                returnRawResults: true,
             }
 
             const worker = new Worker(workerPath, { workerData: task })
@@ -254,7 +253,6 @@ describe('simulation worker integration', () => {
                 },
                 numSimulations,
                 useRandomMood: true, // Config has mood: null
-                returnRawResults: true,
             }
 
             const worker = new Worker(workerPath, { workerData: task })
@@ -426,7 +424,6 @@ describe('simulation worker integration', () => {
             weightedSeasons: createWeightedSeasonArray(),
             weightedWeathers: createWeightedWeatherArray(),
             weightedConditions: createWeightedConditionArray(),
-            returnRawResults: true,
         }
 
         const result = await new Promise<number[]>((resolve, reject) => {
@@ -542,7 +539,6 @@ describe('simulation worker integration', () => {
             weightedSeasons: createWeightedSeasonArray(),
             weightedWeathers: createWeightedWeatherArray(),
             weightedConditions: createWeightedConditionArray(),
-            returnRawResults: true,
         }
 
         const runOnce = (): Promise<number[]> =>

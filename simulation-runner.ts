@@ -563,7 +563,6 @@ export class SimulationRunner {
         const runSimulationInWorker = (
             skillName: string,
             numSimulations: number,
-            returnRawResults: boolean,
         ): Promise<{ skillName: string; rawResults?: number[] }> => {
             return new Promise((resolve, reject) => {
                 const skillId = skillNameToId[skillName]
@@ -590,7 +589,6 @@ export class SimulationRunner {
                         weightedWeathers: conditions.weather.weighted,
                         weightedConditions: conditions.groundCondition.weighted,
                         confidenceInterval,
-                        returnRawResults,
                     },
                 })
 
@@ -687,7 +685,7 @@ export class SimulationRunner {
         const factories = availableSkillNames.map(
             (skillName) => async () => {
                 try {
-                    return await runSimulationInWorker(skillName, numSims, true)
+                    return await runSimulationInWorker(skillName, numSims)
                 } catch (error) {
                     onProgress({
                         type: 'error',

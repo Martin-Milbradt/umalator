@@ -553,7 +553,6 @@ export class BrowserSimulationRunner {
         const runSimulationInWorker = (
             skillName: string,
             numSimulations: number,
-            returnRawResults: boolean,
         ): Promise<{ skillName: string; rawResults?: number[] }> => {
             return new Promise((resolve, reject) => {
                 const skillId = skillNameToId[skillName]
@@ -579,7 +578,6 @@ export class BrowserSimulationRunner {
                     weightedConditions:
                         conditions.groundCondition.weighted ?? undefined,
                     confidenceInterval,
-                    returnRawResults,
                 }
 
                 const worker = new Worker(workerUrl)
@@ -670,7 +668,7 @@ export class BrowserSimulationRunner {
         const factories = availableSkillNames.map(
             (skillName) => async () => {
                 try {
-                    return await runSimulationInWorker(skillName, 500, true)
+                    return await runSimulationInWorker(skillName, 500)
                 } catch (error) {
                     onProgress({
                         type: 'error',

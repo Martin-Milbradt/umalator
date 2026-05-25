@@ -146,16 +146,11 @@ export function runSkillSimulation(task: SimulationTask) {
             shuffleInPlace(globalConditions)
         }
 
-        // Step 5: Compute probability maps for weighting
-        const moodProbs = computeProbs(moodPool)
-        const seasonProbs = computeProbs(seasonPool)
-        const weatherProbs = computeProbs(weatherPool)
-        const conditionProbs = computeProbs(conditionPool)
-
+        // generateRepresentative already produces a pool whose counts are
+        // proportional to the input weights, so the unweighted distribution
+        // of raw results across combos already reflects the desired
+        // weighting -- no per-combo weight factor is needed.
         let seedOffset = 0
-
-        // Step 6: Run combos with global rotation
-        const weightedResults: { value: number; weight: number }[] = []
         let comboIdx = 0
         for (let t = 0; t < numTracks; t++) {
             for (let c = 0; c < combosPerTrack; c++) {
@@ -164,21 +159,6 @@ export function runSkillSimulation(task: SimulationTask) {
                 const weather = globalWeathers[comboIdx]
                 const condition = globalConditions[comboIdx]
                 comboIdx++
-
-                const comboWeight =
-                    (1 / numTracks) *
-                    (task.useRandomMood
-                        ? (moodProbs.get(mood) ?? 0.2)
-                        : 1) *
-                    (task.useRandomSeason
-                        ? (seasonProbs.get(season) ?? 0.25)
-                        : 1) *
-                    (task.useRandomWeather
-                        ? (weatherProbs.get(weather) ?? 0.25)
-                        : 1) *
-                    (task.useRandomCondition
-                        ? (conditionProbs.get(condition) ?? 0.25)
-                        : 1)
 
                 const baseUma = createHorseState({ ...task.baseUma, mood }, baseSkillIds)
                 const umaWithSkill = createHorseState({ ...task.baseUma, mood }, filteredSkillIds)
@@ -202,69 +182,28 @@ export function runSkillSimulation(task: SimulationTask) {
                     [comboSeed, 0],
                     task.simOptions,
                 )
-                for (const v of comboResults) {
-                    weightedResults.push({ value: v, weight: comboWeight })
-                }
+                results.push(...comboResults)
             }
         }
 
-        // Step 7: Weighted statistics
-        return computeWeightedStats(weightedResults, task)
-    } else {
-        const baseUma = createHorseState(task.baseUma, baseSkillIds)
-        const umaWithSkill = createHorseState(task.baseUma, filteredSkillIds)
-        const batchSeed = task.simOptions.seed != null
-            ? task.simOptions.seed
-            : Math.floor(Math.random() * 1000000000)
-        const { results: batchResults } = runComparison(
-            task.numSimulations,
-            courses[0],
-            task.racedef,
-            baseUma,
-            umaWithSkill,
-            [batchSeed, 0],
-            task.simOptions,
-        )
-        results.push(...batchResults)
+        return { skillName: task.skillName, rawResults: results }
     }
-
-    results.sort((a, b) => a - b)
-    const mean = results.reduce((a, b) => a + b, 0) / results.length
-    const min = results[0]
-    const max = results[results.length - 1]
-
-    // Calculate median (results are sorted)
-    const mid = Math.floor(results.length / 2)
-    const median =
-        results.length % 2 === 0
-            ? (results[mid - 1] + results[mid]) / 2
-            : results[mid]
-
-    // Calculate confidence interval based on configured percentage
-    const ciPercent = task.confidenceInterval ?? 95
-    const lowerPercentile = (100 - ciPercent) / 2
-    const upperPercentile = 100 - lowerPercentile
-    const lower_Index = Math.floor(results.length * (lowerPercentile / 100))
-    const upper_Index = Math.floor(results.length * (upperPercentile / 100))
-    const ciLower = results[lower_Index]
-    const ciUpper = results[upper_Index]
-
-    if (task.returnRawResults) {
-        return {
-            skillName: task.skillName,
-            rawResults: results,
-        }
-    }
-
-    return {
-        skillName: task.skillName,
-        mean,
-        median,
-        min,
-        max,
-        ciLower,
-        ciUpper,
-    }
+    const baseUma = createHorseState(task.baseUma, baseSkillIds)
+    const umaWithSkill = createHorseState(task.baseUma, filteredSkillIds)
+    const batchSeed = task.simOptions.seed != null
+        ? task.simOptions.seed
+        : Math.floor(Math.random() * 1000000000)
+    const { results: batchResults } = runComparison(
+        task.numSimulations,
+        courses[0],
+        task.racedef,
+        baseUma,
+        umaWithSkill,
+        [batchSeed, 0],
+        task.simOptions,
+    )
+    results.push(...batchResults)
+    return { skillName: task.skillName, rawResults: results }
 }
 
 /**
@@ -305,68 +244,6 @@ function shuffleInPlace<T>(arr: T[]): void {
         const j = Math.floor(Math.random() * (i + 1))
         ;[arr[i], arr[j]] = [arr[j], arr[i]]
     }
-}
-
-/** Compute probability map from a weighted pool. */
-function computeProbs<T>(pool: T[]): Map<T, number> {
-    const counts = new Map<T, number>()
-    for (const v of pool) counts.set(v, (counts.get(v) ?? 0) + 1)
-    const probs = new Map<T, number>()
-    for (const [k, c] of counts) probs.set(k, c / pool.length)
-    return probs
-}
-
-/** Compute weighted statistics from (value, weight) pairs. */
-function computeWeightedStats(
-    weightedResults: { value: number; weight: number }[],
-    task: SimulationTask,
-) {
-    const totalWeight = weightedResults.reduce((a, r) => a + r.weight, 0)
-    const mean =
-        weightedResults.reduce((a, r) => a + r.value * r.weight, 0) /
-        totalWeight
-
-    // Sort by value for percentile calculations
-    weightedResults.sort((a, b) => a.value - b.value)
-
-    // Weighted median: value where cumulative weight reaches 50%
-    let cumWeight = 0
-    let median = weightedResults[0]?.value ?? 0
-    for (const r of weightedResults) {
-        cumWeight += r.weight
-        if (cumWeight >= totalWeight * 0.5) {
-            median = r.value
-            break
-        }
-    }
-
-    const min = weightedResults[0]?.value ?? 0
-    const max = weightedResults[weightedResults.length - 1]?.value ?? 0
-
-    // Weighted confidence interval
-    const ciPercent = task.confidenceInterval ?? 95
-    const lowerP = (100 - ciPercent) / 200
-    const upperP = 1 - lowerP
-    let ciLower = min
-    let ciUpper = max
-    cumWeight = 0
-    for (const r of weightedResults) {
-        cumWeight += r.weight
-        if (ciLower === min && cumWeight >= totalWeight * lowerP)
-            ciLower = r.value
-        if (cumWeight >= totalWeight * upperP) {
-            ciUpper = r.value
-            break
-        }
-    }
-
-    if (task.returnRawResults) {
-        return {
-            skillName: task.skillName,
-            rawResults: weightedResults.map((r) => r.value),
-        }
-    }
-    return { skillName: task.skillName, mean, median, min, max, ciLower, ciUpper }
 }
 
 if (parentPort && workerData) {

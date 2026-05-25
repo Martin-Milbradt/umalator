@@ -68,21 +68,16 @@ export interface SimulationTask {
     weightedWeathers?: number[]
     weightedConditions?: number[]
     confidenceInterval?: number
-    returnRawResults?: boolean
 }
 
 /**
- * Worker message result for successful simulation.
+ * Worker message result for successful simulation. The worker always
+ * returns raw per-sim values; stats are computed downstream by
+ * calculateStatsFromRawResults so all callers share one math path.
  */
 export interface SimulationResult {
     skillName: string
-    mean?: number
-    median?: number
-    min?: number
-    max?: number
-    ciLower?: number
-    ciUpper?: number
-    rawResults?: number[]
+    rawResults: number[]
 }
 
 /**

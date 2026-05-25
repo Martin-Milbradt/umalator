@@ -62,11 +62,13 @@ describe('random weather consistency', () => {
                 'message',
                 (message: {
                     success: boolean
-                    result?: { mean: number }
+                    result?: { rawResults: number[] }
                     error?: string
                 }) => {
                     if (message.success && message.result) {
-                        resolve(message.result)
+                        const raw = message.result.rawResults
+                        const mean = raw.reduce((a, b) => a + b, 0) / raw.length
+                        resolve({ mean })
                     } else {
                         reject(new Error(message.error ?? 'Unknown error'))
                     }
