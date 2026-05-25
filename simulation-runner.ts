@@ -675,7 +675,17 @@ export class SimulationRunner {
         })
 
         const factories = availableSkillNames.map(
-            (skillName) => () => runSimulationInWorker(skillName, numSims, true),
+            (skillName) => async () => {
+                try {
+                    return await runSimulationInWorker(skillName, numSims, true)
+                } catch (error) {
+                    onProgress({
+                        type: 'error',
+                        error: `Skill "${skillName}" failed: ${error}`,
+                    })
+                    return { skillName, rawResults: undefined }
+                }
+            },
         )
         const results = await processWithConcurrency(factories, concurrency)
 
