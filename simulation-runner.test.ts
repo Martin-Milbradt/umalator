@@ -462,4 +462,117 @@ describe('simulation worker integration', () => {
             `All-random 100 sims: mean=${mean.toFixed(2)}, min=${Math.min(...result).toFixed(2)}, max=${Math.max(...result).toFixed(2)}`,
         )
     }, 30000)
+
+    it('pinned seed with fixed conditions is deterministic across runs', async () => {
+        // Sanity check that the batch (non per-combo) path is deterministic.
+        const a = await runWorkerSimulation(
+            '200492',
+            'Nimble Navigator',
+            nakayama2500,
+            50,
+            55555,
+        )
+        const b = await runWorkerSimulation(
+            '200492',
+            'Nimble Navigator',
+            nakayama2500,
+            50,
+            55555,
+        )
+        expect(a).toEqual(b)
+    }, 30000)
+
+    it('pinned seed with random conditions produces identical raw results across runs', async () => {
+        // Regression for #56: shuffleInPlace previously used Math.random
+        // unconditionally, randomizing the combo->track mapping each run
+        // even when simOptions.seed was pinned.
+        const suzuka2000 = processCourseData(courseData['10905'])
+
+        // Build the task once: createWeightedSeasonArray etc. shuffle
+        // internally with Math.random, so calling them per run would feed
+        // each worker a different pool and obscure the determinism check.
+        const task: SimulationTask = {
+            skillId: '200492',
+            skillName: 'Nimble Navigator',
+            courses: [nakayama2500, suzuka2000],
+            racedef: {
+                groundCondition: 2,
+                weather: 1,
+                season: 1,
+                time: 0,
+                grade: 100,
+                skillId: '',
+                numUmas: 18,
+            },
+            baseUma: {
+                speed: 1200,
+                stamina: 600,
+                power: 1000,
+                guts: 450,
+                wisdom: 550,
+                mood: 2,
+                strategy: 'Nige',
+                distanceAptitude: 'A',
+                surfaceAptitude: 'A',
+                strategyAptitude: 'A',
+                skills: [],
+            },
+            // Matches deterministic mode in simulation-runner.ts: all
+            // randomness-injecting flags off so the only entropy left is
+            // task.simOptions.seed.
+            simOptions: {
+                seed: 77777,
+                useEnhancedSpurt: false,
+                accuracyMode: false,
+                pacemakerCount: 1,
+                allowRushedUma1: false,
+                allowRushedUma2: false,
+                allowDownhillUma1: false,
+                allowDownhillUma2: false,
+                allowSectionModifierUma1: false,
+                allowSectionModifierUma2: false,
+                skillCheckChanceUma1: false,
+                skillCheckChanceUma2: false,
+            },
+            numSimulations: 100,
+            useRandomMood: true,
+            useRandomSeason: true,
+            useRandomWeather: true,
+            useRandomCondition: true,
+            weightedSeasons: createWeightedSeasonArray(),
+            weightedWeathers: createWeightedWeatherArray(),
+            weightedConditions: createWeightedConditionArray(),
+            returnRawResults: true,
+        }
+
+        const runOnce = (): Promise<number[]> =>
+            new Promise((resolve, reject) => {
+                const worker = new Worker(workerPath, {
+                    workerData: task,
+                })
+                worker.on(
+                    'message',
+                    (message: {
+                        success: boolean
+                        result?: { rawResults: number[] }
+                        error?: string
+                    }) => {
+                        if (message.success && message.result?.rawResults) {
+                            resolve(message.result.rawResults)
+                        } else {
+                            reject(new Error(message.error || 'Unknown error'))
+                        }
+                        worker.terminate()
+                    },
+                )
+                worker.on('error', (error) => {
+                    reject(error)
+                    worker.terminate()
+                })
+            })
+
+        const a = await runOnce()
+        const b = await runOnce()
+        expect(a).toEqual(b)
+    }, 30000)
 })

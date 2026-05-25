@@ -136,10 +136,15 @@ export function runSkillSimulation(task: SimulationTask) {
             totalCombos,
             conditionPool,
         )
-        shuffleInPlace(globalMoods)
-        shuffleInPlace(globalSeasons)
-        shuffleInPlace(globalWeathers)
-        shuffleInPlace(globalConditions)
+        // Skip the cosmetic shuffle when running under a pinned seed -- it
+        // uses Math.random() directly and would otherwise randomize the
+        // combo->track mapping run to run, defeating determinism.
+        if (task.simOptions.seed == null) {
+            shuffleInPlace(globalMoods)
+            shuffleInPlace(globalSeasons)
+            shuffleInPlace(globalWeathers)
+            shuffleInPlace(globalConditions)
+        }
 
         // Step 5: Compute probability maps for weighting
         const moodProbs = computeProbs(moodPool)
