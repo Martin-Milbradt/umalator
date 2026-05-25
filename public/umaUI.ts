@@ -11,6 +11,7 @@ import {
     isValidSkillName,
 } from './skillHelpers'
 import { attachSkillAutocomplete } from './skillAutocomplete'
+import { describeSkill } from './skillDescription'
 import { getCalculatedResultsCache, getCurrentConfig } from './state'
 import { showToast } from './toast'
 import type { Uma } from './types'
@@ -245,6 +246,8 @@ export function renderUma(): void {
         const textSpan = document.createElement('span')
         textSpan.textContent = skill
         textSpan.className = 'cursor-text'
+        const desc = describeSkill(skill)
+        if (desc) textSpan.title = desc
         textSpan.addEventListener('click', (e) => {
             e.stopPropagation()
             // Replace pill with edit input

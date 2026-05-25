@@ -22,6 +22,7 @@ import {
     updateSkillVariantsDefault,
 } from './skillHelpers'
 import { attachSkillAutocomplete } from './skillAutocomplete'
+import { describeSkill } from './skillDescription'
 import { canSkillTriggerByName } from './skillTrigger'
 import { getCurrentConfig, getResultsMap, getSelectedSkills } from './state'
 import { showToast } from './toast'
@@ -372,7 +373,11 @@ export function renderSkills(): void {
         const skillNameSpan = document.createElement('span')
         skillNameSpan.className = 'skill-name-span flex-1 cursor-pointer hover:text-teal-400'
         skillNameSpan.textContent = skillName
-        skillNameSpan.title = 'Click to edit skill name'
+        // Tooltip shows the skill's effect/condition summary; falls back to
+        // the edit hint when no description is available (unknown name,
+        // skill data not loaded yet).
+        skillNameSpan.title =
+            describeSkill(skillName) ?? 'Click to edit skill name'
         skillNameSpan.dataset.skill = skillName
         skillNameSpan.addEventListener('click', (e) => {
             e.stopPropagation()
