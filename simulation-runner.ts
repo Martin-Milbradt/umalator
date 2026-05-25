@@ -276,6 +276,16 @@ export class SimulationRunner {
         let useMultipleCourses = false
         const trackNameValue = config.track.trackName
         const distanceValue = config.track.distance
+        // Coerce numeric strings up front so the skill-filter math (which
+        // checks `typeof === 'number'`) doesn't fall through and let
+        // distance-restricted skills leak past the filter (#59).
+        const numericDistance =
+            typeof distanceValue === 'number'
+                ? distanceValue
+                : typeof distanceValue === 'string' &&
+                    Number.isFinite(Number(distanceValue))
+                  ? Number(distanceValue)
+                  : null
 
         const isRandomTrack = isRandomLocation(trackNameValue)
         const distanceCategory = parseDistanceCategory(distanceValue)
@@ -443,16 +453,16 @@ export class SimulationRunner {
             distanceType:
                 distanceCategory !== null
                     ? distanceCategory
-                    : typeof distanceValue === 'number'
-                      ? getDistanceType(distanceValue)
+                    : numericDistance !== null
+                      ? getDistanceType(numericDistance)
                       : null,
             groundCondition: conditions.groundCondition.forFiltering,
             groundType: parseSurface(config.track.surface),
             isBasisDistance:
                 distanceCategory !== null
                     ? null
-                    : typeof distanceValue === 'number'
-                      ? distanceValue % 400 === 0
+                    : numericDistance !== null
+                      ? numericDistance % 400 === 0
                       : null,
             rotation: useMultipleCourses
                 ? null
