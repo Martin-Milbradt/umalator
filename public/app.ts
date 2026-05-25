@@ -68,18 +68,29 @@ const BASE_URL = import.meta.env.BASE_URL ?? '/'
 const GITHUB_ISSUES_URL = 'https://github.com/Martin-Milbradt/umalator/issues/new'
 const DISCORD_INVITE_URL = 'https://discord.gg/DvXMyg8J'
 
-// Load skill names on init
-;(async function loadSkillnamesOnInit() {
-    const response = await fetch(`${BASE_URL}data/skillnames.json`)
-    if (!response.ok) {
-        throw new Error(
-            `Failed to load skillnames: ${response.status} ${response.statusText}`,
-        )
+async function loadJsonResource<T>(
+    filename: string,
+    label: string,
+    setter: (data: T) => void,
+    onSuccess?: () => void,
+): Promise<void> {
+    try {
+        const response = await fetch(`${BASE_URL}data/${filename}`)
+        if (!response.ok) {
+            throw new Error(`${response.status} ${response.statusText}`)
+        }
+        const data = (await response.json()) as T
+        if (!data || typeof data !== 'object') {
+            throw new Error('Invalid data received')
+        }
+        setter(data)
+        onSuccess?.()
+    } catch {
+        showToast({ type: 'error', message: `Failed to load ${label}` })
     }
-    const skillnames = (await response.json()) as SkillNames
-    if (!skillnames || typeof skillnames !== 'object') {
-        throw new Error('Invalid skillnames data received')
-    }
+}
+
+loadJsonResource<SkillNames>('skillnames.json', 'skill names', (skillnames) => {
     setSkillnames(skillnames)
     setSkillNameToId(
         Object.fromEntries(
@@ -88,81 +99,18 @@ const DISCORD_INVITE_URL = 'https://discord.gg/DvXMyg8J'
     )
     buildVariantCache()
     buildSkillNameLookup()
-})().catch(() => {
-    showToast({ type: 'error', message: 'Failed to load skill names' })
 })
 
-// Load skill metadata on init
-;(async function loadSkillmetaOnInit() {
-    const response = await fetch(`${BASE_URL}data/skill_meta.json`)
-    if (!response.ok) {
-        throw new Error(
-            `Failed to load skillmeta: ${response.status} ${response.statusText}`,
-        )
-    }
-    const skillmeta = (await response.json()) as SkillMeta
-    if (!skillmeta || typeof skillmeta !== 'object') {
-        throw new Error('Invalid skillmeta data received')
-    }
-    setSkillmeta(skillmeta)
-})().catch(() => {
-    showToast({ type: 'error', message: 'Failed to load skill metadata' })
+loadJsonResource<SkillMeta>('skill_meta.json', 'skill metadata', setSkillmeta)
+loadJsonResource<SkillData>('skill_data.json', 'skill data', setSkillData)
+loadJsonResource<CourseData>('course_data.json', 'course data', setCourseData, () => {
+    if (getCurrentConfig()) renderTrack()
 })
-
-// Load skill data on init
-;(async function loadSkillDataOnInit() {
-    const response = await fetch(`${BASE_URL}data/skill_data.json`)
-    if (!response.ok) {
-        throw new Error(
-            `Failed to load skilldata: ${response.status} ${response.statusText}`,
-        )
-    }
-    const skillData = (await response.json()) as SkillData
-    if (!skillData || typeof skillData !== 'object') {
-        throw new Error('Invalid skilldata received')
-    }
-    setSkillData(skillData)
-})().catch(() => {
-    showToast({ type: 'error', message: 'Failed to load skill data' })
-})
-
-// Load course data on init
-;(async function loadCourseDataOnInit() {
-    const response = await fetch(`${BASE_URL}data/course_data.json`)
-    if (!response.ok) {
-        throw new Error(
-            `Failed to load course data: ${response.status} ${response.statusText}`,
-        )
-    }
-    const courseData = (await response.json()) as CourseData
-    if (!courseData || typeof courseData !== 'object') {
-        throw new Error('Invalid course data received')
-    }
-    setCourseData(courseData)
-    const currentConfig = getCurrentConfig()
-    if (currentConfig) {
-        renderTrack()
-    }
-})().catch(() => {
-    showToast({ type: 'error', message: 'Failed to load course data' })
-})
-
-// Load track names on init
-;(async function loadTrackNamesOnInit() {
-    const response = await fetch(`${BASE_URL}data/tracknames.json`)
-    if (!response.ok) {
-        throw new Error(
-            `Failed to load track names: ${response.status} ${response.statusText}`,
-        )
-    }
-    const trackNames = (await response.json()) as Record<string, string[]>
-    if (!trackNames || typeof trackNames !== 'object') {
-        throw new Error('Invalid track names received')
-    }
-    setTrackNames(trackNames)
-})().catch(() => {
-    showToast({ type: 'error', message: 'Failed to load track names' })
-})
+loadJsonResource<Record<string, string[]>>(
+    'tracknames.json',
+    'track names',
+    setTrackNames,
+)
 
 function resetUmaSkills(): void {
     const currentConfig = getCurrentConfig()
