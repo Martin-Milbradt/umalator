@@ -1,5 +1,3 @@
-import type { StaticField } from './types'
-
 // localStorage key for persisting last used config
 export const LAST_USED_CONFIG_KEY = 'lastUsedConfig'
 
@@ -69,25 +67,6 @@ export const tracknames: Record<string, [string, string]> = {
     10009: ['', 'Hanshin'],
     10010: ['', 'Kokura'],
     10101: ['', 'Ooi'],
-}
-
-// Max values for fields that support inequality expansion
-export const FIELD_MAX_VALUES: Partial<Record<StaticField, number>> = {
-    distance_type: 4, // Sprint=1, Mile=2, Medium=3, Long=4
-    ground_condition: 4, // Good=1, Yielding=2, Soft=3, Heavy=4
-    ground_type: 2, // Turf=1, Dirt=2
-    is_basis_distance: 1, // 0=non-standard, 1=standard (divisible by 400)
-    rotation: 4, // Clockwise=1, Counterclockwise=2, UnusedOrientation=3, NoTurns=4
-    running_style: 5, // Runaway=1, Front Runner=2, Pace Chaser=3, Late Surger=4, End Closer=5
-    season: 5, // Spring=1, Summer=2, Autumn=3, Winter=4, Sakura=5
-    weather: 4, // Sunny=1, Cloudy=2, Rainy=3, Snowy=4
-}
-
-// Per-field minimum for expansion. Only is_basis_distance is zero-indexed; the
-// rest start at 1. `is_basis_distance<1` and `<=0` would otherwise expand to []
-// and silently drop the skill from the pool.
-export const FIELD_MIN_VALUES: Partial<Record<StaticField, number>> = {
-    is_basis_distance: 0,
 }
 
 export const DISTANCE_CATEGORIES = ['<Sprint>', '<Mile>', '<Medium>', '<Long>']

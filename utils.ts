@@ -773,7 +773,7 @@ export interface CurrentSettings {
 }
 
 // Static field names we care about for filtering
-const STATIC_FIELDS = [
+export const STATIC_FIELDS = [
     'distance_type',
     'ground_condition',
     'ground_type',
@@ -785,10 +785,10 @@ const STATIC_FIELDS = [
     'weather',
 ] as const
 
-type StaticField = (typeof STATIC_FIELDS)[number]
+export type StaticField = (typeof STATIC_FIELDS)[number]
 
 // Max values for fields that support inequality expansion
-const FIELD_MAX_VALUES: Partial<Record<StaticField, number>> = {
+export const FIELD_MAX_VALUES: Partial<Record<StaticField, number>> = {
     distance_type: 4, // Sprint=1, Mile=2, Medium=3, Long=4
     ground_condition: 4, // Good=1, Yielding=2, Soft=3, Heavy=4
     ground_type: 2, // Turf=1, Dirt=2
@@ -803,7 +803,7 @@ const FIELD_MAX_VALUES: Partial<Record<StaticField, number>> = {
 // starts at 1. Without this per-field minimum, `is_basis_distance<1` and
 // `is_basis_distance<=0` both expanded to [] and silently dropped the skill
 // from the pool.
-const FIELD_MIN_VALUES: Partial<Record<StaticField, number>> = {
+export const FIELD_MIN_VALUES: Partial<Record<StaticField, number>> = {
     is_basis_distance: 0,
 }
 
@@ -811,7 +811,7 @@ const FIELD_MIN_VALUES: Partial<Record<StaticField, number>> = {
  * Expand a comparison to an array of values based on operator.
  * For track_id, returns single value array since expansion is not meaningful.
  */
-function expandComparisonToValues(
+export function expandComparisonToValues(
     field: StaticField,
     operator: string,
     value: number,
@@ -867,7 +867,7 @@ function expandComparisonToValues(
  * Supports ==, >=, <=, >, < operators.
  * Returns null if not a static field or not a supported comparison.
  */
-function parseConditionTerm(
+export function parseConditionTerm(
     term: string,
 ): { field: StaticField; values: number[] } | null {
     // Match field, operator, and value
@@ -888,7 +888,7 @@ function parseConditionTerm(
  * Parse a single AND-branch (conditions separated by &) and extract static restrictions.
  * Returns restrictions that must ALL be satisfied for this branch.
  */
-function parseAndBranch(branch: string): SkillRestrictions {
+export function parseAndBranch(branch: string): SkillRestrictions {
     const restrictions: SkillRestrictions = {}
     const terms = branch.split('&')
 
@@ -934,7 +934,7 @@ function parseAndBranch(branch: string): SkillRestrictions {
  * Merge two restriction sets (union for OR alternatives).
  * If any branch allows a value, the merged result allows it.
  */
-function mergeRestrictions(
+export function mergeRestrictions(
     a: SkillRestrictions,
     b: SkillRestrictions,
 ): SkillRestrictions {
@@ -975,7 +975,7 @@ function mergeRestrictions(
  * Intersect two restriction sets (for combining condition and precondition).
  * Both must be satisfiable for the skill to trigger.
  */
-function intersectRestrictions(
+export function intersectRestrictions(
     a: SkillRestrictions,
     b: SkillRestrictions,
 ): SkillRestrictions {
