@@ -14,3 +14,4 @@ biome.json
 configs/
 !configs/config.example.json
 race-check-results.md
+tmp/

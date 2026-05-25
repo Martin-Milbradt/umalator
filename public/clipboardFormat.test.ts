@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+    isBareUmalatorConfig,
     isUmalatorEnvelope,
     UMALATOR_FORMAT_ID,
+    unwrapBareUmalatorConfig,
     unwrapUmalatorEnvelope,
     wrapConfigForClipboard,
 } from './clipboardFormat'
@@ -58,6 +60,51 @@ describe('clipboard envelope', () => {
     it('rejects non-envelope payloads in unwrap', () => {
         expect(() => unwrapUmalatorEnvelope({ skills: {} })).toThrow(
             /envelope/i,
+        )
+    })
+})
+
+describe('bare umalator config', () => {
+    it('recognises a bare config by its skills object', () => {
+        expect(isBareUmalatorConfig({ skills: {} })).toBe(true)
+        expect(isBareUmalatorConfig(sampleConfig)).toBe(true)
+    })
+
+    it('does not match an envelope (avoids double-handling)', () => {
+        const envelope = {
+            format: UMALATOR_FORMAT_ID,
+            name: 'x.json',
+            config: sampleConfig,
+        }
+        expect(isBareUmalatorConfig(envelope)).toBe(false)
+    })
+
+    it('does not match moomulator data (skills is an array)', () => {
+        expect(
+            isBareUmalatorConfig({
+                outfitId: '105001',
+                skills: ['100501', '200172'],
+            }),
+        ).toBe(false)
+    })
+
+    it.each([
+        ['null', null],
+        ['array', []],
+        ['string', 'nope'],
+        ['object without skills', { uma: {} }],
+        ['object with skills set to null', { skills: null }],
+    ])('rejects %s', (_label, data) => {
+        expect(isBareUmalatorConfig(data)).toBe(false)
+    })
+
+    it('unwrap returns the validated config', () => {
+        expect(unwrapBareUmalatorConfig(sampleConfig)).toEqual(sampleConfig)
+    })
+
+    it('unwrap throws for non-bare-config input', () => {
+        expect(() => unwrapBareUmalatorConfig({ uma: {} })).toThrow(
+            /bare umalator config/,
         )
     })
 })

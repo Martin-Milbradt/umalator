@@ -16,7 +16,9 @@ import {
     seedDefaultConfig,
 } from './configStore'
 import {
+    isBareUmalatorConfig,
     isUmalatorEnvelope,
+    unwrapBareUmalatorConfig,
     unwrapUmalatorEnvelope,
     wrapConfigForClipboard,
 } from './clipboardFormat'
@@ -566,6 +568,31 @@ async function importFromClipboard(): Promise<void> {
         await saveImportedConfig(
             choice.filename,
             envelope.config,
+            `Imported ${choice.filename}`,
+        )
+        return
+    }
+
+    // Bare umalator config (no envelope): same save-as-is behaviour, but
+    // we have no name to pre-fill.
+    if (isBareUmalatorConfig(parsed)) {
+        let config: Config
+        try {
+            config = unwrapBareUmalatorConfig(parsed)
+        } catch (error) {
+            showToast({
+                type: 'error',
+                message: `Import failed: ${(error as Error).message}`,
+            })
+            return
+        }
+        const choice = await showImportClipboardDialog(existing, {
+            defaultTemplate: null,
+        })
+        if (!choice) return
+        await saveImportedConfig(
+            choice.filename,
+            config,
             `Imported ${choice.filename}`,
         )
         return

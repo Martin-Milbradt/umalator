@@ -30,6 +30,31 @@ export function isUmalatorEnvelope(data: unknown): boolean {
     return (data as Record<string, unknown>).format === UMALATOR_FORMAT_ID
 }
 
+/**
+ * A bare umalator config — same shape `validateConfigData` accepts, no
+ * envelope. Distinguishable from moomulator data (which carries `skills` as
+ * an array of IDs) by `skills` being a plain object.
+ */
+export function isBareUmalatorConfig(data: unknown): boolean {
+    if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+        return false
+    }
+    if (isUmalatorEnvelope(data)) return false
+    const skills = (data as Record<string, unknown>).skills
+    return (
+        typeof skills === 'object' &&
+        skills !== null &&
+        !Array.isArray(skills)
+    )
+}
+
+export function unwrapBareUmalatorConfig(data: unknown): Config {
+    if (!isBareUmalatorConfig(data)) {
+        throw new Error('Not a bare umalator config')
+    }
+    return validateConfigData(data)
+}
+
 export function unwrapUmalatorEnvelope(data: unknown): {
     name: string
     config: Config
