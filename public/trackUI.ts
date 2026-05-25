@@ -1,28 +1,13 @@
 import { autoSave } from './configManager'
 import { DISTANCE_CATEGORIES, RANDOM_LOCATION, tracknames } from './constants'
 import { callRenderSkills } from './renderCallbacks'
+import { calculateDropdownWidth } from './skillHelpers'
 import {
     getCalculatedResultsCache,
     getCourseData,
     getCurrentConfig,
 } from './state'
 import type { Track } from './types'
-
-function calculateDropdownWidth(options: string[]): number {
-    const canvas = document.createElement('canvas')
-    const context = canvas.getContext('2d')
-    if (!context) return 120
-    context.font =
-        "13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
-    let maxWidth = 0
-    options.forEach((opt) => {
-        const width = context.measureText(opt).width
-        if (width > maxWidth) {
-            maxWidth = width
-        }
-    })
-    return Math.max(maxWidth + 30, 60)
-}
 
 export function isRandomLocation(
     trackName: string | undefined | null,

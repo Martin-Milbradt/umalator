@@ -3,6 +3,7 @@ import { callRenderSkills, registerRenderUma } from './renderCallbacks'
 import { refreshGroupResults, refreshResultsCosts } from './resultsUI'
 import {
     adjustSkillPoints,
+    calculateDropdownWidth,
     compareSkills,
     getCanonicalSkillName,
     getGroupVariantOnUma,
@@ -15,22 +16,6 @@ import { describeSkill } from './skillDescription'
 import { getCalculatedResultsCache, getCurrentConfig } from './state'
 import { showToast } from './toast'
 import type { Uma } from './types'
-
-function calculateDropdownWidth(options: string[]): number {
-    const canvas = document.createElement('canvas')
-    const context = canvas.getContext('2d')
-    if (!context) return 120
-    context.font =
-        "13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
-    let maxWidth = 0
-    options.forEach((opt) => {
-        const width = context.measureText(opt).width
-        if (width > maxWidth) {
-            maxWidth = width
-        }
-    })
-    return Math.max(maxWidth + 30, 60)
-}
 
 export function renderUma(): void {
     const currentConfig = getCurrentConfig()

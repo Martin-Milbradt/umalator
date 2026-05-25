@@ -428,3 +428,24 @@ export function deleteSkill(skillName: string): void {
         delete currentConfig.skills[skillToDelete]
     })
 }
+
+/**
+ * Pixel width for a `<select>` whose options will be `options`. Sized to
+ * fit the widest label at the UI's standard 13px system font, with a
+ * minimum and a small chrome allowance for the arrow/padding.
+ */
+export function calculateDropdownWidth(options: string[]): number {
+    const canvas = document.createElement('canvas')
+    const context = canvas.getContext('2d')
+    if (!context) return 120
+    context.font =
+        "13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+    let maxWidth = 0
+    options.forEach((opt) => {
+        const width = context.measureText(opt).width
+        if (width > maxWidth) {
+            maxWidth = width
+        }
+    })
+    return Math.max(maxWidth + 30, 60)
+}
