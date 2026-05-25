@@ -27,4 +27,76 @@ describe('validateConfigData', () => {
     ])('rejects %s', (_label, data) => {
         expect(() => validateConfigData(data)).toThrow(/skills/)
     })
+
+    it.each([
+        ['skill entry is a string', { skills: { foo: 'bar' } }, /skills\["foo"\]/],
+        ['skill entry is an array', { skills: { foo: [] } }, /skills\["foo"\]/],
+        [
+            'skill discount is a string',
+            { skills: { foo: { discount: '10' } } },
+            /discount/,
+        ],
+        [
+            'skill default is a boolean',
+            { skills: { foo: { default: true } } },
+            /default/,
+        ],
+        ['uma is a string', { skills: {}, uma: 'no' }, /uma/],
+        [
+            'uma stat is a string',
+            { skills: {}, uma: { speed: '1200' } },
+            /uma\.speed/,
+        ],
+        [
+            'uma.skills is not an array',
+            { skills: {}, uma: { skills: 'oops' } },
+            /uma\.skills/,
+        ],
+        [
+            'uma.skills contains a non-string',
+            { skills: {}, uma: { skills: ['ok', 42] } },
+            /uma\.skills/,
+        ],
+        ['track is a string', { skills: {}, track: 'no' }, /track/],
+        [
+            'track.distance is a boolean',
+            { skills: {}, track: { distance: true } },
+            /track\.distance/,
+        ],
+    ])('rejects when %s', (_label, data, pattern) => {
+        expect(() => validateConfigData(data)).toThrow(pattern)
+    })
+
+    it.each([
+        [
+            'empty uma',
+            { skills: {}, uma: {} },
+        ],
+        [
+            'null numeric uma fields',
+            {
+                skills: {},
+                uma: {
+                    speed: null,
+                    stamina: null,
+                    mood: null,
+                    skillPoints: null,
+                },
+            },
+        ],
+        [
+            'uma.skills is an array of strings',
+            { skills: {}, uma: { skills: ['100021', '200172'] } },
+        ],
+        [
+            'track.distance as a numeric string',
+            { skills: {}, track: { distance: '2400' } },
+        ],
+        [
+            'track.distance as null',
+            { skills: {}, track: { distance: null } },
+        ],
+    ])('accepts %s', (_label, data) => {
+        expect(validateConfigData(data)).toBe(data)
+    })
 })

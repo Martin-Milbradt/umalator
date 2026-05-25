@@ -143,20 +143,89 @@ export async function exportAllConfigs(): Promise<number> {
     return all.length
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isOptionalNumberOrNull(value: unknown): boolean {
+    return value === undefined || value === null || typeof value === 'number'
+}
+
+const UMA_NUMERIC_FIELDS = [
+    'guts',
+    'mood',
+    'power',
+    'skillPoints',
+    'speed',
+    'stamina',
+    'wisdom',
+] as const
+
 export function validateConfigData(data: unknown): Config {
-    if (
-        typeof data !== 'object' ||
-        data === null ||
-        Array.isArray(data) ||
-        !('skills' in data)
-    ) {
+    if (!isPlainObject(data) || !('skills' in data)) {
         throw new Error('Invalid config: must have a "skills" object')
     }
-    const skills = (data as Config).skills
-    if (typeof skills !== 'object' || skills === null || Array.isArray(skills)) {
+    const skills = data.skills
+    if (!isPlainObject(skills)) {
         throw new Error('Invalid config: must have a "skills" object')
     }
-    return data as Config
+    for (const [name, entry] of Object.entries(skills)) {
+        if (!isPlainObject(entry)) {
+            throw new Error(
+                `Invalid config: skills[${JSON.stringify(name)}] must be an object`,
+            )
+        }
+        if (!isOptionalNumberOrNull(entry.discount)) {
+            throw new Error(
+                `Invalid config: skills[${JSON.stringify(name)}].discount must be a number or null`,
+            )
+        }
+        if (!isOptionalNumberOrNull(entry.default)) {
+            throw new Error(
+                `Invalid config: skills[${JSON.stringify(name)}].default must be a number or null`,
+            )
+        }
+    }
+    if ('uma' in data && data.uma !== undefined) {
+        if (!isPlainObject(data.uma)) {
+            throw new Error('Invalid config: "uma" must be an object')
+        }
+        for (const field of UMA_NUMERIC_FIELDS) {
+            if (!isOptionalNumberOrNull(data.uma[field])) {
+                throw new Error(
+                    `Invalid config: uma.${field} must be a number or null`,
+                )
+            }
+        }
+        const umaSkills = data.uma.skills
+        if (umaSkills !== undefined) {
+            if (
+                !Array.isArray(umaSkills) ||
+                umaSkills.some((s) => typeof s !== 'string')
+            ) {
+                throw new Error(
+                    'Invalid config: uma.skills must be an array of strings',
+                )
+            }
+        }
+    }
+    if ('track' in data && data.track !== undefined) {
+        if (!isPlainObject(data.track)) {
+            throw new Error('Invalid config: "track" must be an object')
+        }
+        const distance = data.track.distance
+        if (
+            distance !== undefined &&
+            distance !== null &&
+            typeof distance !== 'number' &&
+            typeof distance !== 'string'
+        ) {
+            throw new Error(
+                'Invalid config: track.distance must be a number, string, or null',
+            )
+        }
+    }
+    return data as unknown as Config
 }
 
 export function importConfig(file: File): Promise<{ name: string; config: Config }> {
