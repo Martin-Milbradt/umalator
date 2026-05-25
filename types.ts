@@ -90,10 +90,11 @@ export interface WorkerMessage {
 }
 
 /**
- * Skill metadata from skill_meta.json.
+ * Skill metadata from skill_meta.json. baseCost is optional because hint
+ * variants and some unique skills lack it; callers tolerate undefined.
  */
 export interface SkillMeta {
-    baseCost: number
+    baseCost?: number
     groupId?: string
     order?: number
     iconId?: string

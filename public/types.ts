@@ -1,3 +1,17 @@
+import type { RawCourseData, SkillMeta as RootSkillMeta } from '../types'
+import type { SkillDataEntry } from '../utils'
+
+// Re-export shared types from the canonical homes so UI code can keep
+// importing from './types' without changing call sites.
+export type {
+    CurrentSettings,
+    SkillDataAlternative,
+    SkillDataEntry,
+    SkillRestrictions,
+    StaticField,
+} from '../utils'
+export { STATIC_FIELDS } from '../utils'
+
 export interface Skill {
     discount: number | null
     default?: number | null
@@ -65,80 +79,11 @@ export interface SkillResultWithStatus extends SkillResult {
 }
 
 export type SkillNames = Record<string, string[]>
-export type SkillMeta = Record<
-    string,
-    {
-        baseCost?: number
-        groupId?: string
-        iconId?: string
-        order?: number
-        score?: number
-    }
->
-export type CourseData = Record<
-    string,
-    {
-        surface?: number
-        distance?: number
-        raceTrackId?: number | string
-        turn?: number
-    }
->
-
-// Skill data types for trigger checking
-export interface SkillDataAlternative {
-    baseDuration: number
-    condition: string
-    effects: Array<{ modifier: number; target: number; type: number }>
-    precondition: string
-}
-
-export interface SkillDataEntry {
-    alternatives: SkillDataAlternative[]
-    rarity: number
-    wisdomCheck: number
-}
-
+// SkillMeta is the *record* (id -> entry) consumed across the UI; the
+// inner shape comes from root types.ts so StaticData and the loaded
+// JSON line up without an `as unknown as` cast.
+export type SkillMeta = Record<string, RootSkillMeta>
+export type CourseData = Record<string, RawCourseData>
 export type SkillData = Record<string, SkillDataEntry>
-
-// Skill restrictions for filtering
-export interface SkillRestrictions {
-    distanceTypes?: number[]
-    groundConditions?: number[]
-    groundTypes?: number[]
-    isBasisDistance?: number[]
-    rotations?: number[]
-    runningStyles?: number[]
-    seasons?: number[]
-    trackIds?: number[]
-    weathers?: number[]
-}
-
-export interface CurrentSettings {
-    distanceType: number | null
-    groundCondition: number | null
-    groundType: number | null
-    isBasisDistance: boolean | null
-    rotation: number | null
-    runningStyle: number
-    season: number | null
-    trackId: number | null
-    weather: number | null
-}
-
-// Static fields we care about for filtering
-export const STATIC_FIELDS = [
-    'distance_type',
-    'ground_condition',
-    'ground_type',
-    'is_basis_distance',
-    'rotation',
-    'running_style',
-    'season',
-    'track_id',
-    'weather',
-] as const
-
-export type StaticField = (typeof STATIC_FIELDS)[number]
 
 export type VariantDefaultOperation = 'remove' | 'set'

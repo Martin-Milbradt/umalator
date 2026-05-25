@@ -18,9 +18,26 @@ import {
     setLastCalculationTime,
 } from './state'
 import { showToast } from './toast'
-import type { SkillResult } from './types'
+import type { Config, SkillResult } from './types'
 
-function getStaticData() {
+/**
+ * Narrows a UI Config (which has optional track/uma) to the shape the
+ * runner needs. The runner does its own runtime validation, so this
+ * guard exists purely so the call site doesn't need an `as unknown as`
+ * cast -- the runner will still produce a clean error event if a
+ * required field is missing once it actually runs.
+ */
+function assertRunnable(config: Config): SimulationRunnerConfig {
+    if (!config.track) {
+        throw new Error('Config is missing track settings')
+    }
+    if (!config.uma) {
+        throw new Error('Config is missing uma settings')
+    }
+    return config as SimulationRunnerConfig
+}
+
+function getStaticData(): StaticData {
     const skillMeta = getSkillmeta()
     const skillNames = getSkillnames()
     const skillData = getSkillData()
@@ -31,14 +48,13 @@ function getStaticData() {
         throw new Error('Static data not loaded yet')
     }
 
-    // Cast needed: frontend SkillMeta has optional baseCost, root types.ts requires it
     return {
         skillMeta,
         skillNames,
         skillData,
         courseData,
         trackNames,
-    } as unknown as StaticData
+    }
 }
 
 // Vite sets BASE_URL from the `base` config option (defaults to '/')
@@ -73,7 +89,7 @@ export async function runCalculations(): Promise<void> {
     await ensureSaved()
 
     try {
-        const runner = createRunner(currentConfig as unknown as SimulationRunnerConfig)
+        const runner = createRunner(assertRunnable(currentConfig))
 
         await runner.run((progress) => {
             if (progress.type === 'phase') {
@@ -155,7 +171,7 @@ export async function runSelectiveCalculations(
     await ensureSaved()
 
     try {
-        const runner = createRunner(currentConfig as unknown as SimulationRunnerConfig)
+        const runner = createRunner(assertRunnable(currentConfig))
 
         await runner.run((progress) => {
             if (progress.type === 'result' && progress.result) {

@@ -294,7 +294,7 @@ export function findAllSkillIdsByName(
 export function findSkillIdByNameWithPreference(
     skillName: string,
     skillNames: Record<string, string[]>,
-    skillMeta: Record<string, { baseCost: number }>,
+    skillMeta: Record<string, { baseCost?: number }>,
     preferCostGreaterThanZero: boolean,
 ): string | null {
     const matches = findAllSkillIdsByName(skillName, skillNames)
@@ -320,7 +320,7 @@ export function findSkillIdByNameWithPreference(
 export function findSkillVariantsByName(
     baseSkillName: string,
     skillNames: Record<string, string[]>,
-    skillMeta: Record<string, { baseCost: number }>,
+    skillMeta: Record<string, { baseCost?: number }>,
 ): Array<{ skillId: string; skillName: string }> {
     const variants: Array<{ skillId: string; skillName: string }> = []
     const trimmedBaseName = baseSkillName.trim()
@@ -459,7 +459,7 @@ export interface SkillCostContext {
     skillMeta: Record<
         string,
         {
-            baseCost: number
+            baseCost?: number
             groupId?: string
             order?: number
             score?: number
@@ -1221,13 +1221,15 @@ export function canSkillTrigger(
 /**
  * Skill data entry from skill_data.json.
  */
+export interface SkillDataAlternative {
+    baseDuration: number
+    condition: string
+    effects: Array<{ modifier: number; target: number; type: number }>
+    precondition: string
+}
+
 export interface SkillDataEntry {
-    alternatives: Array<{
-        baseDuration: number
-        condition: string
-        effects: Array<{ modifier: number; target: number; type: number }>
-        precondition: string
-    }>
+    alternatives: SkillDataAlternative[]
     rarity: number
     wisdomCheck: number
 }
