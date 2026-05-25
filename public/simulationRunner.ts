@@ -573,7 +573,6 @@ export class BrowserSimulationRunner {
                 }
 
                 const worker = new Worker(workerUrl)
-                worker.postMessage(taskData)
 
                 const WORKER_TIMEOUT_MS = 5 * 60 * 1000
                 const timeoutId = setTimeout(() => {
@@ -601,6 +600,8 @@ export class BrowserSimulationRunner {
                     reject(error)
                     worker.terminate()
                 }
+
+                worker.postMessage(taskData)
             })
         }
 
