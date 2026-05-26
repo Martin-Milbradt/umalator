@@ -85,20 +85,11 @@ function buildTour() {
                 },
             },
             {
-                element: '#duplicate-config-button',
-                popover: {
-                    title: 'Duplicate the current config',
-                    description:
-                        'Clones the active config under a new name so you can branch off without losing the original.',
-                    side: 'bottom',
-                },
-            },
-            {
                 element: '#config-menu',
                 popover: {
-                    title: 'Import / Export / Delete',
+                    title: 'Duplicate / Import / Export / Delete',
                     description:
-                        'Configs are JSON. Export to share or back up; import to restore. Delete removes the current config.',
+                        'Configs are JSON. Duplicate clones the current config under a new name. Export to share or back up; import to restore. Delete removes the current config.',
                     side: 'bottom',
                 },
             },

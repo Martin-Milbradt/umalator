@@ -159,39 +159,6 @@ if (configSelect) {
     })
 }
 
-// Set up duplicate config button
-const duplicateButton = document.getElementById('duplicate-config-button')
-if (duplicateButton) {
-    duplicateButton.addEventListener('click', async () => {
-        const currentConfigFile = (
-            document.getElementById('config-select') as HTMLSelectElement
-        )?.value
-        if (!currentConfigFile) {
-            alert('No config file selected')
-            return
-        }
-
-        const newName = prompt('Enter name for duplicated config file:')
-        if (!newName || !newName.trim()) {
-            return
-        }
-
-        let trimmedName = newName.trim()
-        if (!trimmedName.toLowerCase().endsWith('.json')) {
-            trimmedName += '.json'
-        }
-
-        try {
-            await duplicateConfig(currentConfigFile, trimmedName)
-            await loadConfigFiles()
-            await loadConfig(trimmedName)
-        } catch (error) {
-            const err = error as Error
-            alert(`Error: ${err.message}`)
-        }
-    })
-}
-
 // Set up run button
 const runButton = document.getElementById('run-button')
 if (runButton) {
@@ -598,6 +565,30 @@ async function importFromClipboard(): Promise<void> {
 }
 
 async function handleConfigMenuAction(action: string): Promise<void> {
+    if (action === 'duplicate-current') {
+        const currentConfigFile = getCurrentConfigFile()
+        if (!currentConfigFile) {
+            showToast({ type: 'info', message: 'No config file selected' })
+            return
+        }
+        const newName = prompt('Enter name for duplicated config file:')
+        if (!newName || !newName.trim()) return
+        let trimmedName = newName.trim()
+        if (!trimmedName.toLowerCase().endsWith('.json')) {
+            trimmedName += '.json'
+        }
+        try {
+            await duplicateConfig(currentConfigFile, trimmedName)
+            await loadConfigFiles()
+            await loadConfig(trimmedName)
+        } catch (error) {
+            showToast({
+                type: 'error',
+                message: `Duplicate failed: ${(error as Error).message}`,
+            })
+        }
+        return
+    }
     if (action === 'export-current') {
         const currentConfigFile = getCurrentConfigFile()
         const currentConfig = getCurrentConfig()

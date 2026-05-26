@@ -108,19 +108,13 @@
                         id="config-select"
                         class="flex-1 py-1 px-1.5 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] focus:outline-none focus:border-sky-500"
                     ></select>
-                    <button
-                        id="duplicate-config-button"
-                        class="bg-sky-600 text-white border-none rounded h-7 w-7 text-[13px] leading-none cursor-pointer flex items-center justify-center p-0 transition-colors hover:bg-sky-700 active:bg-sky-800"
-                        title="Duplicate config file"
-                    >
-                        +
-                    </button>
                     <select
                         id="config-menu"
                         class="py-1 px-1.5 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] focus:outline-none focus:border-sky-500"
                         title="Import/export configs"
                     >
                         <option value="" disabled selected hidden>Configs</option>
+                        <option value="duplicate-current">Duplicate Current</option>
                         <option value="export-current">Export Current</option>
                         <option value="export-all">Export All</option>
                         <option value="export-clipboard">Export to Clipboard</option>
