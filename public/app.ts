@@ -29,7 +29,6 @@ import {
 } from './devConfigSync'
 import { autoSave, loadConfig, loadConfigFiles } from './configManager'
 import { setupPaneResizer } from './paneResizer'
-import { MOBILE_MEDIA_QUERY } from './responsive'
 import {
     renderResultsTable,
     setupResultsTableSorting,
@@ -44,6 +43,7 @@ import {
     renderSkills,
     setupSkillFilters,
     setupSkillsContainerDelegation,
+    setupDiscountWidthObserver,
 } from './skillsUI'
 import {
     getCalculatedResultsCache,
@@ -236,11 +236,10 @@ setupSkillFilters()
 // Make the skills/results split draggable (width on desktop, height on mobile).
 setupPaneResizer()
 
-// The discount control swaps between a button row (desktop) and a dropdown
-// (mobile), so re-render the skills list whenever the breakpoint is crossed.
-window
-    .matchMedia(MOBILE_MEDIA_QUERY)
-    .addEventListener('change', () => renderSkills())
+// The discount control swaps between a button row (wide pane) and a dropdown
+// (narrow pane), so re-render the skills list whenever the skills pane crosses
+// the width threshold (window resize, pane divider drag, etc.).
+setupDiscountWidthObserver()
 
 // Set up results table sorting and select-all checkbox
 setupResultsTableSorting()

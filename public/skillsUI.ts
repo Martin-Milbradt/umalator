@@ -24,7 +24,10 @@ import {
 import { attachSkillAutocomplete } from './skillAutocomplete'
 import { describeSkill } from './skillDescription'
 import { canSkillTriggerByName } from './skillTrigger'
-import { isMobileViewport } from './responsive'
+import {
+    isMobileViewport,
+    shouldUseDiscountDropdownForWidth,
+} from './responsive'
 import { getCurrentConfig, getResultsMap, getSelectedSkills } from './state'
 import { showToast } from './toast'
 
@@ -158,9 +161,42 @@ export function setDiscountForVariants(
 const DISCOUNT_OPTIONS: (number | null)[] = [null, 0, 10, 20, 30, 35, 40]
 
 /**
- * Compact discount picker for mobile, where the seven-button row is too wide.
- * `null` ("None") removes the skill from the results table; a number sets that
- * discount. Mirrors the non-active branch of the button delegation handler.
+ * Decide whether per-skill discounts render as a dropdown (narrow pane) or the
+ * full button row (wide pane). Measured against the skills container's own
+ * width, not the window, so resizing the pane divider collapses the row even on
+ * desktop. Falls back to the window breakpoint before the pane has a measurable
+ * width (very first render).
+ */
+function shouldUseDiscountDropdown(): boolean {
+    const container = document.getElementById('skills-container')
+    if (!container || container.clientWidth === 0) return isMobileViewport()
+    return shouldUseDiscountDropdownForWidth(container.clientWidth)
+}
+
+/**
+ * Re-render the skills list when the skills pane crosses the discount-dropdown
+ * width threshold (e.g. the user drags the pane divider). Tracks the last mode
+ * so we only re-render on an actual flip rather than on every resize frame.
+ */
+export function setupDiscountWidthObserver(): void {
+    const container = document.getElementById('skills-container')
+    if (!container || typeof ResizeObserver === 'undefined') return
+    let lastDropdown = shouldUseDiscountDropdown()
+    const observer = new ResizeObserver(() => {
+        const dropdown = shouldUseDiscountDropdown()
+        if (dropdown !== lastDropdown) {
+            lastDropdown = dropdown
+            renderSkills()
+        }
+    })
+    observer.observe(container)
+}
+
+/**
+ * Compact discount picker for a narrow skills pane, where the seven-button row
+ * is too wide. `null` ("None") removes the skill from the results table; a
+ * number sets that discount. Mirrors the non-active branch of the button
+ * delegation handler.
  */
 function createDiscountSelect(
     skillName: string,
@@ -303,9 +339,9 @@ export function renderSkills(): void {
         discountButtonGroup.className = 'discount-options flex gap-1 items-center'
         discountButtonGroup.dataset.skill = skillName
 
-        // Mobile gets a dropdown (the button row is too wide for narrow
-        // screens); desktop keeps the one-tap button row.
-        if (isMobileViewport()) {
+        // A narrow skills pane gets a dropdown (the button row is too wide to
+        // fit next to the skill name); a wide pane keeps the one-tap button row.
+        if (shouldUseDiscountDropdown()) {
             discountButtonGroup.appendChild(
                 createDiscountSelect(skillName, currentDiscount),
             )
