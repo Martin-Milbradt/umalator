@@ -4,8 +4,8 @@ $ErrorActionPreference = "Stop"
 # Change to script directory
 Set-Location $PSScriptRoot
 
-# Check if uma-tools exists, clone if it doesn't
-$umaToolsPath = Join-Path $PSScriptRoot ".." "uma-tools"
+# uma-tools is an in-repo submodule (with a nested uma-skill-tools submodule).
+$umaToolsPath = Join-Path $PSScriptRoot "uma-tools"
 if (-not (Test-Path $umaToolsPath)) {
     Write-Host "uma-tools repository not found. Attempting to clone..."
     $parentDir = Split-Path $PSScriptRoot -Parent
@@ -62,7 +62,7 @@ if (-not (Test-Path $umaToolsPath)) {
 # The uma-tools submodule itself records an older uma-skill-tools
 # commit, so we re-checkout 24f0a88 here (and in CI) after init.
 Write-Host "Updating submodules..."
-git submodule update --init uma-tools
+git submodule update --init --recursive uma-tools
 if (Test-Path $umaToolsPath) {
     Push-Location (Join-Path $umaToolsPath "uma-skill-tools")
     git fetch origin 24f0a8862106dd4aaeea55e90e975acc9ca5d019
@@ -81,10 +81,13 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-# Start Express server + Vite dev server in a new window using whichever
-# PowerShell ran this script (so a pwsh launcher spawns pwsh, not the old
-# Windows PowerShell, while still working for contributors without pwsh).
-$startCommand = "Set-Location '$PSScriptRoot'; npm run dev:server"
+# Start the Vite dev server in a new window using whichever PowerShell ran
+# this script (so a pwsh launcher spawns pwsh, not the old Windows PowerShell,
+# while still working for contributors without pwsh). Vite serves the data and
+# syncs configs with the configs/ folder; simulations run in browser Web
+# Workers, so the legacy Express server (server.ts, :3000) is not needed and
+# would only add a second origin with its own, unshared IndexedDB.
+$startCommand = "Set-Location '$PSScriptRoot'; npx vite"
 $shellExe = (Get-Process -Id $PID).Path
 Start-Process $shellExe -ArgumentList "-NoExit", "-Command", $startCommand
 
