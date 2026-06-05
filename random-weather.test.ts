@@ -10,7 +10,6 @@ import type { RawCourseData, SimulationTask } from './types'
  *
  * "It's On!" (200461) is weather-independent, so <Random> weather should produce
  * the same mean as any fixed weather (the weighted average across weathers).
- * Previously, the nsamples bias in runComparison caused a ~13% gap.
  */
 describe('random weather consistency', () => {
     const umaToolsDir = resolve(

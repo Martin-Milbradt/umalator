@@ -119,10 +119,10 @@
                 id="right-pane"
                 class="w-full flex-1 min-w-0 min-h-0 p-2.5 flex flex-col bg-zinc-900 overflow-y-auto"
             >
-                <div class="flex flex-wrap items-center gap-2.5 mb-2.5">
+                <div class="flex flex-wrap items-center gap-1.5 mb-2.5">
                     <select
                         id="config-select"
-                        class="flex-1 py-1 px-1.5 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] focus:outline-none focus:border-sky-500"
+                        class="flex-1 min-w-0 py-1 px-1.5 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] focus:outline-none focus:border-sky-500"
                     ></select>
                     <select
                         id="config-menu"
@@ -158,13 +158,13 @@
                     />
                     <button
                         id="run-button"
-                        class="h-7 px-3 text-white border-none rounded text-[13px] cursor-pointer transition-colors bg-sky-600 hover:bg-sky-700 active:bg-sky-800 disabled:bg-zinc-600 disabled:cursor-not-allowed flex items-center"
+                        class="h-7 px-2 text-white border-none rounded text-[13px] cursor-pointer transition-colors bg-sky-600 hover:bg-sky-700 active:bg-sky-800 disabled:bg-zinc-600 disabled:cursor-not-allowed flex items-center"
                     >
-                        Run Calculations
+                        Run
                     </button>
                     <button
                         id="reset-button"
-                        class="h-7 px-3 text-white border-none rounded text-[13px] cursor-pointer transition-colors bg-red-600 hover:bg-red-700 active:bg-red-800 flex items-center"
+                        class="h-7 px-2 text-white border-none rounded text-[13px] cursor-pointer transition-colors bg-red-600 hover:bg-red-700 active:bg-red-800 flex items-center"
                     >
                         Reset
                     </button>
@@ -188,7 +188,7 @@
                         <span id="totals-efficiency" class="ml-4"></span>
                         <span id="totals-minmax" class="ml-4"></span>
                     </div>
-                    <table id="results-table" class="w-full text-left">
+                    <table id="results-table" class="w-full text-left whitespace-nowrap">
                         <thead class="text-teal-400 border-b border-zinc-700">
                             <tr>
                                 <th class="p-1 w-8"><input type="checkbox" id="select-all-checkbox" title="Select all" /></th>
@@ -197,10 +197,10 @@
                                 <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="cost">Cost</th>
                                 <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="discount">Disc</th>
                                 <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="meanLength">Mean</th>
-                                <th class="p-1 cursor-pointer hover:text-teal-300 text-right hidden md:table-cell" data-sort="medianLength">Median</th>
+                                <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="medianLength">Median</th>
                                 <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="meanLengthPerCost">Mean/Cost</th>
-                                <th class="p-1 text-right hidden md:table-cell">Min-Max</th>
-                                <th class="p-1 text-right hidden md:table-cell">95% CI</th>
+                                <th class="p-1 text-right">Min-Max</th>
+                                <th class="p-1 text-right">95% CI</th>
                             </tr>
                         </thead>
                         <tbody id="results-tbody"></tbody>

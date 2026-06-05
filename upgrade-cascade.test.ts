@@ -129,9 +129,8 @@ describe('refreshGroupResults', () => {
     })
 
     it('adding ◎ invalidates Flash Forward and drops dominated ○', () => {
-        // Regression test for the original Flash Forward bug: adding ◎ must not
-        // leave Flash Forward's cached mean in place, since its simulation
-        // baseline changed.
+        // Adding ◎ must not leave Flash Forward's cached mean in place, since
+        // its simulation baseline changed.
         seedGroup([MEDIUM_RARE])
 
         refreshGroupResults(MEDIUM_RARE)
@@ -149,10 +148,8 @@ describe('refreshGroupResults', () => {
     })
 
     it('overwriting Flash Forward with ○ restores BOTH ◎ and Flash Forward to results', () => {
-        // Regression test for the reported bug: Uma had Flash Forward, then the
-        // user swaps to ○. Flash Forward was hiding both ◎ and ○ from results.
-        // After the swap, only ○ is on Uma — Flash Forward and ◎ should both
-        // reappear in the results map.
+        // Swapping Flash Forward to ○ leaves only ○ on Uma, so Flash Forward
+        // and ◎ should both appear in the results map.
 
         // Initial state: Uma had Flash Forward, ◎ and ○ were hidden.
         seedGroup([FLASH_FORWARD])
@@ -180,7 +177,7 @@ describe('refreshGroupResults', () => {
     it('removing the Uma skill restores all siblings to results', () => {
         seedGroup([FLASH_FORWARD])
         const results = getResultsMap()
-        // Previously hidden because of Flash Forward on Uma.
+        // Hidden because of Flash Forward on Uma.
         results.delete(MEDIUM_RARE)
         results.delete(MEDIUM_NORMAL)
 
@@ -230,9 +227,8 @@ describe('addSkillToUmaFromTable restores the replaced variant (#33)', () => {
     })
 
     it('adding ○ while ◎ is on Uma brings ◎ back to the results table', () => {
-        // Regression test for #33: before the refreshGroupResults unification,
-        // replacing ◎ with ○ from the table left ◎ missing — cached data was
-        // dropped and no returnSkillToResultsTable call rehydrated it.
+        // Replacing ◎ with ○ from the table must rehydrate ◎ from cache rather
+        // than drop it.
         addSkillToUmaFromTable(MEDIUM_NORMAL, 100)
 
         const cfg = getCurrentConfig()

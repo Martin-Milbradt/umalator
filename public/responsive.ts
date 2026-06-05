@@ -7,11 +7,10 @@ export function isMobileViewport(): boolean {
     return window.matchMedia(MOBILE_MEDIA_QUERY).matches
 }
 
-// Below this skills-pane width the seven-button discount row no longer fits
+// Below this skills-pane width the seven-button discount row does not fit
 // comfortably next to the skill name, so the per-skill discount control
-// collapses to a compact dropdown. This is measured against the pane that holds
-// the discounts rather than the full window width, so a narrowed (resized)
-// desktop pane collapses too — not just narrow phones.
+// collapses to a compact dropdown. Measured against the skills pane width (not
+// the window), so a narrow or resized pane collapses too.
 export const DISCOUNT_DROPDOWN_MAX_PANEL_WIDTH = 480
 
 export function shouldUseDiscountDropdownForWidth(panelWidth: number): boolean {

@@ -82,8 +82,8 @@ export async function runCalculations(): Promise<void> {
     button.disabled = true
 
     if (countEl) countEl.textContent = 'Running calculations...'
-    // Keep the existing results visible during the run (#36); stale entries
-    // are pruned on completion below.
+    // Keep the existing results visible during the run; stale entries are
+    // pruned on completion below.
     const seenSkillNames = new Set<string>()
 
     await ensureSaved()

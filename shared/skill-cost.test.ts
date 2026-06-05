@@ -19,9 +19,9 @@ describe('applyDiscount', () => {
         expect(applyDiscount(200, 100)).toBe(0)
     })
 
-    // Regression: 170 * 0.7 = 118.999... in IEEE 754, which used to floor to
-    // 118. The game displays 119 (e.g. Corner Recovery ○ at 30% off). The same
-    // off-by-one bit baseCost=90 → 63 and baseCost=180 → 126 at 30%.
+    // 170 * 0.7 = 118.999... in IEEE 754, so naive flooring yields 118, but the
+    // game displays 119 (e.g. Corner Recovery ○ at 30% off). The same off-by-one
+    // affects baseCost=90 → 63 and baseCost=180 → 126 at 30%.
     it('matches in-game cost when 1 - discount/100 is not exactly representable', () => {
         expect(applyDiscount(170, 30)).toBe(119)
         expect(applyDiscount(90, 30)).toBe(63)
