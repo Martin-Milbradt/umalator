@@ -188,7 +188,7 @@
                         <span id="totals-efficiency" class="ml-4"></span>
                         <span id="totals-minmax" class="ml-4"></span>
                     </div>
-                    <table id="results-table" class="w-full text-left">
+                    <table id="results-table" class="w-full text-left whitespace-nowrap">
                         <thead class="text-teal-400 border-b border-zinc-700">
                             <tr>
                                 <th class="p-1 w-8"><input type="checkbox" id="select-all-checkbox" title="Select all" /></th>
@@ -197,10 +197,10 @@
                                 <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="cost">Cost</th>
                                 <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="discount">Disc</th>
                                 <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="meanLength">Mean</th>
-                                <th class="p-1 cursor-pointer hover:text-teal-300 text-right hidden md:table-cell" data-sort="medianLength">Median</th>
+                                <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="medianLength">Median</th>
                                 <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="meanLengthPerCost">Mean/Cost</th>
-                                <th class="p-1 text-right hidden md:table-cell">Min-Max</th>
-                                <th class="p-1 text-right hidden md:table-cell">95% CI</th>
+                                <th class="p-1 text-right">Min-Max</th>
+                                <th class="p-1 text-right">95% CI</th>
                             </tr>
                         </thead>
                         <tbody id="results-tbody"></tbody>
