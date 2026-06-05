@@ -335,6 +335,23 @@ export function renderSkills(): void {
         div.dataset.skill = skillName
 
         const currentDiscount = skill.discount
+
+        // Lock state: is the current discount the config's saved default? When
+        // it is, the active discount highlights green (rather than the usual
+        // blue) to signal the value is locked to the default.
+        const skillDefault = skill.default
+        const isDefaultActive =
+            skillDefault !== undefined &&
+            skillDefault !== null &&
+            currentDiscount === skillDefault
+        const isDefaultNull =
+            (skillDefault === undefined || skillDefault === null) &&
+            (currentDiscount === null || currentDiscount === undefined)
+        const isLocked = isDefaultActive || isDefaultNull
+        const activeDiscountClass = isLocked
+            ? `${squareClasses} bg-green-600 text-white border border-green-600 hover:bg-green-700 hover:border-green-700`
+            : `${squareClasses} bg-sky-600 text-white border border-sky-600 hover:bg-sky-700 hover:border-sky-700`
+
         const discountButtonGroup = document.createElement('div')
         discountButtonGroup.className = 'discount-options flex gap-1 items-center'
         discountButtonGroup.dataset.skill = skillName
@@ -358,7 +375,7 @@ export function renderSkills(): void {
                         (currentDiscount === null ||
                             currentDiscount === undefined))
                 ) {
-                    button.className = `${squareClasses} bg-sky-600 text-white border border-sky-600 hover:bg-sky-700 hover:border-sky-700`
+                    button.className = activeDiscountClass
                 }
                 discountButtonGroup.appendChild(button)
             })
@@ -367,15 +384,6 @@ export function renderSkills(): void {
         const lockButton = document.createElement('button')
         lockButton.className = `lock-btn ${squareClasses} bg-transparent text-zinc-500 border-none hover:text-zinc-200 hover:bg-zinc-700`
         lockButton.dataset.skill = skillName
-        const skillDefault = skill.default
-        const isDefaultActive =
-            skillDefault !== undefined &&
-            skillDefault !== null &&
-            currentDiscount === skillDefault
-        const isDefaultNull =
-            (skillDefault === undefined || skillDefault === null) &&
-            (currentDiscount === null || currentDiscount === undefined)
-        const isLocked = isDefaultActive || isDefaultNull
         lockButton.textContent = isLocked ? '🔒' : '🔓'
         lockButton.title = isLocked
             ? 'Remove default'
