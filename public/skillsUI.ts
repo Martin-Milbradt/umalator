@@ -201,10 +201,14 @@ export function setupDiscountWidthObserver(): void {
 function createDiscountSelect(
     skillName: string,
     currentDiscount: number | null | undefined,
+    isLocked: boolean,
 ): HTMLSelectElement {
     const select = document.createElement('select')
-    select.className =
-        'discount-select bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] px-1 py-0.5 focus:outline-none focus:border-sky-500'
+    // Tint green when the selection matches the config's locked default,
+    // matching the button row's locked highlight.
+    select.className = isLocked
+        ? 'discount-select bg-green-600 text-white border border-green-600 rounded text-[13px] px-1 py-0.5 focus:outline-none focus:border-sky-500'
+        : 'discount-select bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] px-1 py-0.5 focus:outline-none focus:border-sky-500'
     select.dataset.skill = skillName
 
     for (const value of DISCOUNT_OPTIONS) {
@@ -360,7 +364,7 @@ export function renderSkills(): void {
         // fit next to the skill name); a wide pane keeps the one-tap button row.
         if (shouldUseDiscountDropdown()) {
             discountButtonGroup.appendChild(
-                createDiscountSelect(skillName, currentDiscount),
+                createDiscountSelect(skillName, currentDiscount, isLocked),
             )
         } else {
             DISCOUNT_OPTIONS.forEach((value) => {
