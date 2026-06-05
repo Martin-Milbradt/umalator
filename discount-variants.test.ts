@@ -84,9 +84,8 @@ describe('setDiscountForVariants propagates to results map', () => {
     })
 
     it('adding a discount to ○ registers a pending result for BOTH ○ and ◎', () => {
-        // Regression test: before the fix, only the clicked skill got a pending
-        // entry in the results map. ◎'s config was updated but no row was shown
-        // until "Run Calculations" was clicked.
+        // Setting a discount on ○ registers a pending row for both ○ and ◎, so
+        // ◎ shows up immediately rather than only after the next run.
         setDiscountForVariants(NORMAL, 10)
 
         const results = getResultsMap()

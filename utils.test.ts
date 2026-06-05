@@ -1764,9 +1764,9 @@ describe('extractSkillRestrictions', () => {
     })
 
     it('expands is_basis_distance<1 to [0] (zero-indexed field)', () => {
-        // Regression: previously "<" expansions started at 1, so
-        // is_basis_distance<1 produced [] and the skill was silently dropped
-        // from the pool. is_basis_distance is the only 0-based static field.
+        // "<" expansions on is_basis_distance must start at 0, so
+        // is_basis_distance<1 expands to [0]. is_basis_distance is the only
+        // 0-based static field.
         const skillData: SkillDataEntry = {
             alternatives: [
                 {

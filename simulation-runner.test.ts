@@ -480,9 +480,8 @@ describe('simulation worker integration', () => {
     }, 30000)
 
     it('pinned seed with random conditions produces identical raw results across runs', async () => {
-        // Regression for #56: shuffleInPlace previously used Math.random
-        // unconditionally, randomizing the combo->track mapping each run
-        // even when simOptions.seed was pinned.
+        // With a pinned simOptions.seed, shuffleInPlace must use the seeded RNG
+        // so the combo->track mapping is identical across runs.
         const suzuka2000 = processCourseData(courseData['10905'])
 
         // Build the task once: createWeightedSeasonArray etc. shuffle

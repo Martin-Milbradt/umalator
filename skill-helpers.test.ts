@@ -44,9 +44,9 @@ describe('variant lookups exclude × purple variants', () => {
     })
 
     it('getBasicVariant(○) is null — the × purple skill is not a prerequisite', () => {
-        // Regression test for #44: when adding ○ to Uma, the caller uses
-        // !getBasicVariant(○) to decide whether to invalidate the upgraded
-        // variant's cache. Returning × here leaves the cache stale.
+        // When adding ○ to Uma, the caller uses !getBasicVariant(○) to decide
+        // whether to invalidate the upgraded variant's cache. Returning × here
+        // would leave the cache stale.
         expect(getBasicVariant('Winter Runner ○')).toBeNull()
     })
 

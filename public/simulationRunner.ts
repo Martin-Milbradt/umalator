@@ -268,7 +268,7 @@ export class BrowserSimulationRunner {
         const distanceValue = config.track.distance
         // Coerce numeric strings up front so the skill-filter math (which
         // checks `typeof === 'number'`) doesn't fall through and let
-        // distance-restricted skills leak past the filter (#59).
+        // distance-restricted skills leak past the filter.
         const numericDistance =
             typeof distanceValue === 'number'
                 ? distanceValue
@@ -359,8 +359,8 @@ export class BrowserSimulationRunner {
         const strategyName = parseStrategyName(umaConfig.strategy)
         const conditions = parseRaceConditions(config.track, umaConfig)
 
-        // mood and popularity live on HorseParameters (baseUma) since
-        // uma-skill-tools 24f0a88; they are no longer part of RaceParameters.
+        // mood and popularity live on HorseParameters (baseUma), not on
+        // RaceParameters.
         const racedef: RaceParameters = {
             groundCondition: conditions.groundCondition.value,
             weather: conditions.weather.value,
