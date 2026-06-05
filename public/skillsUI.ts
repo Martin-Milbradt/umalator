@@ -24,6 +24,7 @@ import {
 import { attachSkillAutocomplete } from './skillAutocomplete'
 import { describeSkill } from './skillDescription'
 import { canSkillTriggerByName } from './skillTrigger'
+import { isMobileViewport } from './responsive'
 import { getCurrentConfig, getResultsMap, getSelectedSkills } from './state'
 import { showToast } from './toast'
 
@@ -154,6 +155,46 @@ export function setDiscountForVariants(
     }
 }
 
+const DISCOUNT_OPTIONS: (number | null)[] = [null, 0, 10, 20, 30, 35, 40]
+
+/**
+ * Compact discount picker for mobile, where the seven-button row is too wide.
+ * `null` ("None") removes the skill from the results table; a number sets that
+ * discount. Mirrors the non-active branch of the button delegation handler.
+ */
+function createDiscountSelect(
+    skillName: string,
+    currentDiscount: number | null | undefined,
+): HTMLSelectElement {
+    const select = document.createElement('select')
+    select.className =
+        'discount-select bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] px-1 py-0.5 focus:outline-none focus:border-sky-500'
+    select.dataset.skill = skillName
+
+    for (const value of DISCOUNT_OPTIONS) {
+        const option = document.createElement('option')
+        option.value = value === null ? '-' : value.toString()
+        option.textContent = value === null ? 'None' : `${value}%`
+        if (
+            currentDiscount === value ||
+            (value === null &&
+                (currentDiscount === null || currentDiscount === undefined))
+        ) {
+            option.selected = true
+        }
+        select.appendChild(option)
+    }
+
+    select.addEventListener('change', () => {
+        const discount = select.value === '-' ? null : parseInt(select.value, 10)
+        setDiscountForVariants(skillName, discount)
+        renderSkills()
+        autoSave()
+    })
+
+    return select
+}
+
 export function renderSkills(): void {
     const currentConfig = getCurrentConfig()
     if (!currentConfig) return
@@ -258,26 +299,34 @@ export function renderSkills(): void {
         div.dataset.skill = skillName
 
         const currentDiscount = skill.discount
-        const discountOptions: (number | null)[] = [null, 0, 10, 20, 30, 35, 40]
         const discountButtonGroup = document.createElement('div')
         discountButtonGroup.className = 'discount-options flex gap-1 items-center'
         discountButtonGroup.dataset.skill = skillName
 
-        discountOptions.forEach((value) => {
-            const button = document.createElement('button')
-            button.className = `${squareClasses} bg-zinc-700 text-zinc-200 border border-zinc-600 hover:bg-zinc-600 hover:border-zinc-500`
-            button.dataset.skill = skillName
-            button.dataset.discount = value === null ? '-' : value.toString()
-            button.textContent = value === null ? '-' : value.toString()
-            if (
-                currentDiscount === value ||
-                (value === null &&
-                    (currentDiscount === null || currentDiscount === undefined))
-            ) {
-                button.className = `${squareClasses} bg-sky-600 text-white border border-sky-600 hover:bg-sky-700 hover:border-sky-700`
-            }
-            discountButtonGroup.appendChild(button)
-        })
+        // Mobile gets a dropdown (the button row is too wide for narrow
+        // screens); desktop keeps the one-tap button row.
+        if (isMobileViewport()) {
+            discountButtonGroup.appendChild(
+                createDiscountSelect(skillName, currentDiscount),
+            )
+        } else {
+            DISCOUNT_OPTIONS.forEach((value) => {
+                const button = document.createElement('button')
+                button.className = `${squareClasses} bg-zinc-700 text-zinc-200 border border-zinc-600 hover:bg-zinc-600 hover:border-zinc-500`
+                button.dataset.skill = skillName
+                button.dataset.discount = value === null ? '-' : value.toString()
+                button.textContent = value === null ? '-' : value.toString()
+                if (
+                    currentDiscount === value ||
+                    (value === null &&
+                        (currentDiscount === null ||
+                            currentDiscount === undefined))
+                ) {
+                    button.className = `${squareClasses} bg-sky-600 text-white border border-sky-600 hover:bg-sky-700 hover:border-sky-700`
+                }
+                discountButtonGroup.appendChild(button)
+            })
+        }
 
         const lockButton = document.createElement('button')
         lockButton.className = `lock-btn ${squareClasses} bg-transparent text-zinc-500 border-none hover:text-zinc-200 hover:bg-zinc-700`

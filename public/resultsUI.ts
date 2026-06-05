@@ -174,9 +174,9 @@ export function renderResultsTable(): void {
             result.status === 'pending' ? '...' : result.meanLength.toFixed(2)
         row.appendChild(meanCell)
 
-        // Median
+        // Median (hidden on mobile to keep the table compact)
         const medianCell = document.createElement('td')
-        medianCell.className = 'p-1 text-right'
+        medianCell.className = 'p-1 text-right hidden md:table-cell'
         medianCell.textContent =
             result.status === 'pending' ? '...' : result.medianLength.toFixed(2)
         row.appendChild(medianCell)
@@ -190,18 +190,18 @@ export function renderResultsTable(): void {
                 : (result.meanLengthPerCost * 1000).toFixed(2)
         row.appendChild(effCell)
 
-        // Min-Max
+        // Min-Max (hidden on mobile to keep the table compact)
         const minMaxCell = document.createElement('td')
-        minMaxCell.className = 'p-1 text-right'
+        minMaxCell.className = 'p-1 text-right hidden md:table-cell'
         minMaxCell.textContent =
             result.status === 'pending'
                 ? '...'
                 : `${result.minLength.toFixed(2)}-${result.maxLength.toFixed(2)}`
         row.appendChild(minMaxCell)
 
-        // CI
+        // CI (hidden on mobile to keep the table compact)
         const ciCell = document.createElement('td')
-        ciCell.className = 'p-1 text-right'
+        ciCell.className = 'p-1 text-right hidden md:table-cell'
         ciCell.textContent =
             result.status === 'pending'
                 ? '...'

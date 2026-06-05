@@ -28,6 +28,8 @@ import {
     syncConfigsFromFilesystem,
 } from './devConfigSync'
 import { autoSave, loadConfig, loadConfigFiles } from './configManager'
+import { setupPaneResizer } from './paneResizer'
+import { MOBILE_MEDIA_QUERY } from './responsive'
 import {
     renderResultsTable,
     setupResultsTableSorting,
@@ -230,6 +232,15 @@ if (addSkillButton) {
 // Set up event delegation for skills container
 setupSkillsContainerDelegation()
 setupSkillFilters()
+
+// Make the skills/results split draggable (width on desktop, height on mobile).
+setupPaneResizer()
+
+// The discount control swaps between a button row (desktop) and a dropdown
+// (mobile), so re-render the skills list whenever the breakpoint is crossed.
+window
+    .matchMedia(MOBILE_MEDIA_QUERY)
+    .addEventListener('change', () => renderSkills())
 
 // Set up results table sorting and select-all checkbox
 setupResultsTableSorting()

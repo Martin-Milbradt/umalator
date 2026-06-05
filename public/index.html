@@ -10,7 +10,7 @@
         <link rel="stylesheet" crossorigin href="/index.css" />
     </head>
     <body
-        class="m-0 p-0 box-border font-sans bg-zinc-900 text-zinc-200 h-screen overflow-hidden"
+        class="m-0 p-0 box-border font-sans bg-zinc-900 text-zinc-200 h-dvh overflow-hidden"
     >
         <div
             id="toast-container"
@@ -62,9 +62,14 @@
             </div>
         </div>
 
-        <div class="flex h-screen">
+        <div
+            id="layout"
+            class="flex flex-col md:flex-row h-full overflow-hidden"
+            style="--left-w: 800px; --top-h: 45vh"
+        >
             <div
-                class="flex flex-col bg-zinc-800 border-r border-zinc-700 w-[800px] h-screen"
+                id="left-pane"
+                class="flex flex-col bg-zinc-800 w-full md:w-[var(--left-w)] h-[var(--top-h)] md:h-auto shrink-0 min-h-0"
             >
                 <div class="px-2.5 pt-2.5 pb-2 shrink-0 bg-zinc-800 border-b border-zinc-700">
                     <h3
@@ -102,8 +107,19 @@
                 <div id="skills-container" class="flex-1 overflow-y-auto px-2.5 py-2"></div>
             </div>
 
-            <div class="w-full p-2.5 flex flex-col bg-zinc-900 overflow-y-auto">
-                <div class="flex items-center gap-2.5 mb-2.5">
+            <div
+                id="pane-divider"
+                role="separator"
+                aria-label="Resize panels"
+                title="Drag to resize · double-click to reset"
+                class="shrink-0 bg-zinc-700 hover:bg-sky-600 transition-colors touch-none select-none h-1.5 w-full cursor-row-resize md:h-auto md:w-1.5 md:cursor-col-resize"
+            ></div>
+
+            <div
+                id="right-pane"
+                class="w-full flex-1 min-w-0 min-h-0 p-2.5 flex flex-col bg-zinc-900 overflow-y-auto"
+            >
+                <div class="flex flex-wrap items-center gap-2.5 mb-2.5">
                     <select
                         id="config-select"
                         class="flex-1 py-1 px-1.5 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] focus:outline-none focus:border-sky-500"
@@ -156,7 +172,7 @@
 
                 <div
                     id="results-container"
-                    class="flex-1 bg-zinc-800 text-zinc-200 p-2.5 rounded-md text-sm leading-normal overflow-y-auto border border-zinc-700 mb-2.5"
+                    class="flex-1 bg-zinc-800 text-zinc-200 p-2.5 rounded-md text-sm leading-normal overflow-y-auto overflow-x-auto border border-zinc-700 mb-2.5"
                 >
                     <div
                         id="results-status"
@@ -181,10 +197,10 @@
                                 <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="cost">Cost</th>
                                 <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="discount">Disc</th>
                                 <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="meanLength">Mean</th>
-                                <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="medianLength">Median</th>
+                                <th class="p-1 cursor-pointer hover:text-teal-300 text-right hidden md:table-cell" data-sort="medianLength">Median</th>
                                 <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="meanLengthPerCost">Mean/Cost</th>
-                                <th class="p-1 text-right">Min-Max</th>
-                                <th class="p-1 text-right">95% CI</th>
+                                <th class="p-1 text-right hidden md:table-cell">Min-Max</th>
+                                <th class="p-1 text-right hidden md:table-cell">95% CI</th>
                             </tr>
                         </thead>
                         <tbody id="results-tbody"></tbody>
