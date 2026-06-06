@@ -8,6 +8,17 @@ Web interface for Uma Musume skill efficiency calculations. Calculates mean leng
 
 Fully client-side static site deployed to GitHub Pages. Simulations run in browser Web Workers, configs persist in IndexedDB.
 
+## Environment Setup
+
+Running in an ephemeral Cloud / CI container (Claude Code on the web, GitHub
+Actions, fresh clone) has gotchas that the README "Getting Started" glosses over
+— `node_modules` is absent, submodules need init, and the nested
+`uma-skill-tools` must be pinned to a loose commit that a plain `git fetch`
+won't retrieve. See **[docs/cloud-setup.md](docs/cloud-setup.md)** for the full
+step-by-step (install → submodule init → pin `24f0a88` via full SHA → build),
+plus how to drive a headless browser for UI verification and which `git status`
+noise is expected.
+
 ## Commands
 
 ```bash
@@ -83,7 +94,7 @@ npx tsx race-check.ts --races path/to/races.json --sims 200
 
 - `./uma-tools` is a git submodule (clone with `--recursive`)
 - `./uma-tools/uma-skill-tools/` is derived from <https://github.com/alpha123/uma-skill-tools> - understanding this code helps when working on simulation logic, but **never modify it**; pull latest from upstream instead
-- `uma-skill-tools` is pinned to commit `24f0a88`, which is one commit ahead of upstream `master` (`8b3f5e2` as of 2026-05). The pin carries two changes we depend on that haven't merged upstream: the `otherHorse()` API used by `uma-tools/umalator/compare.ts`, and the move of `mood`/`popularity` from `RaceParameters` onto `HorseParameters`. The parent `uma-tools` submodule still records an older `uma-skill-tools` commit (`6ba5ca0`), so a vanilla `git submodule update --recursive` lands ~9 commits before the pin — CI and `start_web.ps1` re-checkout `24f0a88` after init for that reason. Verify locally: `git -C uma-tools/uma-skill-tools rev-parse HEAD`
+- `uma-skill-tools` is pinned to commit `24f0a88`, which is one commit ahead of upstream `master` (`8b3f5e2` as of 2026-05). The pin carries two changes we depend on that haven't merged upstream: the `otherHorse()` API used by `uma-tools/umalator/compare.ts`, and the move of `mood`/`popularity` from `RaceParameters` onto `HorseParameters`. The parent `uma-tools` submodule still records an older `uma-skill-tools` commit (`6ba5ca0`), so a vanilla `git submodule update --recursive` lands ~9 commits before the pin — CI and `start_web.ps1` re-checkout `24f0a88` after init for that reason. Note a plain `git fetch` will not retrieve `24f0a88` (it is not a branch tip); fetch the full SHA: `git -C uma-tools/uma-skill-tools fetch origin 24f0a8862106dd4aaeea55e90e975acc9ca5d019 && git -C uma-tools/uma-skill-tools checkout 24f0a8862106dd4aaeea55e90e975acc9ca5d019`. Verify locally: `git -C uma-tools/uma-skill-tools rev-parse HEAD`. Full setup walkthrough in [docs/cloud-setup.md](docs/cloud-setup.md).
 - Ignore type checking errors from `./uma-tools` package. Our own files type-check cleanly; `mood` and `popularity` flow through `baseUma` (HorseParameters) end-to-end, matching the post-24f0a88 API.
 - `driver.js` (npm dependency) powers the onboarding tour in `public/tour.ts`. CSS is imported in the same file (`driver.js/dist/driver.css`).
 

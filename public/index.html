@@ -117,9 +117,9 @@
 
             <div
                 id="right-pane"
-                class="w-full flex-1 min-w-0 min-h-0 p-2.5 flex flex-col bg-zinc-900 overflow-y-auto"
+                class="w-full flex-1 min-w-0 min-h-0 p-2.5 flex flex-col bg-zinc-900 overflow-hidden"
             >
-                <div class="flex flex-wrap items-center gap-1.5 mb-2.5">
+                <div class="shrink-0 flex flex-wrap items-center gap-1.5 mb-2.5">
                     <select
                         id="config-select"
                         class="flex-1 min-w-0 py-1 px-1.5 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] focus:outline-none focus:border-sky-500"
@@ -170,6 +170,14 @@
                     </button>
                 </div>
 
+                <!--
+                    Scroll wrapper: the results table + uma/race box scroll as a
+                    single unit when they don't fit. The table renders at full
+                    height (no internal vertical scroll), so the whole panel's
+                    content overflows here rather than squeezing the table into a
+                    fixed-height box.
+                -->
+                <div id="right-scroll" class="flex-1 min-h-0 overflow-y-auto">
                 <div
                     id="results-container"
                     class="bg-zinc-800 text-zinc-200 p-2.5 rounded-md text-sm leading-normal overflow-x-auto border border-zinc-700 mb-2.5"
@@ -212,6 +220,7 @@
                 >
                     <div id="uma-container"></div>
                     <div id="track-container"></div>
+                </div>
                 </div>
             </div>
         </div>
