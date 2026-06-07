@@ -18,7 +18,7 @@
       "Bash(powershell -Command \"Get-Content:*)",
       "Bash(python3:*)",
       "Bash(node -e:*)",
-      "Bash(node cli.js:*)"
+      "Bash(npx tsx cli.ts:*)"
     ]
   }
 }
