@@ -63,6 +63,8 @@ describe('validateConfigData', () => {
             { skills: {}, track: { distance: true } },
             /track\.distance/,
         ],
+        ['seed is a string', { skills: {}, seed: 'x' }, /seed/],
+        ['seed is a boolean', { skills: {}, seed: true }, /seed/],
     ])('rejects when %s', (_label, data, pattern) => {
         expect(() => validateConfigData(data)).toThrow(pattern)
     })
@@ -96,6 +98,8 @@ describe('validateConfigData', () => {
             'track.distance as null',
             { skills: {}, track: { distance: null } },
         ],
+        ['a numeric seed', { skills: {}, seed: 12345 }],
+        ['a null seed', { skills: {}, seed: null }],
     ])('accepts %s', (_label, data) => {
         expect(validateConfigData(data)).toBe(data)
     })

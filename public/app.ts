@@ -14,6 +14,7 @@ import {
     loadConfig as loadConfigFromStore,
     saveConfig,
     seedDefaultConfig,
+    validateConfigData,
 } from './configStore'
 import {
     isBareUmalatorConfig,
@@ -590,6 +591,19 @@ async function importFromClipboard(): Promise<void> {
         showToast({
             type: 'error',
             message: `Import failed: ${(error as Error).message}`,
+        })
+        return
+    }
+
+    // The moomulator conversion is the one import path that builds a config
+    // from scratch, so validate it before persisting (the other paths validate
+    // while unwrapping).
+    try {
+        validateConfigData(result.config)
+    } catch (error) {
+        showToast({
+            type: 'error',
+            message: `Import produced an invalid config: ${(error as Error).message}`,
         })
         return
     }

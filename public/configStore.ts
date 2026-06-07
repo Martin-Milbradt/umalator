@@ -79,8 +79,14 @@ export async function loadConfig(name: string): Promise<Config> {
         request.onsuccess = () => {
             if (request.result === undefined) {
                 reject(new Error(`Config "${name}" not found`))
-            } else {
-                resolve(request.result as Config)
+                return
+            }
+            // Validate on the way out too: a config can reach IndexedDB from an
+            // older app version or hand-editing, and rendering trusts its shape.
+            try {
+                resolve(validateConfigData(request.result))
+            } catch (error) {
+                reject(error)
             }
         }
         request.onerror = () => reject(request.error)
