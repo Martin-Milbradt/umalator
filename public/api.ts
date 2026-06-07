@@ -195,6 +195,10 @@ export async function runSelectiveCalculations(
                 renderResultsTable()
             } else if (progress.type === 'error') {
                 console.error('Selective calculation error:', progress.error)
+                showToast({
+                    type: 'error',
+                    message: progress.error || 'Calculation failed',
+                })
                 for (const skillName of skillNames) {
                     const existing = resultsMap.get(skillName)
                     if (existing?.status === 'pending') {

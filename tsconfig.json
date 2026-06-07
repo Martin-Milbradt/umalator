@@ -13,6 +13,7 @@
     "jsxFragmentFactory": "Fragment",
     "module": "ESNext",
     "noEmit": true,
+    "strict": true,
     "noUncheckedIndexedAccess": true,
     "types": ["node"]
   },

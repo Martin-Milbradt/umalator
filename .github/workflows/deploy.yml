@@ -34,7 +34,18 @@ jobs:
       - run: npm ci
       - name: Pin uma-skill-tools
         run: node scripts/pin-submodule.mjs --strict
+      # Gate the deploy: a red typecheck or test must never reach Pages. The
+      # build steps (esbuild/vite) do not type-check, so this is the only guard.
+      # Build first: the worker integration tests spawn the built worker.
+      - name: Typecheck
+        run: npm run typecheck
+      # Production build fetches the latest upstream game data; the deploy is
+      # gated on the tests passing against that same data.
       - run: npm run build
+        env:
+          UPDATE_GAME_DATA: '1'
+      - name: Test
+        run: npm test
       - run: npm run build:frontend
         env:
           VITE_BASE: /umalator/

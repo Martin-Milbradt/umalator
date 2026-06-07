@@ -14,6 +14,7 @@ import {
     loadConfig as loadConfigFromStore,
     saveConfig,
     seedDefaultConfig,
+    validateConfigData,
 } from './configStore'
 import {
     isBareUmalatorConfig,
@@ -171,6 +172,34 @@ if (runButton) {
 const resetButton = document.getElementById('reset-button')
 if (resetButton) {
     resetButton.addEventListener('click', resetUmaSkills)
+}
+
+// Optional reproducibility seed: blank = fresh random seed each run, a number =
+// identical results across runs. Persisted on the config like other settings.
+const seedInput = document.getElementById(
+    'seed-input',
+) as HTMLInputElement | null
+if (seedInput) {
+    seedInput.addEventListener('change', () => {
+        const currentConfig = getCurrentConfig()
+        if (!currentConfig) return
+        const raw = seedInput.value.trim()
+        if (raw === '') {
+            currentConfig.seed = null
+        } else {
+            const parsed = Number(raw)
+            if (!Number.isFinite(parsed)) {
+                showToast({ type: 'error', message: 'Seed must be a number' })
+                seedInput.value =
+                    currentConfig.seed != null
+                        ? String(currentConfig.seed)
+                        : ''
+                return
+            }
+            currentConfig.seed = parsed
+        }
+        autoSave()
+    })
 }
 
 // Set up add skill button
@@ -562,6 +591,19 @@ async function importFromClipboard(): Promise<void> {
         showToast({
             type: 'error',
             message: `Import failed: ${(error as Error).message}`,
+        })
+        return
+    }
+
+    // The moomulator conversion is the one import path that builds a config
+    // from scratch, so validate it before persisting (the other paths validate
+    // while unwrapping).
+    try {
+        validateConfigData(result.config)
+    } catch (error) {
+        showToast({
+            type: 'error',
+            message: `Import produced an invalid config: ${(error as Error).message}`,
         })
         return
     }

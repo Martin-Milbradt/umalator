@@ -44,12 +44,29 @@ export async function loadConfigFiles(): Promise<void> {
 }
 
 export async function loadConfig(filename: string): Promise<void> {
-    const config = await configStore.loadConfig(filename)
+    let config: Config
+    try {
+        config = await configStore.loadConfig(filename)
+    } catch (error) {
+        // Surface a corrupt/invalid stored config instead of letting it crash
+        // the next render; leave the previously loaded config in place.
+        showToast({
+            type: 'error',
+            message: `Could not load "${filename}": ${(error as Error).message}`,
+        })
+        return
+    }
     setCurrentConfig(config)
     setCurrentConfigFile(filename)
     const select = document.getElementById('config-select') as HTMLSelectElement
     if (select) {
         select.value = filename
+    }
+    const seedInput = document.getElementById(
+        'seed-input',
+    ) as HTMLInputElement | null
+    if (seedInput) {
+        seedInput.value = config.seed != null ? String(config.seed) : ''
     }
 
     try {
@@ -71,8 +88,16 @@ export async function saveConfig(): Promise<void> {
     try {
         await configStore.saveConfig(currentConfigFile, currentConfig)
         writeConfigToFilesystem(currentConfigFile, currentConfig)
-    } catch {
-        showToast({ type: 'error', message: 'Failed to save config' })
+    } catch (error) {
+        const err = error as Error
+        // A full quota is the common, actionable failure; name it specifically
+        // so the user knows what to do rather than seeing a generic message.
+        const message =
+            err.name === 'QuotaExceededError'
+                ? 'Could not save: browser storage is full. Delete old configs or free up space.'
+                : `Could not save config: ${err.message}`
+        console.error('saveConfig failed:', err)
+        showToast({ type: 'error', message })
     }
 }
 

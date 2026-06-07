@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      # The submodule must sit on the commit we depend on before any build/type
+      # step; --strict so CI fails loudly if it can't be pinned.
+      - name: Pin uma-skill-tools
+        run: node scripts/pin-submodule.mjs --strict
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # The simulation worker integration tests spawn the built worker, so the
+      # build must run before the test step.
+      - name: Build workers
+        run: npm run build
+
+      - name: Test
+        run: npm test

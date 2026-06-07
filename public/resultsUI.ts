@@ -30,6 +30,11 @@ import {
 } from './state'
 import type { SkillResult, SkillResultWithStatus } from './types'
 
+// Render a "lo-hi" interval to two decimals.
+function formatInterval(lo: number, hi: number): string {
+    return `${lo.toFixed(2)}-${hi.toFixed(2)}`
+}
+
 // Forward declaration to avoid circular import - will be set by api.ts
 let runSelectiveCalculationsImpl:
     | ((skillNames: string[]) => Promise<void>)
@@ -127,6 +132,7 @@ export function renderResultsTable(): void {
             'bg-sky-600 text-white border-none rounded w-5 h-5 text-sm leading-none cursor-pointer flex items-center justify-center p-0 transition-colors hover:bg-sky-700 active:bg-sky-800'
         addBtn.textContent = '+'
         addBtn.title = 'Add to Uma skills'
+        addBtn.setAttribute('aria-label', `Add ${result.skill} to uma skills`)
         addBtn.addEventListener('click', () => {
             addSkillToUmaFromTable(result.skill, result.cost)
         })
@@ -195,14 +201,23 @@ export function renderResultsTable(): void {
                 : `${result.minLength.toFixed(2)}-${result.maxLength.toFixed(2)}`
         row.appendChild(minMaxCell)
 
-        // CI
-        const ciCell = document.createElement('td')
-        ciCell.className = 'p-1 text-right'
-        ciCell.textContent =
+        // Range: central percentile band of per-race outcomes (spread).
+        const rangeCell = document.createElement('td')
+        rangeCell.className = 'p-1 text-right'
+        rangeCell.textContent =
             result.status === 'pending'
                 ? '...'
-                : `${result.ciLower.toFixed(2)}-${result.ciUpper.toFixed(2)}`
-        row.appendChild(ciCell)
+                : formatInterval(result.ciLower, result.ciUpper)
+        row.appendChild(rangeCell)
+
+        // Mean CI: confidence interval of the mean gain (precision of the mean).
+        const ciMeanCell = document.createElement('td')
+        ciMeanCell.className = 'p-1 text-right'
+        ciMeanCell.textContent =
+            result.status === 'pending'
+                ? '...'
+                : formatInterval(result.ciMeanLower, result.ciMeanUpper)
+        row.appendChild(ciMeanCell)
 
         tbody.appendChild(row)
     }
@@ -520,6 +535,8 @@ export function addPendingSkillToResults(
         maxLength: 0,
         ciLower: 0,
         ciUpper: 0,
+        ciMeanLower: 0,
+        ciMeanUpper: 0,
         status: 'pending',
     })
     renderResultsTable()

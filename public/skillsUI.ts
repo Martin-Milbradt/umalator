@@ -647,6 +647,7 @@ export function setupSkillsContainerDelegation(): void {
 function updateOwnedButton(button: HTMLButtonElement): void {
     const hideOwned = getHideOwned()
     button.dataset.active = hideOwned ? 'true' : 'false'
+    button.setAttribute('aria-pressed', hideOwned ? 'true' : 'false')
     button.className = hideOwned
         ? 'bg-sky-600 text-white border border-sky-600 rounded h-7 px-2 cursor-pointer transition-colors hover:bg-sky-700'
         : 'bg-zinc-700 text-zinc-200 border border-zinc-600 rounded h-7 px-2 cursor-pointer transition-colors hover:bg-zinc-600'
@@ -661,6 +662,7 @@ function updateAvailableSelect(select: HTMLSelectElement): void {
 function updateIconsButton(button: HTMLButtonElement): void {
     const showIcons = getShowIcons()
     button.dataset.active = showIcons ? 'true' : 'false'
+    button.setAttribute('aria-pressed', showIcons ? 'true' : 'false')
     button.title = showIcons ? 'Hide skill icons' : 'Show skill icons'
     const img = button.querySelector('img')
     if (img) {

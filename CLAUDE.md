@@ -57,15 +57,16 @@ npx tsx race-check.ts --races path/to/races.json --sims 200
 
 ## Architecture
 
-**Static site** with vanilla TypeScript frontend (no framework). Simulations run in browser Web Workers. A legacy Express server (`server.ts`) is available via `npm run dev:server`.
+**Static site** with vanilla TypeScript frontend (no framework). Simulations run in browser Web Workers.
 
 ### Core Files
 
 - `simulation.worker.ts` - Simulation logic using uma-tools comparison engine (shared by Node and browser builds)
 - `simulation.browser-worker.ts` - Thin Web Worker entry point for browser builds
-- `cli.ts` - CLI entry point: loads data at runtime, runs `SimulationRunner`, outputs JSON
-- `simulation-runner.ts` - Node worker orchestration (used by `cli.ts` and `server.ts`)
-- `build.ts` - esbuild config: bundles Node worker + browser worker, fetches latest game data from upstream uma-tools, copies data files to `static/data/`
+- `shared/simulation-orchestrator.ts` - Runtime-neutral orchestration (config validation, course resolution, skill filtering, seeding, stats) shared by the Node and browser runners
+- `cli.ts` - CLI entry point: loads data at runtime, runs `SimulationRunner`, outputs JSON; supports `--seed`
+- `simulation-runner.ts` - Node worker transport over the shared orchestrator (used by `cli.ts`, `race-check.ts`, tests)
+- `build.ts` - esbuild config: bundles Node worker + browser worker, copies data files to `static/data/`; fetches latest upstream game data only when `UPDATE_GAME_DATA=1` (set by the deploy workflow)
 - `utils.ts` - Pure utility functions for parsing, formatting, statistics, and skill resolution
 - `types.ts` - Shared type definitions (worker messages, simulation tasks, skill metadata)
 
@@ -101,18 +102,19 @@ npx tsx race-check.ts --races path/to/races.json --sims 200
 ### Build Pipeline
 
 - `npm run build` runs `tsx build.ts` which:
-  1. Fetches latest `skill_data.json` and `skill_meta.json` from upstream uma-tools (falls back to local files offline)
-  2. Copies 5 JSON data files from `uma-tools/umalator-global/` to `static/data/`
-  3. Builds Node worker (`simulation.worker.js` in repo root)
-  4. Builds browser worker (`static/simulation.browser-worker.js`)
+  1. Copies 5 JSON data files from `uma-tools/umalator-global/` to `static/data/`
+  2. Builds Node worker (`simulation.worker.js` in repo root)
+  3. Builds browser worker (`static/simulation.browser-worker.js`)
+  - With `UPDATE_GAME_DATA=1` (set only by the deploy workflow) it first overwrites the submodule's `skill_data.json`/`skill_meta.json` from upstream `master`. Local builds and PR/push CI skip this, so they use the pinned submodule data and don't dirty the submodule.
 - `npm run build:frontend` runs `vite build` which bundles `public/` into `dist/`
 - `static/` is Vite's publicDir (configured in `vite.config.ts`) - files are copied as-is to `dist/`
 - GitHub Pages deploy sets `VITE_BASE=/umalator/` so asset paths resolve correctly
+- CI: `.github/workflows/ci.yml` runs `typecheck` + `build` + `test` on pushes/PRs; `deploy.yml` runs the same gates before publishing to Pages
 
 ### Static vs Runtime Data
 
-- **Browser** uses bundled data files in `static/data/` (copied at build time). `npm run build` fetches latest game data from upstream automatically.
-- **CLI** loads data from `uma-tools/umalator-global/` at runtime, so it always reflects current skill data without rebuilding.
+- **Browser** uses bundled data files in `static/data/` (copied at build time). The deploy build refreshes them from upstream; local builds use the pinned submodule data.
+- **CLI** loads data from `uma-tools/umalator-global/` at runtime, so it reflects whatever the submodule currently has.
 
 ## Key Patterns
 

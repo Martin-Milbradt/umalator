@@ -73,9 +73,16 @@
                         internal variance is preserved.
                     </li>
                     <li>
-                        Results report Mean, Median, Min-Max, and a 95%
-                        confidence interval. Mean / Cost is the efficiency
-                        score.
+                        Results report Mean, Median, Min-Max, a
+                        <strong>Range</strong> (the spread of individual race
+                        outcomes), and a <strong>Mean CI</strong> (a confidence
+                        interval of the mean, i.e. how precisely the average is
+                        estimated). Mean / Cost is the efficiency score.
+                    </li>
+                    <li>
+                        Set a <strong>seed</strong> in the toolbar to make a run
+                        reproducible; leave it blank for a fresh random seed each
+                        run.
                     </li>
                 </ul>
             </section>
@@ -183,12 +190,19 @@
                         sort key.
                     </li>
                     <li>
-                        <strong>Min-Max</strong>, <strong>95% CI</strong>:
-                        spread of outcomes.
+                        <strong>Min-Max</strong> and <strong>Range</strong>:
+                        the spread of individual per-race outcomes (Range is the
+                        central percentile band).
                     </li>
                     <li>
-                        Click any header to sort. Tick rows to see a selection
-                        total in the status bar above the table.
+                        <strong>Mean CI</strong>: a confidence interval of the
+                        mean gain &mdash; how precisely the average is estimated
+                        (much tighter than Range).
+                    </li>
+                    <li>
+                        Hover any column header for a one-line explanation. Click
+                        a header to sort. Tick rows to see a selection total in
+                        the status bar above the table.
                     </li>
                 </ul>
             </section>

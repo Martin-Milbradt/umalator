@@ -29,20 +29,22 @@ See [docs/cloud-setup.md](docs/cloud-setup.md) for the full Cloud/CI walkthrough
 
 ```bash
 npm run dev              # Build worker + Vite dev server (port 5173)
-npm run dev:server       # Express backend + Vite dev server (for server-side mode)
 npm run build            # Build simulation workers
 npm run build:frontend   # Build frontend only
 npm run preview          # Full production build + preview
+npm run typecheck        # Type-check (ignores expected uma-tools errors)
 npm test                 # Run all tests
+npm run test:coverage    # Run tests with coverage
 npx vitest run <file>    # Run single test file
 npm run race-check       # Compare skills across races (see Race Check below)
+npx tsx cli.ts <config>.json [--skills "A,B"] [--seed N]  # CLI run
 ```
 
 ## Architecture
 
 Fully client-side static site. Simulations run in browser Web Workers, configs persist in IndexedDB. Deployed to GitHub Pages via GitHub Actions.
 
-A legacy Express server (`server.ts`) is available for local server-side mode via `npm run dev:server`.
+The Node orchestration (`simulation-runner.ts`) and the browser orchestration (`public/simulationRunner.ts`) share one runtime-neutral core, `shared/simulation-orchestrator.ts`; each runner only supplies its worker transport.
 
 ### Core Files
 
@@ -50,7 +52,8 @@ A legacy Express server (`server.ts`) is available for local server-side mode vi
 | --- | --- |
 | `simulation.worker.ts` | Simulation logic using uma-tools comparison engine |
 | `simulation.browser-worker.ts` | Thin Web Worker entry point for browser builds |
-| `simulation-runner.ts` | Server-side worker orchestration (legacy) |
+| `simulation-runner.ts` | Node worker transport for the CLI and tests |
+| `shared/simulation-orchestrator.ts` | Shared simulation orchestration (Node + browser) |
 | `build.ts` | esbuild config: bundles Node + browser workers, copies data files |
 | `utils.ts` | Pure utility functions for parsing, formatting, statistics |
 | `types.ts` | Shared type definitions |
@@ -125,10 +128,14 @@ See `configs/config.example.json` for the config file format.
 
 ### Simulation Settings
 
-- `deterministic`: Boolean (default: `false`)
-  - `true`: deterministic simulation (seed: 0, all optional features disabled)
-  - `false`: randomized simulations with all optional features enabled
-- `confidenceInterval`: Confidence interval percentage for statistics (default: `95`)
+- `seed`: Fixed RNG seed for reproducible runs. Omit or `null` for a fresh
+  random seed each run (the default). Set a number and the same config produces
+  identical results every run. Also settable in the web UI (the seed box) and on
+  the CLI (`--seed N`).
+- `deterministic`: Boolean (default: `false`). Legacy flag; equivalent to
+  `seed: 0`. Prefer `seed`.
+- `confidenceInterval`: Confidence level percentage for the statistics
+  intervals (default: `95`).
 
 All skills receive 500 simulations.
 
@@ -173,7 +180,8 @@ All skills receive 500 simulations.
 | Median | Median length gain from simulations |
 | Mean/Cost | Efficiency ratio (mean length / cost, x1000) |
 | Min-Max | Minimum and maximum length gains |
-| CI | Confidence interval bounds (e.g., "95% CI") |
+| Range (`ciLower`/`ciUpper`) | Outcome spread: the central percentile band of per-race gains (e.g. 2.5–97.5% at 95%). How much the result swings race to race. |
+| Mean CI (`ciMeanLower`/`ciMeanUpper`) | Confidence interval of the mean gain (mean ± z·SE): how precisely the average is estimated. |
 
 Results are sorted by Mean/Cost in descending order.
 

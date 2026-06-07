@@ -23,7 +23,6 @@ import {
     formatDistanceType,
     formatStrategyName,
     formatSurface,
-    formatTable,
     formatTurn,
     Grade,
     GroundCondition,
@@ -1075,95 +1074,6 @@ describe('calculateSkillCost', () => {
             context,
         )
         expect(result).toBe(150)
-    })
-})
-
-describe('formatTable', () => {
-    it('formats results table correctly', () => {
-        const results: SkillResult[] = [
-            {
-                skill: 'Skill A',
-                cost: 100,
-                discount: 10,
-
-                meanLength: 5.5,
-                medianLength: 5.0,
-                meanLengthPerCost: 0.055,
-                minLength: 1.0,
-                maxLength: 10.0,
-                ciLower: 2.0,
-                ciUpper: 9.0,
-            },
-        ]
-
-        const output = formatTable(results, 95)
-        expect(output).toContain('Skill')
-        expect(output).toContain('Cost')
-        expect(output).toContain('Discount')
-        expect(output).toContain('Mean')
-        expect(output).toContain('Skill A')
-        expect(output).toContain('100')
-        expect(output).toContain('10%')
-        expect(output).toContain('5.50')
-    })
-
-    it('formats discount as dash when 0', () => {
-        const results: SkillResult[] = [
-            {
-                skill: 'Test',
-                cost: 100,
-                discount: 0,
-
-                meanLength: 5.0,
-                medianLength: 5.0,
-                meanLengthPerCost: 0.05,
-                minLength: 1.0,
-                maxLength: 10.0,
-                ciLower: 2.0,
-                ciUpper: 8.0,
-            },
-        ]
-
-        const output = formatTable(results, 95)
-        expect(output).toContain('-')
-    })
-
-    it('handles multiple results', () => {
-        const results: SkillResult[] = [
-            {
-                skill: 'Skill A',
-                cost: 100,
-                discount: 10,
-
-                meanLength: 5.5,
-                medianLength: 5.0,
-                meanLengthPerCost: 0.055,
-                minLength: 1.0,
-                maxLength: 10.0,
-                ciLower: 2.0,
-                ciUpper: 9.0,
-            },
-            {
-                skill: 'Longer Skill Name',
-                cost: 200,
-                discount: 0,
-
-                meanLength: 3.0,
-                medianLength: 2.5,
-                meanLengthPerCost: 0.015,
-                minLength: 0.5,
-                maxLength: 6.0,
-                ciLower: 1.0,
-                ciUpper: 5.0,
-            },
-        ]
-
-        const output = formatTable(results, 95)
-        const lines = output.split('\n')
-        expect(lines).toHaveLength(4)
-        expect(lines[0]).toContain('Skill')
-        expect(lines[2]).toContain('Skill A')
-        expect(lines[3]).toContain('Longer Skill Name')
     })
 })
 

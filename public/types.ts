@@ -57,6 +57,8 @@ export interface Config {
     track?: Track
     uma?: Uma
     filters?: Filters
+    // Fixed RNG seed for reproducible runs; null/absent = random each run.
+    seed?: number | null
 }
 
 // Results from simulation
@@ -69,8 +71,13 @@ export interface SkillResult {
     meanLengthPerCost: number
     minLength: number
     maxLength: number
+    // Outcome spread: central percentile band of individual per-race results
+    // (not a CI of the mean). Named ciLower/ciUpper for historical reasons.
     ciLower: number
     ciUpper: number
+    // Confidence interval of the mean gain (mean ± z·SE).
+    ciMeanLower: number
+    ciMeanUpper: number
 }
 
 export interface SkillResultWithStatus extends SkillResult {

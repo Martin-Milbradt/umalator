@@ -16,6 +16,10 @@ const skillmeta = skillmetaRaw as Record<
     { baseCost: number; groupId: string; iconId: string; order: number; score: number }
 >
 
+// Mirrors uma-tools DEFAULT_HORSE_STATE: 4×S then 6×A across the aptitude
+// spreads. Used when a serialized HorseState omits aptitudes.
+const DEFAULT_APTITUDES = ['S', 'S', 'S', 'S', 'A', 'A', 'A', 'A', 'A', 'A']
+
 /**
  * Creates a HorseState object compatible with uma-tools runComparison.
  * mood and popularity live here (HorseParameters) since uma-skill-tools 24f0a88.
@@ -40,10 +44,13 @@ function createHorseState(
         surfaceAptitude: props.surfaceAptitude as HorseState['surfaceAptitude'],
         strategyAptitude:
             props.strategyAptitude as HorseState['strategyAptitude'],
-        // Cast through unknown: HorseState['aptitudes'] is typed as
-        // `Aptitude[10]` upstream which TS interprets as the indexed type
-        // `Aptitude`, not a 10-tuple. The runtime shape is correct.
-        aptitudes: (props.aptitudes ?? ['S','S','S','S','A','A','A','A','A','A']) as unknown as HorseState['aptitudes'],
+        // HorseState['aptitudes'] is declared `Aptitude[10]` upstream, which TS
+        // collapses to the indexed type `Aptitude` (a bare string) rather than a
+        // 10-tuple, so an array can't be assigned without a double cast. The
+        // runtime value is the correct 10-element array; this is the one
+        // uma-tools impedance point we cannot type away.
+        aptitudes: (props.aptitudes ??
+            DEFAULT_APTITUDES) as unknown as HorseState['aptitudes'],
         skills: SkillSet(skillIds),
         samplePolicies: new Map(),
     }
@@ -147,15 +154,19 @@ export function runSkillSimulation(task: SimulationTask) {
             totalCombos,
             conditionPool,
         )
-        // Skip the cosmetic shuffle when running under a pinned seed -- it
-        // uses Math.random() directly and would otherwise randomize the
-        // combo->track mapping run to run, defeating determinism.
-        if (task.simOptions.seed == null) {
-            shuffleInPlace(globalMoods)
-            shuffleInPlace(globalSeasons)
-            shuffleInPlace(globalWeathers)
-            shuffleInPlace(globalConditions)
-        }
+        // Decorrelate the per-combination assignment of each dimension. The
+        // pools come in a fixed order, so without this the heaviest season
+        // would always pair with the heaviest weather, etc. Seed the shuffle
+        // from the task seed so a pinned seed still reproduces exactly; fall
+        // back to Math.random only when there is no seed.
+        const shuffleRng =
+            task.simOptions.seed != null
+                ? makeSeededRng(task.simOptions.seed)
+                : Math.random
+        shuffleInPlace(globalMoods, shuffleRng)
+        shuffleInPlace(globalSeasons, shuffleRng)
+        shuffleInPlace(globalWeathers, shuffleRng)
+        shuffleInPlace(globalConditions, shuffleRng)
 
         // generateRepresentative already produces a pool whose counts are
         // proportional to the input weights, so the unweighted distribution
@@ -219,9 +230,17 @@ export function runSkillSimulation(task: SimulationTask) {
 
 /**
  * Generate n values representative of the weighted distribution.
- * Guarantees at least 1 of each distinct value when n >= distinctCount.
+ *
+ * When n >= the number of distinct values, every distinct value appears at
+ * least once and the remaining slots are apportioned by weight
+ * (largest-remainder), so the tail is never dropped. When n < distinct (only
+ * possible with a very small budget, e.g. a low CLI --sims with several random
+ * dimensions), n slots cannot hold every value, so we keep the n most probable
+ * — the least-biased deterministic choice for too few slots.
+ *
+ * Exported for unit testing.
  */
-function generateRepresentative<T>(n: number, weightedPool: T[]): T[] {
+export function generateRepresentative<T>(n: number, weightedPool: T[]): T[] {
     if (n <= 0) return []
     const counts = new Map<T, number>()
     for (const v of weightedPool) counts.set(v, (counts.get(v) ?? 0) + 1)
@@ -249,10 +268,21 @@ function generateRepresentative<T>(n: number, weightedPool: T[]): T[] {
     return entries.slice(0, n).map(([val]) => val)
 }
 
-/** Fisher-Yates shuffle in place. */
-function shuffleInPlace<T>(arr: T[]): void {
+/** mulberry32: a tiny deterministic PRNG returning floats in [0, 1). */
+function makeSeededRng(seed: number): () => number {
+    let state = seed >>> 0
+    return () => {
+        state = (state + 0x6d2b79f5) | 0
+        let t = Math.imul(state ^ (state >>> 15), 1 | state)
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+    }
+}
+
+/** Fisher-Yates shuffle in place using the supplied [0,1) RNG. */
+function shuffleInPlace<T>(arr: T[], rng: () => number): void {
     for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1))
+        const j = Math.floor(rng() * (i + 1))
         ;[arr[i], arr[j]] = [arr[j]!, arr[i]!]
     }
 }

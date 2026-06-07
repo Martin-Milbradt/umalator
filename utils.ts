@@ -139,8 +139,15 @@ export interface SkillResult {
     meanLengthPerCost: number
     minLength: number
     maxLength: number
+    // Outcome spread: the central percentile band of individual per-race
+    // results (e.g. 2.5th–97.5th for 95%). NOT a confidence interval of the
+    // mean. Named ciLower/ciUpper for historical reasons.
     ciLower: number
     ciUpper: number
+    // Confidence interval of the MEAN gain (mean ± z·SE): how precisely the
+    // average is estimated.
+    ciMeanLower: number
+    ciMeanUpper: number
 }
 
 export function parseGroundCondition(name: string): GroundCondition {
@@ -250,13 +257,19 @@ export function shuffleArray<T>(array: T[]): T[] {
     return result
 }
 
+// The weighted pools are returned in a fixed order, not shuffled. The worker
+// (simulation.worker.ts) draws representative values from them by count and
+// then shuffles the per-combination assignment with a seeded RNG, so the input
+// order is irrelevant to the result and a fixed order keeps seeded runs
+// reproducible. Weights are approximate in-game frequencies (exact provenance
+// unverified; see the open tracking issue).
 export function createWeightedSeasonArray(): Season[] {
     const result: Season[] = []
     for (let i = 0; i < 40; i++) result.push(Season.Spring)
     for (let i = 0; i < 22; i++) result.push(Season.Summer)
     for (let i = 0; i < 12; i++) result.push(Season.Autumn)
     for (let i = 0; i < 26; i++) result.push(Season.Winter)
-    return shuffleArray(result)
+    return result
 }
 
 export function createWeightedWeatherArray(): number[] {
@@ -265,7 +278,7 @@ export function createWeightedWeatherArray(): number[] {
     for (let i = 0; i < 30; i++) result.push(2)
     for (let i = 0; i < 11; i++) result.push(3)
     for (let i = 0; i < 1; i++) result.push(4)
-    return shuffleArray(result)
+    return result
 }
 
 export function createWeightedConditionArray(): GroundCondition[] {
@@ -274,7 +287,7 @@ export function createWeightedConditionArray(): GroundCondition[] {
     for (let i = 0; i < 11; i++) result.push(GroundCondition.Yielding)
     for (let i = 0; i < 7; i++) result.push(GroundCondition.Soft)
     for (let i = 0; i < 5; i++) result.push(GroundCondition.Heavy)
-    return shuffleArray(result)
+    return result
 }
 
 export function findAllSkillIdsByName(
@@ -417,6 +430,65 @@ export function processCourseData(rawCourse: {
     }
 }
 
+/**
+ * Standard normal quantile (inverse CDF) via Acklam's rational approximation,
+ * accurate to ~1e-9 over (0,1). Used to turn a confidence level into a z-score.
+ */
+export function standardNormalQuantile(p: number): number {
+    if (p <= 0 || p >= 1) {
+        throw new Error(`standardNormalQuantile expects p in (0,1), got ${p}`)
+    }
+    const a0 = -3.969683028665376e1
+    const a1 = 2.209460984245205e2
+    const a2 = -2.759285104469687e2
+    const a3 = 1.38357751867269e2
+    const a4 = -3.066479806614716e1
+    const a5 = 2.506628277459239
+    const b0 = -5.447609879822406e1
+    const b1 = 1.615858368580409e2
+    const b2 = -1.556989798598866e2
+    const b3 = 6.680131188771972e1
+    const b4 = -1.328068155288572e1
+    const c0 = -7.784894002430293e-3
+    const c1 = -3.223964580411365e-1
+    const c2 = -2.400758277161838
+    const c3 = -2.549732539343734
+    const c4 = 4.374664141464968
+    const c5 = 2.938163982698783
+    const d0 = 7.784695709041462e-3
+    const d1 = 3.224671290700398e-1
+    const d2 = 2.445134137142996
+    const d3 = 3.754408661907416
+    const pLow = 0.02425
+    const pHigh = 1 - pLow
+
+    if (p < pLow) {
+        const q = Math.sqrt(-2 * Math.log(p))
+        return (
+            (((((c0 * q + c1) * q + c2) * q + c3) * q + c4) * q + c5) /
+            ((((d0 * q + d1) * q + d2) * q + d3) * q + 1)
+        )
+    }
+    if (p <= pHigh) {
+        const q = p - 0.5
+        const r = q * q
+        return (
+            ((((((a0 * r + a1) * r + a2) * r + a3) * r + a4) * r + a5) * q) /
+            (((((b0 * r + b1) * r + b2) * r + b3) * r + b4) * r + 1)
+        )
+    }
+    const q = Math.sqrt(-2 * Math.log(1 - p))
+    return (
+        -(((((c0 * q + c1) * q + c2) * q + c3) * q + c4) * q + c5) /
+        ((((d0 * q + d1) * q + d2) * q + d3) * q + 1)
+    )
+}
+
+/** Two-sided z-score for a confidence level given as a percentage (e.g. 95). */
+export function zForConfidenceLevel(ciPercent: number): number {
+    return standardNormalQuantile((1 + ciPercent / 100) / 2)
+}
+
 export function calculateStatsFromRawResults(
     rawResults: number[],
     cost: number,
@@ -447,6 +519,16 @@ export function calculateStatsFromRawResults(
     const ciUpper = sorted[upperIndex]!
     const meanLengthPerCost = cost > 0 ? mean / cost : 0
 
+    // Confidence interval of the mean: mean ± z·(s/√n), using the sample
+    // standard deviation (n-1). With a single sample the margin is 0.
+    const variance =
+        sorted.length > 1
+            ? sorted.reduce((acc, v) => acc + (v - mean) ** 2, 0) /
+              (sorted.length - 1)
+            : 0
+    const standardError = Math.sqrt(variance) / Math.sqrt(sorted.length)
+    const margin = zForConfidenceLevel(ciPercent) * standardError
+
     return {
         skill: skillName,
         cost,
@@ -458,6 +540,8 @@ export function calculateStatsFromRawResults(
         maxLength: max,
         ciLower,
         ciUpper,
+        ciMeanLower: mean - margin,
+        ciMeanUpper: mean + margin,
     }
 }
 
@@ -890,6 +974,21 @@ export function parseConditionTerm(
     return { field, values }
 }
 
+const STATIC_FIELD_TO_RESTRICTION_KEY: Record<
+    StaticField,
+    keyof SkillRestrictions
+> = {
+    distance_type: 'distanceTypes',
+    ground_condition: 'groundConditions',
+    ground_type: 'groundTypes',
+    is_basis_distance: 'isBasisDistance',
+    rotation: 'rotations',
+    running_style: 'runningStyles',
+    season: 'seasons',
+    track_id: 'trackIds',
+    weather: 'weathers',
+}
+
 /**
  * Parse a single AND-branch (conditions separated by &) and extract static restrictions.
  * Returns restrictions that must ALL be satisfied for this branch.
@@ -902,35 +1001,14 @@ export function parseAndBranch(branch: string): SkillRestrictions {
         const parsed = parseConditionTerm(term.trim())
         if (!parsed) continue
 
-        switch (parsed.field) {
-            case 'distance_type':
-                restrictions.distanceTypes = parsed.values
-                break
-            case 'ground_condition':
-                restrictions.groundConditions = parsed.values
-                break
-            case 'ground_type':
-                restrictions.groundTypes = parsed.values
-                break
-            case 'is_basis_distance':
-                restrictions.isBasisDistance = parsed.values
-                break
-            case 'rotation':
-                restrictions.rotations = parsed.values
-                break
-            case 'running_style':
-                restrictions.runningStyles = parsed.values
-                break
-            case 'season':
-                restrictions.seasons = parsed.values
-                break
-            case 'track_id':
-                restrictions.trackIds = parsed.values
-                break
-            case 'weather':
-                restrictions.weathers = parsed.values
-                break
-        }
+        // The same field can appear twice in one &-branch (e.g.
+        // "distance_type>=2&distance_type<=3"). AND means both must hold, so
+        // intersect rather than overwrite; a contradiction yields [] (impossible).
+        const key = STATIC_FIELD_TO_RESTRICTION_KEY[parsed.field]
+        const existing = restrictions[key]
+        restrictions[key] = existing
+            ? existing.filter((value) => parsed.values.includes(value))
+            : parsed.values
     }
 
     return restrictions
@@ -1270,81 +1348,4 @@ export function extractSkillRestrictions(
     }
 
     return mergedRestrictions || {}
-}
-
-export function formatTable(
-    results: SkillResult[],
-    confidenceInterval: number,
-): string {
-    const maxSkillLen = Math.max(
-        ...results.map((r) => r.skill.length),
-        'Skill'.length,
-    )
-    const maxCostLen = Math.max(
-        ...results.map((r) => r.cost.toString().length),
-        'Cost'.length,
-    )
-    const maxDiscountLen = Math.max(
-        ...results.map((r) => (r.discount > 0 ? `${r.discount}%` : '-').length),
-        'Discount'.length,
-    )
-    const maxMeanLen = Math.max(
-        ...results.map((r) => r.meanLength.toFixed(2).length),
-        'Mean'.length,
-    )
-    const maxMedianLen = Math.max(
-        ...results.map((r) => r.medianLength.toFixed(2).length),
-        'Median'.length,
-    )
-    const maxRatioLen = Math.max(
-        ...results.map((r) => (r.meanLengthPerCost * 1000).toFixed(2).length),
-        'Mean/Cost'.length,
-    )
-    const maxMinMaxLen = Math.max(
-        ...results.map(
-            (r) => `${r.minLength.toFixed(2)}-${r.maxLength.toFixed(2)}`.length,
-        ),
-        'Min-Max'.length,
-    )
-    const ciLabel = `${confidenceInterval}% CI`
-    const maxCILen = Math.max(
-        ...results.map(
-            (r) => `${r.ciLower.toFixed(2)}-${r.ciUpper.toFixed(2)}`.length,
-        ),
-        ciLabel.length,
-    )
-
-    const header = `Skill${' '.repeat(maxSkillLen - 'Skill'.length + 2)}Cost${' '.repeat(
-        maxCostLen - 'Cost'.length + 2,
-    )}Discount${' '.repeat(maxDiscountLen - 'Discount'.length + 2)}Mean${' '.repeat(maxMeanLen - 'Mean'.length + 2)}Median${' '.repeat(
-        maxMedianLen - 'Median'.length + 2,
-    )}Mean/Cost${' '.repeat(maxRatioLen - 'Mean/Cost'.length + 2)}Min-Max${' '.repeat(
-        maxMinMaxLen - 'Min-Max'.length + 2,
-    )}${ciLabel}`
-    const separator = '-'.repeat(header.length)
-
-    const rows = results.map((r) => {
-        const skillPad = ' '.repeat(maxSkillLen - r.skill.length + 2)
-        const costPad = ' '.repeat(maxCostLen - r.cost.toString().length + 2)
-        const discountStr = r.discount > 0 ? `${r.discount}%` : '-'
-        const discountPad = ' '.repeat(maxDiscountLen - discountStr.length + 2)
-        const meanPad = ' '.repeat(
-            maxMeanLen - r.meanLength.toFixed(2).length + 2,
-        )
-        const medianPad = ' '.repeat(
-            maxMedianLen - r.medianLength.toFixed(2).length + 2,
-        )
-        const ratioPad = ' '.repeat(
-            maxRatioLen - (r.meanLengthPerCost * 1000).toFixed(2).length + 2,
-        )
-        const minMaxStr = `${r.minLength.toFixed(2)}-${r.maxLength.toFixed(2)}`
-        const minMaxPad = ' '.repeat(maxMinMaxLen - minMaxStr.length + 2)
-        const ciStr = `${r.ciLower.toFixed(2)}-${r.ciUpper.toFixed(2)}`
-        const ciPad = ' '.repeat(maxCILen - ciStr.length)
-        return `${r.skill}${skillPad}${r.cost}${costPad}${discountStr}${discountPad}${r.meanLength.toFixed(2)}${meanPad}${r.medianLength.toFixed(2)}${medianPad}${(
-            r.meanLengthPerCost * 1000
-        ).toFixed(2)}${ratioPad}${minMaxStr}${minMaxPad}${ciStr}${ciPad}`
-    })
-
-    return [header, separator, ...rows].join('\n')
 }
