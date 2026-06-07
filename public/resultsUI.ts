@@ -1,5 +1,10 @@
+import { saveResults } from './configStore'
 import { autoSave } from './configManager'
-import { callRenderSkills, callRenderUma } from './renderCallbacks'
+import {
+    callRenderSkills,
+    callRenderUma,
+    registerRenderResults,
+} from './renderCallbacks'
 import {
     adjustSkillPoints,
     createSkillIcon,
@@ -13,6 +18,7 @@ import {
 import {
     getCalculatedResultsCache,
     getCurrentConfig,
+    getCurrentConfigFile,
     getLastCalculationTime,
     getResultsMap,
     getSelectedSkills,
@@ -33,6 +39,33 @@ import type { SkillResult, SkillResultWithStatus } from './types'
 // Render a "lo-hi" interval to two decimals.
 function formatInterval(lo: number, hi: number): string {
     return `${lo.toFixed(2)}-${hi.toFixed(2)}`
+}
+
+// Persist the current table to IndexedDB (debounced) so it reappears on the next
+// load without recomputing. Only completed rows are stored; pending/error rows
+// are transient. Keyed by the open config.
+let resultsSaveTimeout: ReturnType<typeof setTimeout> | null = null
+function persistResults(): void {
+    if (resultsSaveTimeout) clearTimeout(resultsSaveTimeout)
+    resultsSaveTimeout = setTimeout(() => {
+        resultsSaveTimeout = null
+        const configFile = getCurrentConfigFile()
+        if (!configFile) return
+        const results: SkillResult[] = []
+        for (const row of getResultsMap().values()) {
+            if (row.status === 'pending' || row.status === 'error') continue
+            const {
+                status: _status,
+                rawResults: _rawResults,
+                errorMessage: _errorMessage,
+                ...plain
+            } = row
+            results.push(plain)
+        }
+        void saveResults(configFile, results).catch((error) => {
+            console.warn('Failed to persist results:', error)
+        })
+    }, 500)
 }
 
 // Forward declaration to avoid circular import - will be set by api.ts
@@ -82,6 +115,7 @@ export function renderResultsTable(): void {
     if (results.length === 0) {
         if (countEl) countEl.textContent = 'No results yet'
         updateTotalsRow()
+        persistResults()
         return
     }
 
@@ -234,7 +268,12 @@ export function renderResultsTable(): void {
     }
 
     updateTotalsRow()
+    persistResults()
 }
+
+// Re-render the results table from the current state. Registered so config
+// loading can restore persisted results without a circular import.
+registerRenderResults(renderResultsTable)
 
 export function updateTotalsRow(): void {
     const resultsMap = getResultsMap()
