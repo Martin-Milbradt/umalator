@@ -890,6 +890,21 @@ export function parseConditionTerm(
     return { field, values }
 }
 
+const STATIC_FIELD_TO_RESTRICTION_KEY: Record<
+    StaticField,
+    keyof SkillRestrictions
+> = {
+    distance_type: 'distanceTypes',
+    ground_condition: 'groundConditions',
+    ground_type: 'groundTypes',
+    is_basis_distance: 'isBasisDistance',
+    rotation: 'rotations',
+    running_style: 'runningStyles',
+    season: 'seasons',
+    track_id: 'trackIds',
+    weather: 'weathers',
+}
+
 /**
  * Parse a single AND-branch (conditions separated by &) and extract static restrictions.
  * Returns restrictions that must ALL be satisfied for this branch.
@@ -902,35 +917,14 @@ export function parseAndBranch(branch: string): SkillRestrictions {
         const parsed = parseConditionTerm(term.trim())
         if (!parsed) continue
 
-        switch (parsed.field) {
-            case 'distance_type':
-                restrictions.distanceTypes = parsed.values
-                break
-            case 'ground_condition':
-                restrictions.groundConditions = parsed.values
-                break
-            case 'ground_type':
-                restrictions.groundTypes = parsed.values
-                break
-            case 'is_basis_distance':
-                restrictions.isBasisDistance = parsed.values
-                break
-            case 'rotation':
-                restrictions.rotations = parsed.values
-                break
-            case 'running_style':
-                restrictions.runningStyles = parsed.values
-                break
-            case 'season':
-                restrictions.seasons = parsed.values
-                break
-            case 'track_id':
-                restrictions.trackIds = parsed.values
-                break
-            case 'weather':
-                restrictions.weathers = parsed.values
-                break
-        }
+        // The same field can appear twice in one &-branch (e.g.
+        // "distance_type>=2&distance_type<=3"). AND means both must hold, so
+        // intersect rather than overwrite; a contradiction yields [] (impossible).
+        const key = STATIC_FIELD_TO_RESTRICTION_KEY[parsed.field]
+        const existing = restrictions[key]
+        restrictions[key] = existing
+            ? existing.filter((value) => parsed.values.includes(value))
+            : parsed.values
     }
 
     return restrictions

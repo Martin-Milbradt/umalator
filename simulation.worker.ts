@@ -226,9 +226,17 @@ export function runSkillSimulation(task: SimulationTask) {
 
 /**
  * Generate n values representative of the weighted distribution.
- * Guarantees at least 1 of each distinct value when n >= distinctCount.
+ *
+ * When n >= the number of distinct values, every distinct value appears at
+ * least once and the remaining slots are apportioned by weight
+ * (largest-remainder), so the tail is never dropped. When n < distinct (only
+ * possible with a very small budget, e.g. a low CLI --sims with several random
+ * dimensions), n slots cannot hold every value, so we keep the n most probable
+ * — the least-biased deterministic choice for too few slots.
+ *
+ * Exported for unit testing.
  */
-function generateRepresentative<T>(n: number, weightedPool: T[]): T[] {
+export function generateRepresentative<T>(n: number, weightedPool: T[]): T[] {
     if (n <= 0) return []
     const counts = new Map<T, number>()
     for (const v of weightedPool) counts.set(v, (counts.get(v) ?? 0) + 1)
