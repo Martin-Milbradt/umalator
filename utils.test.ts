@@ -1093,6 +1093,8 @@ describe('formatTable', () => {
                 maxLength: 10.0,
                 ciLower: 2.0,
                 ciUpper: 9.0,
+                ciMeanLower: 5.0,
+                ciMeanUpper: 6.0,
             },
         ]
 
@@ -1121,6 +1123,8 @@ describe('formatTable', () => {
                 maxLength: 10.0,
                 ciLower: 2.0,
                 ciUpper: 8.0,
+                ciMeanLower: 4.5,
+                ciMeanUpper: 5.5,
             },
         ]
 
@@ -1142,6 +1146,8 @@ describe('formatTable', () => {
                 maxLength: 10.0,
                 ciLower: 2.0,
                 ciUpper: 9.0,
+                ciMeanLower: 5.0,
+                ciMeanUpper: 6.0,
             },
             {
                 skill: 'Longer Skill Name',
@@ -1155,6 +1161,8 @@ describe('formatTable', () => {
                 maxLength: 6.0,
                 ciLower: 1.0,
                 ciUpper: 5.0,
+                ciMeanLower: 2.5,
+                ciMeanUpper: 3.5,
             },
         ]
 

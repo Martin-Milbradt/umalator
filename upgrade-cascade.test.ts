@@ -33,6 +33,8 @@ const freshResult = (skill: string, mean: number): SkillResult => ({
     maxLength: mean * 2,
     ciLower: 0,
     ciUpper: mean * 2,
+    ciMeanLower: mean,
+    ciMeanUpper: mean,
 })
 
 const freshWithStatus = (
