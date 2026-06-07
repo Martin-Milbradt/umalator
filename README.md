@@ -180,8 +180,8 @@ All skills receive 500 simulations.
 | Median | Median length gain from simulations |
 | Mean/Cost | Efficiency ratio (mean length / cost, x1000) |
 | Min-Max | Minimum and maximum length gains |
-| Range (`ciLower`/`ciUpper`) | Outcome spread: the central percentile band of per-race gains (e.g. 2.5–97.5% at 95%). How much the result swings race to race. |
-| Mean CI (`ciMeanLower`/`ciMeanUpper`) | Confidence interval of the mean gain (mean ± z·SE): how precisely the average is estimated. |
+| Range (`rangeLower`/`rangeUpper`) | Outcome spread: the central percentile band of per-race gains (e.g. 2.5–97.5% at 95%). How much the result swings race to race. |
+| Mean CI (`ciMeanLower`/`ciMeanUpper`) | Confidence interval of the mean gain (mean ± t·SE): how precisely the average is estimated. |
 
 Results are sorted by Mean/Cost in descending order.
 

@@ -141,10 +141,10 @@ export interface SkillResult {
     maxLength: number
     // Outcome spread: the central percentile band of individual per-race
     // results (e.g. 2.5th–97.5th for 95%). NOT a confidence interval of the
-    // mean. Named ciLower/ciUpper for historical reasons.
-    ciLower: number
-    ciUpper: number
-    // Confidence interval of the MEAN gain (mean ± z·SE): how precisely the
+    // mean.
+    rangeLower: number
+    rangeUpper: number
+    // Confidence interval of the MEAN gain (mean ± t·SE): how precisely the
     // average is estimated.
     ciMeanLower: number
     ciMeanUpper: number
@@ -489,6 +489,142 @@ export function zForConfidenceLevel(ciPercent: number): number {
     return standardNormalQuantile((1 + ciPercent / 100) / 2)
 }
 
+/** Natural log of the gamma function (Lanczos approximation, g=7). */
+function logGamma(x: number): number {
+    const c = [
+        0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+        771.32342877765313, -176.61502916214059, 12.507343278686905,
+        -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7,
+    ]
+    if (x < 0.5) {
+        return Math.log(Math.PI / Math.sin(Math.PI * x)) - logGamma(1 - x)
+    }
+    const y = x - 1
+    let a = c[0]!
+    const t = y + 7.5
+    for (let i = 1; i < 9; i++) a += c[i]! / (y + i)
+    return (
+        0.5 * Math.log(2 * Math.PI) + (y + 0.5) * Math.log(t) - t + Math.log(a)
+    )
+}
+
+/** Lentz continued fraction for the incomplete beta (Numerical Recipes). */
+function betaContinuedFraction(x: number, a: number, b: number): number {
+    const MAX_ITER = 1000
+    const EPS = 1e-15
+    const TINY = 1e-300
+    const qab = a + b
+    const qap = a + 1
+    const qam = a - 1
+    let c = 1
+    let d = 1 - (qab * x) / qap
+    if (Math.abs(d) < TINY) d = TINY
+    d = 1 / d
+    let h = d
+    for (let m = 1; m <= MAX_ITER; m++) {
+        const m2 = 2 * m
+        let aa = (m * (b - m) * x) / ((qam + m2) * (a + m2))
+        d = 1 + aa * d
+        if (Math.abs(d) < TINY) d = TINY
+        c = 1 + aa / c
+        if (Math.abs(c) < TINY) c = TINY
+        d = 1 / d
+        h *= d * c
+        aa = (-(a + m) * (qab + m) * x) / ((a + m2) * (qap + m2))
+        d = 1 + aa * d
+        if (Math.abs(d) < TINY) d = TINY
+        c = 1 + aa / c
+        if (Math.abs(c) < TINY) c = TINY
+        d = 1 / d
+        const del = d * c
+        h *= del
+        if (Math.abs(del - 1) < EPS) break
+    }
+    return h
+}
+
+/** Regularized lower incomplete beta I_x(a, b). */
+function regularizedIncompleteBeta(x: number, a: number, b: number): number {
+    if (x <= 0) return 0
+    if (x >= 1) return 1
+    const front = Math.exp(
+        logGamma(a + b) -
+            logGamma(a) -
+            logGamma(b) +
+            a * Math.log(x) +
+            b * Math.log(1 - x),
+    )
+    if (x < (a + 1) / (a + b + 2)) {
+        return (front * betaContinuedFraction(x, a, b)) / a
+    }
+    return 1 - (front * betaContinuedFraction(1 - x, b, a)) / b
+}
+
+/** Inverse of the regularized incomplete beta via bisection. */
+function inverseRegularizedIncompleteBeta(
+    p: number,
+    a: number,
+    b: number,
+): number {
+    if (p <= 0) return 0
+    if (p >= 1) return 1
+    let lo = 0
+    let hi = 1
+    for (let i = 0; i < 80; i++) {
+        const mid = (lo + hi) / 2
+        if (regularizedIncompleteBeta(mid, a, b) < p) {
+            lo = mid
+        } else {
+            hi = mid
+        }
+    }
+    return (lo + hi) / 2
+}
+
+/**
+ * Cornish-Fisher expansion of the t quantile from the normal quantile. Exact to
+ * the eye for large df; used for df >= 50 where the beta continued fraction
+ * converges slowly as x -> 1.
+ */
+function cornishFisherT(p: number, df: number): number {
+    const z = standardNormalQuantile(p)
+    const z3 = z ** 3
+    const z5 = z ** 5
+    const z7 = z ** 7
+    const z9 = z ** 9
+    const g1 = (z3 + z) / 4
+    const g2 = (5 * z5 + 16 * z3 + 3 * z) / 96
+    const g3 = (3 * z7 + 19 * z5 + 17 * z3 - 15 * z) / 384
+    const g4 = (79 * z9 + 776 * z7 + 1482 * z5 - 1920 * z3 - 945 * z) / 92160
+    return z + g1 / df + g2 / df ** 2 + g3 / df ** 3 + g4 / df ** 4
+}
+
+/**
+ * Student's t quantile (inverse CDF) with `df` degrees of freedom. Small df use
+ * the exact t-beta identity df/(df+T^2) ~ Beta(df/2, 1/2); large df use the
+ * Cornish-Fisher expansion. Converges to the normal quantile as df grows.
+ */
+export function studentTQuantile(p: number, df: number): number {
+    if (p <= 0 || p >= 1) {
+        throw new Error(`studentTQuantile expects p in (0,1), got ${p}`)
+    }
+    if (df <= 0) {
+        throw new Error(`studentTQuantile expects df > 0, got ${df}`)
+    }
+    if (p === 0.5) return 0
+    if (df >= 50) return cornishFisherT(p, df)
+    const upper = p > 0.5
+    const tail = upper ? 1 - p : p
+    const x = inverseRegularizedIncompleteBeta(2 * tail, df / 2, 0.5)
+    const t = Math.sqrt((df * (1 - x)) / x)
+    return upper ? t : -t
+}
+
+/** Two-sided t-score for a confidence level (percentage) at `df` degrees of freedom. */
+export function tForConfidenceLevel(ciPercent: number, df: number): number {
+    return studentTQuantile((1 + ciPercent / 100) / 2, df)
+}
+
 export function calculateStatsFromRawResults(
     rawResults: number[],
     cost: number,
@@ -515,19 +651,25 @@ export function calculateStatsFromRawResults(
         Math.floor(sorted.length * (upperPercentile / 100)),
         sorted.length - 1,
     )
-    const ciLower = sorted[lowerIndex]!
-    const ciUpper = sorted[upperIndex]!
+    const rangeLower = sorted[lowerIndex]!
+    const rangeUpper = sorted[upperIndex]!
     const meanLengthPerCost = cost > 0 ? mean / cost : 0
 
-    // Confidence interval of the mean: mean ± z·(s/√n), using the sample
-    // standard deviation (n-1). With a single sample the margin is 0.
+    // Confidence interval of the mean: mean ± t_{n-1}·(s/√n), using the sample
+    // standard deviation (n-1). Bounded data is never exactly normal, so the t
+    // pivot is (like z) only asymptotically exact, but it is marginally more
+    // honest at small n and converges to z as n grows. A single sample has
+    // SE = 0, so the margin is 0 and the degrees of freedom are never evaluated.
     const variance =
         sorted.length > 1
             ? sorted.reduce((acc, v) => acc + (v - mean) ** 2, 0) /
               (sorted.length - 1)
             : 0
     const standardError = Math.sqrt(variance) / Math.sqrt(sorted.length)
-    const margin = zForConfidenceLevel(ciPercent) * standardError
+    const margin =
+        sorted.length > 1
+            ? tForConfidenceLevel(ciPercent, sorted.length - 1) * standardError
+            : 0
 
     return {
         skill: skillName,
@@ -538,8 +680,8 @@ export function calculateStatsFromRawResults(
         meanLengthPerCost,
         minLength: min,
         maxLength: max,
-        ciLower,
-        ciUpper,
+        rangeLower,
+        rangeUpper,
         ciMeanLower: mean - margin,
         ciMeanUpper: mean + margin,
     }

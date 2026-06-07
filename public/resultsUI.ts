@@ -241,7 +241,7 @@ export function renderResultsTable(): void {
         rangeCell.textContent =
             result.status === 'pending'
                 ? '...'
-                : formatInterval(result.ciLower, result.ciUpper)
+                : formatInterval(result.rangeLower, result.rangeUpper)
         row.appendChild(rangeCell)
 
         // Mean CI: confidence interval of the mean gain (precision of the mean).
@@ -572,8 +572,8 @@ export function addPendingSkillToResults(
         meanLengthPerCost: 0,
         minLength: 0,
         maxLength: 0,
-        ciLower: 0,
-        ciUpper: 0,
+        rangeLower: 0,
+        rangeUpper: 0,
         ciMeanLower: 0,
         ciMeanUpper: 0,
         status: 'pending',

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
     calculateStatsFromRawResults,
     standardNormalQuantile,
+    tForConfidenceLevel,
     zForConfidenceLevel,
 } from './utils'
 
@@ -28,20 +29,39 @@ describe('zForConfidenceLevel', () => {
     })
 })
 
+describe('tForConfidenceLevel', () => {
+    it('matches standard t-table values', () => {
+        expect(tForConfidenceLevel(95, 1)).toBeCloseTo(12.7062, 2)
+        expect(tForConfidenceLevel(95, 5)).toBeCloseTo(2.5706, 3)
+        expect(tForConfidenceLevel(95, 10)).toBeCloseTo(2.2281, 3)
+        expect(tForConfidenceLevel(95, 30)).toBeCloseTo(2.0423, 3)
+        expect(tForConfidenceLevel(95, 100)).toBeCloseTo(1.984, 3)
+        expect(tForConfidenceLevel(99, 10)).toBeCloseTo(3.1693, 3)
+    })
+
+    it('converges to the normal z-score as df grows', () => {
+        expect(tForConfidenceLevel(95, 100000)).toBeCloseTo(
+            zForConfidenceLevel(95),
+            3,
+        )
+    })
+})
+
 describe('calculateStatsFromRawResults confidence interval of the mean', () => {
-    it('computes mean ± z·(s/√n) with the sample standard deviation', () => {
+    it('computes mean ± t·(s/√n) with the sample standard deviation', () => {
         const r = calculateStatsFromRawResults([1, 2, 3, 4, 5], 100, 0, 'X', 95)
-        // mean=3, sample sd=√2.5≈1.5811, SE≈0.70711, z≈1.95996, margin≈1.3859
+        // mean=3, sample sd=√2.5≈1.5811, SE≈0.70711, t_{4,.975}≈2.7764,
+        // margin≈1.9632
         expect(r.meanLength).toBeCloseTo(3, 10)
-        expect(r.ciMeanLower).toBeCloseTo(1.6141, 3)
-        expect(r.ciMeanUpper).toBeCloseTo(4.3859, 3)
+        expect(r.ciMeanLower).toBeCloseTo(1.0368, 3)
+        expect(r.ciMeanUpper).toBeCloseTo(4.9632, 3)
     })
 
     it('is tighter than the percentile range for a spread sample', () => {
         const r = calculateStatsFromRawResults([1, 2, 3, 4, 5], 100, 0, 'X', 95)
         // percentile range spans the extremes here; CI of the mean is inside it
-        expect(r.ciMeanLower).toBeGreaterThan(r.ciLower)
-        expect(r.ciMeanUpper).toBeLessThan(r.ciUpper)
+        expect(r.ciMeanLower).toBeGreaterThan(r.rangeLower)
+        expect(r.ciMeanUpper).toBeLessThan(r.rangeUpper)
     })
 
     it('collapses to the mean for a single sample (zero margin)', () => {
@@ -59,10 +79,10 @@ describe('calculateStatsFromRawResults confidence interval of the mean', () => {
         expect(width99).toBeGreaterThan(width90)
     })
 
-    it('keeps the percentile range as the outcome spread (ciLower/ciUpper)', () => {
+    it('keeps the percentile range as the outcome spread (rangeLower/rangeUpper)', () => {
         const r = calculateStatsFromRawResults([1, 2, 3, 4, 5], 100, 0, 'X', 95)
         // 2.5th percentile index = floor(5*0.025)=0 -> 1; 97.5th = index 4 -> 5
-        expect(r.ciLower).toBe(1)
-        expect(r.ciUpper).toBe(5)
+        expect(r.rangeLower).toBe(1)
+        expect(r.rangeUpper).toBe(5)
     })
 })

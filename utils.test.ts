@@ -702,7 +702,7 @@ describe('calculateStatsFromRawResults', () => {
         expect(result.medianLength).toBe(2.5)
     })
 
-    it('calculates confidence interval correctly', () => {
+    it('calculates the outcome-spread range correctly', () => {
         const rawResults = Array.from({ length: 100 }, (_, i) => i + 1)
         const result = calculateStatsFromRawResults(
             rawResults,
@@ -712,8 +712,8 @@ describe('calculateStatsFromRawResults', () => {
             95,
         )
 
-        expect(result.ciLower).toBe(3)
-        expect(result.ciUpper).toBe(98)
+        expect(result.rangeLower).toBe(3)
+        expect(result.rangeUpper).toBe(98)
     })
 
     it('handles single result', () => {
