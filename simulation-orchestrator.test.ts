@@ -128,6 +128,35 @@ describe('runSimulation orchestration', () => {
         }
     })
 
+    async function seedsFor(
+        config: SimulationRunnerConfig,
+    ): Promise<(number | null)[]> {
+        const { adapter, tasks } = fakeAdapter((t) => t.numSimulations)
+        await collect(config, adapter)
+        return tasks.map((t) => t.simOptions.seed)
+    }
+
+    it('uses the configured seed and is reproducible across runs', async () => {
+        const a = await seedsFor(baseConfig({ seed: 4242 }))
+        const b = await seedsFor(baseConfig({ seed: 4242 }))
+        expect(a.length).toBeGreaterThan(0)
+        expect(a).toEqual(b)
+        expect(a[0]).toBe(4242)
+    })
+
+    it('derives different seeds for different configured seeds', async () => {
+        const a = await seedsFor(baseConfig({ seed: 1 }))
+        const b = await seedsFor(baseConfig({ seed: 2 }))
+        expect(a[0]).not.toBe(b[0])
+    })
+
+    it('uses a fresh random seed when none is configured', async () => {
+        const a = await seedsFor(baseConfig())
+        const b = await seedsFor(baseConfig())
+        // Random 0..1e9 seeds: a collision across runs is astronomically unlikely.
+        expect(a[0]).not.toBe(b[0])
+    })
+
     it('emits an error when no skills are available', async () => {
         const { adapter } = fakeAdapter((t) => t.numSimulations)
         const events = await collect(

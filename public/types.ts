@@ -57,6 +57,8 @@ export interface Config {
     track?: Track
     uma?: Uma
     filters?: Filters
+    // Fixed RNG seed for reproducible runs; null/absent = random each run.
+    seed?: number | null
 }
 
 // Results from simulation

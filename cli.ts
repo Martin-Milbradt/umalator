@@ -10,7 +10,9 @@ import {
 
 const configArg = process.argv[2]
 if (!configArg || configArg === '--help' || configArg === '-h') {
-    console.error('Usage: npx tsx cli.ts <config.json> [--skills skill1,skill2]')
+    console.error(
+        'Usage: npx tsx cli.ts <config.json> [--skills skill1,skill2] [--seed N]',
+    )
     process.exit(configArg ? 0 : 1)
 }
 
@@ -22,6 +24,14 @@ const skillFilter = skillsArg
           .map((s) => s.trim())
           .filter(Boolean)
     : undefined
+
+const seedIdx = process.argv.indexOf('--seed')
+const seedArg = seedIdx !== -1 ? process.argv[seedIdx + 1] : undefined
+if (seedIdx !== -1 && (seedArg === undefined || !Number.isFinite(Number(seedArg)))) {
+    console.error('--seed requires a numeric value')
+    process.exit(1)
+}
+const seedOverride = seedArg !== undefined ? Number(seedArg) : undefined
 
 const configPath = resolve(
     configArg.includes('/') || configArg.includes('\\')
@@ -36,6 +46,9 @@ function loadJson<T>(path: string): T {
 }
 
 const config = loadJson<SimulationRunnerConfig>(configPath)
+if (seedOverride !== undefined) {
+    config.seed = seedOverride
+}
 const staticData = {
     courseData: loadJson<Record<string, RawCourseData>>(`${dataDir}/course_data.json`),
     skillData: loadJson<Record<string, SkillDataEntry>>(`${dataDir}/skill_data.json`),

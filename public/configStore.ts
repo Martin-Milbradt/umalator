@@ -210,6 +210,9 @@ export function validateConfigData(data: unknown): Config {
             }
         }
     }
+    if (!isOptionalNumberOrNull(data.seed)) {
+        throw new Error('Invalid config: seed must be a number or null')
+    }
     if ('track' in data && data.track !== undefined) {
         if (!isPlainObject(data.track)) {
             throw new Error('Invalid config: "track" must be an object')

@@ -173,6 +173,34 @@ if (resetButton) {
     resetButton.addEventListener('click', resetUmaSkills)
 }
 
+// Optional reproducibility seed: blank = fresh random seed each run, a number =
+// identical results across runs. Persisted on the config like other settings.
+const seedInput = document.getElementById(
+    'seed-input',
+) as HTMLInputElement | null
+if (seedInput) {
+    seedInput.addEventListener('change', () => {
+        const currentConfig = getCurrentConfig()
+        if (!currentConfig) return
+        const raw = seedInput.value.trim()
+        if (raw === '') {
+            currentConfig.seed = null
+        } else {
+            const parsed = Number(raw)
+            if (!Number.isFinite(parsed)) {
+                showToast({ type: 'error', message: 'Seed must be a number' })
+                seedInput.value =
+                    currentConfig.seed != null
+                        ? String(currentConfig.seed)
+                        : ''
+                return
+            }
+            currentConfig.seed = parsed
+        }
+        autoSave()
+    })
+}
+
 // Set up add skill button
 const addSkillButton = document.getElementById(
     'add-skill-button',

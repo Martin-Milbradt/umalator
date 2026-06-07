@@ -51,6 +51,12 @@ export async function loadConfig(filename: string): Promise<void> {
     if (select) {
         select.value = filename
     }
+    const seedInput = document.getElementById(
+        'seed-input',
+    ) as HTMLInputElement | null
+    if (seedInput) {
+        seedInput.value = config.seed != null ? String(config.seed) : ''
+    }
 
     try {
         localStorage.setItem(LAST_USED_CONFIG_KEY, filename)

@@ -102,6 +102,9 @@ export interface SimulationRunnerConfig {
     deterministic?: boolean
     confidenceInterval?: number
     numSimulations?: number
+    // Fixed RNG seed for reproducible runs. null/undefined = a fresh random
+    // seed each run (the default).
+    seed?: number | null
 }
 
 export interface SimulationProgress {
@@ -447,6 +450,12 @@ export async function runSimulation(
     }
 
     const deterministic = config.deterministic ?? false
+    // A fixed seed makes the whole run reproducible: every task's seed is
+    // derived from it (seedBase + task index) and runComparison draws all of
+    // its randomness from that seed. config.seed wins; the legacy
+    // `deterministic` flag behaves like seed 0; otherwise each task gets a
+    // fresh random seed.
+    const seedBase = config.seed ?? (deterministic ? 0 : null)
     // Base simOptions without seed - seed is generated per worker invocation
     const baseSimOptions = {
         useEnhancedSpurt: !deterministic,
@@ -595,9 +604,10 @@ export async function runSimulation(
 
     const buildTask = (skillName: string): SimulationTask => {
         const skillId = skillNameToId[skillName]!
-        const seed = deterministic
-            ? seedCounter++
-            : Math.floor(Math.random() * 1000000000)
+        const seed =
+            seedBase !== null
+                ? seedBase + seedCounter++
+                : Math.floor(Math.random() * 1000000000)
         return {
             skillId,
             skillName,

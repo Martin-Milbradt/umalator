@@ -480,13 +480,13 @@ describe('simulation worker integration', () => {
     }, 30000)
 
     it('pinned seed with random conditions produces identical raw results across runs', async () => {
-        // With a pinned simOptions.seed, shuffleInPlace must use the seeded RNG
-        // so the combo->track mapping is identical across runs.
+        // With a pinned simOptions.seed, shuffleInPlace uses a seeded RNG so
+        // the combo->track mapping is identical across runs.
         const suzuka2000 = processCourseData(courseData['10905']!)
 
-        // Build the task once: createWeightedSeasonArray etc. shuffle
-        // internally with Math.random, so calling them per run would feed
-        // each worker a different pool and obscure the determinism check.
+        // The weighted pools are built in a fixed order (no internal shuffle),
+        // so the only entropy is the pinned seed; building the task once keeps
+        // the check focused on that.
         const task: SimulationTask = {
             skillId: '200492',
             skillName: 'Nimble Navigator',

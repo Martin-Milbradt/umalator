@@ -257,13 +257,19 @@ export function shuffleArray<T>(array: T[]): T[] {
     return result
 }
 
+// The weighted pools are returned in a fixed order, not shuffled. The worker
+// (simulation.worker.ts) draws representative values from them by count and
+// then shuffles the per-combination assignment with a seeded RNG, so the input
+// order is irrelevant to the result and a fixed order keeps seeded runs
+// reproducible. Weights are approximate in-game frequencies (exact provenance
+// unverified; see the open tracking issue).
 export function createWeightedSeasonArray(): Season[] {
     const result: Season[] = []
     for (let i = 0; i < 40; i++) result.push(Season.Spring)
     for (let i = 0; i < 22; i++) result.push(Season.Summer)
     for (let i = 0; i < 12; i++) result.push(Season.Autumn)
     for (let i = 0; i < 26; i++) result.push(Season.Winter)
-    return shuffleArray(result)
+    return result
 }
 
 export function createWeightedWeatherArray(): number[] {
@@ -272,7 +278,7 @@ export function createWeightedWeatherArray(): number[] {
     for (let i = 0; i < 30; i++) result.push(2)
     for (let i = 0; i < 11; i++) result.push(3)
     for (let i = 0; i < 1; i++) result.push(4)
-    return shuffleArray(result)
+    return result
 }
 
 export function createWeightedConditionArray(): GroundCondition[] {
@@ -281,7 +287,7 @@ export function createWeightedConditionArray(): GroundCondition[] {
     for (let i = 0; i < 11; i++) result.push(GroundCondition.Yielding)
     for (let i = 0; i < 7; i++) result.push(GroundCondition.Soft)
     for (let i = 0; i < 5; i++) result.push(GroundCondition.Heavy)
-    return shuffleArray(result)
+    return result
 }
 
 export function findAllSkillIdsByName(
