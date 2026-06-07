@@ -36,11 +36,12 @@ jobs:
         run: node scripts/pin-submodule.mjs --strict
       # Gate the deploy: a red typecheck or test must never reach Pages. The
       # build steps (esbuild/vite) do not type-check, so this is the only guard.
+      # Build first: the worker integration tests spawn the built worker.
       - name: Typecheck
         run: npm run typecheck
+      - run: npm run build
       - name: Test
         run: npm test
-      - run: npm run build
       - run: npm run build:frontend
         env:
           VITE_BASE: /umalator/
