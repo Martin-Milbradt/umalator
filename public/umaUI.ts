@@ -92,7 +92,14 @@ export function renderUma(): void {
 
     const createUmaField = (field: UmaField): HTMLElement => {
         const wrapper = document.createElement('span')
-        wrapper.className = 'inline-flex items-center gap-1'
+        // The Unique field holds a free-text skill name that can be long. Let its
+        // wrapper shrink (min-w-0) inside the flex-wrap stats row so it never
+        // forces the uma/track box wider than the pane (which would add a
+        // horizontal scrollbar). Other fields stay sized to their content.
+        wrapper.className =
+            field.key === 'unique'
+                ? 'inline-flex items-center gap-1 min-w-0 max-w-full'
+                : 'inline-flex items-center gap-1'
 
         const label = document.createElement('span')
         label.className = 'text-zinc-300 text-[13px] whitespace-nowrap'
@@ -144,6 +151,11 @@ export function renderUma(): void {
                 input.classList.add('text-red-400', 'border-red-500')
             }
             if (field.key === 'unique') {
+                // `width` (above) is the preferred width; min-w-0 lets the input
+                // shrink below it when the pane is narrow, max-w-full keeps it
+                // inside the box, and text-ellipsis renders long names as "…"
+                // rather than overflowing.
+                input.classList.add('min-w-0', 'max-w-full', 'text-ellipsis')
                 attachSkillAutocomplete(input as HTMLInputElement, 'unique')
             }
         }
