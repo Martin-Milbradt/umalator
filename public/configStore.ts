@@ -127,6 +127,9 @@ export async function duplicateConfig(
 ): Promise<void> {
     const config = await loadConfig(from)
     await saveConfig(to, config)
+    // Carry the cached results over so the duplicate shows the same table
+    // immediately instead of an empty one.
+    await saveResults(to, await loadResults(from))
 }
 
 /** Persist the last calculated results for a config (keyed by config name). */
