@@ -54,23 +54,15 @@ if (-not (Test-Path $umaToolsPath)) {
     }
 }
 
-# Update submodules to the commits pinned in the parent repo.
-# uma-skill-tools needs a specific commit (24f0a88) which is one commit
-# ahead of upstream master. We depend on two unmerged changes from it:
-#   1. the otherHorse() API used by uma-tools/umalator/compare.ts
-#   2. mood/popularity moved from RaceParameters onto HorseParameters
-# The uma-tools submodule itself records an older uma-skill-tools
-# commit, so we re-checkout 24f0a88 here (and in CI) after init.
-Write-Host "Updating submodules..."
+# Update submodules, then re-pin the nested uma-skill-tools to the loose commit
+# we depend on. scripts/pin-submodule.mjs owns the SHA and the rationale; see it
+# (and docs/cloud-setup.md) for why a plain submodule update lands on the wrong
+# commit.
+Write-Host "Updating submodules and pinning uma-skill-tools..."
 git submodule update --init --recursive uma-tools
-if (Test-Path $umaToolsPath) {
-    Push-Location (Join-Path $umaToolsPath "uma-skill-tools")
-    git fetch origin 24f0a8862106dd4aaeea55e90e975acc9ca5d019
-    git checkout 24f0a8862106dd4aaeea55e90e975acc9ca5d019
-    if ($LASTEXITCODE -ne 0) {
-        Write-Warning "Failed to update uma-skill-tools, continuing anyway..."
-    }
-    Pop-Location
+node scripts/pin-submodule.mjs --strict
+if ($LASTEXITCODE -ne 0) {
+    Write-Warning "Failed to pin uma-skill-tools, continuing anyway..."
 }
 
 # Build workers before starting servers

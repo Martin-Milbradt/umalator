@@ -7,17 +7,16 @@ display. For everyday local development on your own machine, the
 [README](../README.md) "Getting Started" section is enough; this doc covers the
 extra steps and gotchas that bite in automation.
 
-> TL;DR — the four steps that must all happen before anything works:
+> TL;DR — one command does all four steps (submodule init, pin, build):
 >
 > ```bash
-> npm install
-> git submodule update --init --recursive
-> # CRITICAL: pin the nested submodule to the exact commit we depend on
-> ( cd uma-tools/uma-skill-tools \
->   && git fetch origin 24f0a8862106dd4aaeea55e90e975acc9ca5d019 \
->   && git checkout 24f0a8862106dd4aaeea55e90e975acc9ca5d019 )
-> npm run build
+> npm install      # postinstall pins uma-skill-tools if the submodule is present
+> npm run setup    # init submodules + pin uma-skill-tools + build workers
 > ```
+>
+> `npm run setup` wraps `scripts/pin-submodule.mjs`, the single source of truth
+> for the pinned SHA. The equivalent manual steps (useful when something goes
+> wrong) are below.
 
 ## Prerequisites: network access
 
@@ -54,6 +53,10 @@ records (`6ba5ca0` as of writing), which is **not** the commit we need. Do not
 skip Step 3.
 
 ## Step 3 — Pin `uma-skill-tools` to `24f0a88` (the easy-to-miss step)
+
+> `node scripts/pin-submodule.mjs` (run for you by `postinstall` and
+> `npm run setup`) does exactly this step, idempotently. The manual commands
+> below are the fallback when you need to do it by hand.
 
 We depend on commit `24f0a88`, which is **one commit ahead of upstream
 `uma-skill-tools` master**. It carries two changes our code relies on:

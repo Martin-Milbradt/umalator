@@ -9,6 +9,8 @@
     "dev": "npm run build && vite",
     "dev:server": "concurrently \"tsx server.ts\" \"vite\"",
     "markdownlint": "markdownlint-cli2 \"**/*.md\"",
+    "postinstall": "node scripts/pin-submodule.mjs",
+    "setup": "git submodule update --init --recursive && node scripts/pin-submodule.mjs --strict && npm run build",
     "test": "vitest run",
     "preview": "npm run build && npm run build:frontend && vite preview",
     "race-check": "tsx race-check.ts",

@@ -15,11 +15,15 @@ npm run dev     # Build worker + start Vite dev server
 
 Then open `http://localhost:5173` in your browser.
 
-The `--recursive` flag is required to clone the [uma-tools](https://github.com/alpha123/uma-tools) submodule (and its nested `uma-skill-tools` submodule). If you already cloned without it:
+The `--recursive` flag is required to clone the [uma-tools](https://github.com/alpha123/uma-tools) submodule (and its nested `uma-skill-tools` submodule). `npm install` then runs a `postinstall` step that pins `uma-skill-tools` to the exact commit the app depends on (one commit ahead of upstream; the parent submodule records an older one, so a plain checkout gets it wrong).
+
+If you cloned without `--recursive`, or are setting up in CI or a fresh container, run the one-shot bootstrap instead of the manual submodule dance:
 
 ```bash
-git submodule update --init --recursive
+npm run setup   # init submodules + pin uma-skill-tools + build workers
 ```
+
+See [docs/cloud-setup.md](docs/cloud-setup.md) for the full Cloud/CI walkthrough (network requirements, headless UI verification, expected `git status` noise).
 
 ## Commands
 
