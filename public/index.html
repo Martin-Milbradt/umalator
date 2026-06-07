@@ -22,8 +22,16 @@
             id="import-clipboard-modal"
             class="hidden fixed inset-0 z-40 bg-black/60 flex items-center justify-center"
         >
-            <div class="bg-zinc-800 border border-zinc-700 rounded-md p-4 w-96 max-w-[90vw] shadow-xl">
-                <h2 class="text-zinc-200 text-base font-semibold mb-3">
+            <div
+                class="bg-zinc-800 border border-zinc-700 rounded-md p-4 w-96 max-w-[90vw] shadow-xl"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="import-clipboard-title"
+            >
+                <h2
+                    id="import-clipboard-title"
+                    class="text-zinc-200 text-base font-semibold mb-3"
+                >
                     Import from Clipboard
                 </h2>
                 <label class="block mb-3">
@@ -79,6 +87,7 @@
                             id="add-skill-button"
                             class="bg-sky-600 text-white border-none rounded h-7 w-7 text-[13px] leading-none cursor-pointer flex items-center justify-center p-0 transition-colors hover:bg-sky-700 active:bg-sky-800"
                             title="Add new skill (hotkey: +)"
+                            aria-label="Add new skill"
                         >
                             +
                         </button>
@@ -88,6 +97,8 @@
                                 id="filter-icons-button"
                                 class="bg-zinc-700 border border-zinc-600 rounded h-7 w-7 flex items-center justify-center cursor-pointer transition-colors hover:bg-zinc-600"
                                 title="Toggle skill icons"
+                                aria-label="Toggle skill icons"
+                                aria-pressed="true"
                                 data-active="true"
                             >
                                 <img alt="" class="w-5 h-5" />
@@ -96,12 +107,15 @@
                                 id="filter-owned-button"
                                 class="bg-zinc-700 text-zinc-200 border border-zinc-600 rounded h-7 px-2 cursor-pointer transition-colors hover:bg-zinc-600"
                                 title="Toggle: hide skills already on the uma"
+                                aria-label="Hide skills already on the uma"
+                                aria-pressed="false"
                                 data-active="false"
                             >
                                 Owned
                             </button>
                             <select
                                 id="filter-available-select"
+                                aria-label="Skill availability filter"
                                 class="py-1 px-1.5 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] focus:outline-none focus:border-sky-500"
                             >
                                 <option value="filtered" title="Skills that match the current distance, style, etc.">Filtered</option>
@@ -130,10 +144,12 @@
                 <div class="shrink-0 flex flex-wrap items-center gap-1.5 mb-2.5">
                     <select
                         id="config-select"
+                        aria-label="Active config"
                         class="flex-1 min-w-0 py-1 px-1.5 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] focus:outline-none focus:border-sky-500"
                     ></select>
                     <select
                         id="config-menu"
+                        aria-label="Config actions"
                         class="py-1 px-1.5 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] focus:outline-none focus:border-sky-500"
                         title="Import/export configs"
                     >
@@ -148,6 +164,7 @@
                     </select>
                     <select
                         id="help-menu"
+                        aria-label="Help menu"
                         class="py-1 px-1.5 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] focus:outline-none focus:border-sky-500"
                         title="Help, tour, and contact"
                     >
@@ -168,6 +185,7 @@
                         id="seed-input"
                         type="number"
                         placeholder="seed"
+                        aria-label="Reproducibility seed (blank for random)"
                         title="Fixed RNG seed for reproducible runs. Leave blank for a fresh random seed each run."
                         class="h-7 w-20 px-1.5 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] focus:outline-none focus:border-sky-500"
                     />
@@ -214,17 +232,17 @@
                     <table id="results-table" class="w-full text-left whitespace-nowrap">
                         <thead class="text-teal-400 border-b border-zinc-700">
                             <tr>
-                                <th class="p-1 w-8"><input type="checkbox" id="select-all-checkbox" title="Select all" /></th>
-                                <th class="p-1 w-8"></th>
-                                <th class="p-1 cursor-pointer hover:text-teal-300" data-sort="skill" title="Skill name">Skill</th>
-                                <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="cost" title="Skill point cost after discount, including any uncovered prerequisites">Cost</th>
-                                <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="discount" title="Hint discount applied to this skill">Disc</th>
-                                <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="meanLength" title="Average length gained versus not having the skill, across all simulations">Mean</th>
-                                <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="medianLength" title="Median length gained: half of races gain more, half less">Median</th>
-                                <th class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="meanLengthPerCost" title="Efficiency: mean length gained per skill point (×1000)">Mean/Cost</th>
-                                <th class="p-1 text-right" title="Smallest and largest single-race gain observed">Min-Max</th>
-                                <th class="p-1 text-right" title="Outcome spread: the central percentile band of per-race gains (e.g. 2.5–97.5%). How much the result swings race to race.">Range</th>
-                                <th class="p-1 text-right" title="Confidence interval of the mean gain (mean ± z × standard error): how precisely the average is estimated.">Mean CI</th>
+                                <th scope="col" class="p-1 w-8"><input type="checkbox" id="select-all-checkbox" title="Select all" aria-label="Select all skills" /></th>
+                                <th scope="col" class="p-1 w-8"><span class="sr-only">Add to uma</span></th>
+                                <th scope="col" class="p-1 cursor-pointer hover:text-teal-300" data-sort="skill" title="Skill name">Skill</th>
+                                <th scope="col" class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="cost" title="Skill point cost after discount, including any uncovered prerequisites">Cost</th>
+                                <th scope="col" class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="discount" title="Hint discount applied to this skill">Disc</th>
+                                <th scope="col" class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="meanLength" title="Average length gained versus not having the skill, across all simulations">Mean</th>
+                                <th scope="col" class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="medianLength" title="Median length gained: half of races gain more, half less">Median</th>
+                                <th scope="col" class="p-1 cursor-pointer hover:text-teal-300 text-right" data-sort="meanLengthPerCost" title="Efficiency: mean length gained per skill point (×1000)">Mean/Cost</th>
+                                <th scope="col" class="p-1 text-right" title="Smallest and largest single-race gain observed">Min-Max</th>
+                                <th scope="col" class="p-1 text-right" title="Outcome spread: the central percentile band of per-race gains (e.g. 2.5–97.5%). How much the result swings race to race.">Range</th>
+                                <th scope="col" class="p-1 text-right" title="Confidence interval of the mean gain (mean ± z × standard error): how precisely the average is estimated.">Mean CI</th>
                             </tr>
                         </thead>
                         <tbody id="results-tbody"></tbody>

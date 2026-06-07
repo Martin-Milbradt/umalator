@@ -132,6 +132,7 @@ export function renderResultsTable(): void {
             'bg-sky-600 text-white border-none rounded w-5 h-5 text-sm leading-none cursor-pointer flex items-center justify-center p-0 transition-colors hover:bg-sky-700 active:bg-sky-800'
         addBtn.textContent = '+'
         addBtn.title = 'Add to Uma skills'
+        addBtn.setAttribute('aria-label', `Add ${result.skill} to uma skills`)
         addBtn.addEventListener('click', () => {
             addSkillToUmaFromTable(result.skill, result.cost)
         })
