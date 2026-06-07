@@ -8,5 +8,10 @@ export default defineConfig({
         globals: true,
         environment: 'node',
         include: ['**/*.test.ts'],
+        coverage: {
+            provider: 'v8',
+            reporter: ['text', 'html'],
+            exclude: ['**/node_modules/**', '**/uma-tools/**'],
+        },
     },
 })

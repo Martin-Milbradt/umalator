@@ -12,6 +12,8 @@
     "postinstall": "node scripts/pin-submodule.mjs",
     "setup": "git submodule update --init --recursive && node scripts/pin-submodule.mjs --strict && npm run build",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "node scripts/typecheck.mjs",
     "preview": "npm run build && npm run build:frontend && vite preview",
     "race-check": "tsx race-check.ts",
     "web": "npm run build:frontend && tsx server.ts"
@@ -27,6 +29,7 @@
     "@tailwindcss/vite": "^4.1.18",
     "@types/express": "^5.0.6",
     "@types/node": "^25.0.3",
+    "@vitest/coverage-v8": "^4.0.17",
     "concurrently": "^9.2.1",
     "tailwindcss": "^4.1.18",
     "tsx": "^4.21.0",

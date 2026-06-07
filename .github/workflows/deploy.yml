@@ -34,6 +34,12 @@ jobs:
       - run: npm ci
       - name: Pin uma-skill-tools
         run: node scripts/pin-submodule.mjs --strict
+      # Gate the deploy: a red typecheck or test must never reach Pages. The
+      # build steps (esbuild/vite) do not type-check, so this is the only guard.
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Test
+        run: npm test
       - run: npm run build
       - run: npm run build:frontend
         env:
