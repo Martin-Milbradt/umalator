@@ -37,6 +37,7 @@ import {
     setupSelectAllCheckbox,
 } from './resultsUI'
 import {
+    PLACEHOLDER_SKILL_NAME,
     buildSkillNameLookup,
     buildVariantCache,
     getCanonicalSkillName,
@@ -234,11 +235,10 @@ if (addSkillButton) {
         if (!currentConfig.skills) {
             currentConfig.skills = {}
         }
-        const newSkillName = 'New Skill'
         let counter = 1
-        let finalName = newSkillName
+        let finalName = PLACEHOLDER_SKILL_NAME
         while (currentConfig.skills[finalName]) {
-            finalName = `${newSkillName} ${counter}`
+            finalName = `${PLACEHOLDER_SKILL_NAME} ${counter}`
             counter++
         }
         currentConfig.skills[finalName] = {

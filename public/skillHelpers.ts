@@ -86,6 +86,23 @@ export function isValidSkillName(name: string): boolean {
     return false
 }
 
+/** Base name a freshly added skill row carries until the user types a real one. */
+export const PLACEHOLDER_SKILL_NAME = 'New Skill'
+
+const placeholderSkillNamePattern = new RegExp(
+    `^${PLACEHOLDER_SKILL_NAME}( \\d+)?$`,
+)
+
+/**
+ * Whether `name` is the auto-generated placeholder a freshly added skill carries
+ * until it is named ("New Skill", "New Skill 1", ...). Such a row isn't a real
+ * skill, so its discount must not enter the results table or kick off a
+ * simulation that would fail on the placeholder name.
+ */
+export function isPlaceholderSkillName(name: string): boolean {
+    return placeholderSkillNamePattern.test(name.trim())
+}
+
 export function getBaseSkillName(skillName: string): string {
     return skillName.replace(/[◎○]$/, '').trim()
 }

@@ -19,6 +19,7 @@ import {
     getShowIcons,
     getSkillCostWithDiscount,
     getVariantsForBaseName,
+    isPlaceholderSkillName,
     isSkillOnUma,
     isValidSkillName,
     setShowIcons,
@@ -123,6 +124,15 @@ export function setDiscountForVariants(
 
     if (!currentConfig.skills[skillName]) {
         currentConfig.skills[skillName] = { discount: null }
+    }
+
+    // A placeholder row ("New Skill") isn't a real skill yet. Store the discount
+    // so it carries over when the user names the skill, but skip the results /
+    // variant work: there are no ○/◎ siblings to mirror, and feeding the
+    // placeholder name to the simulation would just fail.
+    if (isPlaceholderSkillName(skillName)) {
+        currentConfig.skills[skillName]!.discount = discount
+        return
     }
 
     const variants = getDiscountVariants(skillName)
@@ -524,6 +534,19 @@ function buildSkillRow(skillName: string): HTMLDivElement | null {
             renderSkills()
         }
 
+        // Re-insert the original name span without rebuilding the list, so a
+        // click that moved focus out of the input (e.g. a discount button on the
+        // same row) still lands on its target. The span keeps its rename
+        // listener across the detach/reattach.
+        const restoreSpanInPlace = () => {
+            const parent = skillNameInput.parentNode
+            if (parent) {
+                parent.replaceChild(spanTarget, skillNameInput)
+            } else {
+                renderSkills()
+            }
+        }
+
         const deleteAndCancel = () => {
             cancelled = true
             deleteSkill(originalName)
@@ -538,33 +561,43 @@ function buildSkillRow(skillName: string): HTMLDivElement | null {
             const inputName = skillNameInput.value.trim()
             if (!inputName) {
                 deleteAndCancel()
-            } else {
-                const canonicalName = getCanonicalSkillName(inputName)
-                if (!isValidSkillName(canonicalName)) {
-                    showToast({
-                        type: 'error',
-                        message: `Unknown skill: "${inputName}"`,
-                    })
-                    restoreSpan()
-                } else if (
-                    canonicalName !== originalName &&
-                    !currentConfig.skills[canonicalName]
-                ) {
-                    const skillData = currentConfig.skills[originalName]!
-                    deleteSkill(originalName)
-                    pruneFromResults(originalName)
-                    currentConfig.skills[canonicalName] = skillData
-                    renderSkills()
-                    callRenderUma()
-                    triggerCalculationForRenamedSkill(
-                        canonicalName,
-                        skillData.discount,
-                    )
-                    autoSave()
-                } else {
-                    restoreSpan()
-                }
+                return
             }
+            // Still the placeholder name: the user is setting a discount (or
+            // clicked away) before naming the skill. Keep the row instead of
+            // rejecting it as an unknown skill, and restore the span in place so
+            // the click that triggered the blur reaches the discount control.
+            if (isPlaceholderSkillName(inputName)) {
+                restoreSpanInPlace()
+                return
+            }
+            const canonicalName = getCanonicalSkillName(inputName)
+            if (!isValidSkillName(canonicalName)) {
+                showToast({
+                    type: 'error',
+                    message: `Unknown skill: "${inputName}"`,
+                })
+                restoreSpan()
+                return
+            }
+            if (
+                canonicalName !== originalName &&
+                !currentConfig.skills[canonicalName]
+            ) {
+                const skillData = currentConfig.skills[originalName]!
+                deleteSkill(originalName)
+                pruneFromResults(originalName)
+                currentConfig.skills[canonicalName] = skillData
+                renderSkills()
+                callRenderUma()
+                triggerCalculationForRenamedSkill(
+                    canonicalName,
+                    skillData.discount,
+                )
+                autoSave()
+                return
+            }
+            restoreSpan()
         }
 
         const parent = spanTarget.parentNode
@@ -585,8 +618,7 @@ function buildSkillRow(skillName: string): HTMLDivElement | null {
                 skillNameInput.blur()
             } else if (e.key === 'Escape') {
                 const value = skillNameInput.value.trim()
-                const isPlaceholder = /^New Skill( \d+)?$/.test(value)
-                if (!value || isPlaceholder) {
+                if (!value || isPlaceholderSkillName(value)) {
                     deleteAndCancel()
                 } else {
                     restoreSpan()
