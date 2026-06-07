@@ -16,6 +16,10 @@ const skillmeta = skillmetaRaw as Record<
     { baseCost: number; groupId: string; iconId: string; order: number; score: number }
 >
 
+// Mirrors uma-tools DEFAULT_HORSE_STATE: 4×S then 6×A across the aptitude
+// spreads. Used when a serialized HorseState omits aptitudes.
+const DEFAULT_APTITUDES = ['S', 'S', 'S', 'S', 'A', 'A', 'A', 'A', 'A', 'A']
+
 /**
  * Creates a HorseState object compatible with uma-tools runComparison.
  * mood and popularity live here (HorseParameters) since uma-skill-tools 24f0a88.
@@ -40,10 +44,13 @@ function createHorseState(
         surfaceAptitude: props.surfaceAptitude as HorseState['surfaceAptitude'],
         strategyAptitude:
             props.strategyAptitude as HorseState['strategyAptitude'],
-        // Cast through unknown: HorseState['aptitudes'] is typed as
-        // `Aptitude[10]` upstream which TS interprets as the indexed type
-        // `Aptitude`, not a 10-tuple. The runtime shape is correct.
-        aptitudes: (props.aptitudes ?? ['S','S','S','S','A','A','A','A','A','A']) as unknown as HorseState['aptitudes'],
+        // HorseState['aptitudes'] is declared `Aptitude[10]` upstream, which TS
+        // collapses to the indexed type `Aptitude` (a bare string) rather than a
+        // 10-tuple, so an array can't be assigned without a double cast. The
+        // runtime value is the correct 10-element array; this is the one
+        // uma-tools impedance point we cannot type away.
+        aptitudes: (props.aptitudes ??
+            DEFAULT_APTITUDES) as unknown as HorseState['aptitudes'],
         skills: SkillSet(skillIds),
         samplePolicies: new Map(),
     }
