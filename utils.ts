@@ -430,63 +430,72 @@ export function processCourseData(rawCourse: {
     }
 }
 
-/**
- * Standard normal quantile (inverse CDF) via Acklam's rational approximation,
- * accurate to ~1e-9 over (0,1). Used to turn a confidence level into a z-score.
- */
-export function standardNormalQuantile(p: number): number {
-    if (p <= 0 || p >= 1) {
-        throw new Error(`standardNormalQuantile expects p in (0,1), got ${p}`)
-    }
-    const a0 = -3.969683028665376e1
-    const a1 = 2.209460984245205e2
-    const a2 = -2.759285104469687e2
-    const a3 = 1.38357751867269e2
-    const a4 = -3.066479806614716e1
-    const a5 = 2.506628277459239
-    const b0 = -5.447609879822406e1
-    const b1 = 1.615858368580409e2
-    const b2 = -1.556989798598866e2
-    const b3 = 6.680131188771972e1
-    const b4 = -1.328068155288572e1
-    const c0 = -7.784894002430293e-3
-    const c1 = -3.223964580411365e-1
-    const c2 = -2.400758277161838
-    const c3 = -2.549732539343734
-    const c4 = 4.374664141464968
-    const c5 = 2.938163982698783
-    const d0 = 7.784695709041462e-3
-    const d1 = 3.224671290700398e-1
-    const d2 = 2.445134137142996
-    const d3 = 3.754408661907416
-    const pLow = 0.02425
-    const pHigh = 1 - pLow
+// Bootstrap resample count for the mean's confidence interval. Enough for
+// stable 2.5/97.5 percentiles at negligible cost next to the simulation.
+const BOOTSTRAP_RESAMPLES = 2000
 
-    if (p < pLow) {
-        const q = Math.sqrt(-2 * Math.log(p))
-        return (
-            (((((c0 * q + c1) * q + c2) * q + c3) * q + c4) * q + c5) /
-            ((((d0 * q + d1) * q + d2) * q + d3) * q + 1)
-        )
+/** mulberry32: a tiny deterministic PRNG returning floats in [0, 1). */
+function makeSeededRng(seed: number): () => number {
+    let state = seed >>> 0
+    return () => {
+        state = (state + 0x6d2b79f5) | 0
+        let t = Math.imul(state ^ (state >>> 15), 1 | state)
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296
     }
-    if (p <= pHigh) {
-        const q = p - 0.5
-        const r = q * q
-        return (
-            ((((((a0 * r + a1) * r + a2) * r + a3) * r + a4) * r + a5) * q) /
-            (((((b0 * r + b1) * r + b2) * r + b3) * r + b4) * r + 1)
-        )
-    }
-    const q = Math.sqrt(-2 * Math.log(1 - p))
-    return (
-        -(((((c0 * q + c1) * q + c2) * q + c3) * q + c4) * q + c5) /
-        ((((d0 * q + d1) * q + d2) * q + d3) * q + 1)
-    )
 }
 
-/** Two-sided z-score for a confidence level given as a percentage (e.g. 95). */
-export function zForConfidenceLevel(ciPercent: number): number {
-    return standardNormalQuantile((1 + ciPercent / 100) / 2)
+/**
+ * Deterministic 32-bit seed derived from the sample (FNV-1a over the values'
+ * decimal forms), so the bootstrap CI is reproducible: identical results give an
+ * identical interval, with no external seed to thread through.
+ */
+function seedFromSamples(values: number[]): number {
+    let hash = 0x811c9dc5
+    for (const value of values) {
+        const text = value.toString()
+        for (let i = 0; i < text.length; i++) {
+            hash ^= text.charCodeAt(i)
+            hash = Math.imul(hash, 0x01000193)
+        }
+    }
+    return hash >>> 0
+}
+
+/**
+ * Percentile-bootstrap confidence interval of the mean. Non-parametric: it makes
+ * no distribution assumption, so it handles the zero-inflated, bimodal gain
+ * distributions typical of trigger/recovery skills, and never returns a bound
+ * outside the observed range (no spurious negatives when all gains are >= 0).
+ * Seeded from the sample so the interval is reproducible.
+ */
+export function bootstrapMeanCI(
+    sorted: number[],
+    ciPercent: number,
+): { lower: number; upper: number } {
+    const n = sorted.length
+    if (n === 1) {
+        const only = sorted[0]!
+        return { lower: only, upper: only }
+    }
+    const rng = makeSeededRng(seedFromSamples(sorted))
+    const means = new Array<number>(BOOTSTRAP_RESAMPLES)
+    for (let b = 0; b < BOOTSTRAP_RESAMPLES; b++) {
+        let sum = 0
+        for (let i = 0; i < n; i++) {
+            sum += sorted[Math.floor(rng() * n)]!
+        }
+        means[b] = sum / n
+    }
+    means.sort((a, b) => a - b)
+    const lowerPercentile = (100 - ciPercent) / 2
+    const upperPercentile = 100 - lowerPercentile
+    const lowerIndex = Math.floor(BOOTSTRAP_RESAMPLES * (lowerPercentile / 100))
+    const upperIndex = Math.min(
+        Math.floor(BOOTSTRAP_RESAMPLES * (upperPercentile / 100)),
+        BOOTSTRAP_RESAMPLES - 1,
+    )
+    return { lower: means[lowerIndex]!, upper: means[upperIndex]! }
 }
 
 export function calculateStatsFromRawResults(
@@ -519,15 +528,10 @@ export function calculateStatsFromRawResults(
     const ciUpper = sorted[upperIndex]!
     const meanLengthPerCost = cost > 0 ? mean / cost : 0
 
-    // Confidence interval of the mean: mean ± z·(s/√n), using the sample
-    // standard deviation (n-1). With a single sample the margin is 0.
-    const variance =
-        sorted.length > 1
-            ? sorted.reduce((acc, v) => acc + (v - mean) ** 2, 0) /
-              (sorted.length - 1)
-            : 0
-    const standardError = Math.sqrt(variance) / Math.sqrt(sorted.length)
-    const margin = zForConfidenceLevel(ciPercent) * standardError
+    // Non-parametric bootstrap CI of the mean (see bootstrapMeanCI): correct for
+    // the zero-inflated, bimodal gain distributions these skills produce, where
+    // a normal mean ± z·SE interval would be symmetric and could dip below 0.
+    const meanCI = bootstrapMeanCI(sorted, ciPercent)
 
     return {
         skill: skillName,
@@ -540,8 +544,8 @@ export function calculateStatsFromRawResults(
         maxLength: max,
         ciLower,
         ciUpper,
-        ciMeanLower: mean - margin,
-        ciMeanUpper: mean + margin,
+        ciMeanLower: meanCI.lower,
+        ciMeanUpper: meanCI.upper,
     }
 }
 
