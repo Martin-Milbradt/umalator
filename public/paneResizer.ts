@@ -13,7 +13,7 @@ const DEFAULT_LEFT = '800px'
 const DEFAULT_TOP = '45vh'
 
 // Keep both panes usable: never let the drag collapse either side below these.
-const MIN_LEFT = 240
+const MIN_LEFT = 320
 const MIN_RIGHT = 320
 const MIN_TOP = 120
 const MIN_BOTTOM = 160

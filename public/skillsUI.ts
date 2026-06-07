@@ -4,20 +4,24 @@ import {
     addPendingSkillToResults,
     addSkillToUmaFromTable,
     removeSkillFromUma,
+    renderResultsTable,
     updateResultsForDiscountChange,
 } from './resultsUI'
 import {
     compareSkills,
+    createSkillIcon,
     deleteSkill,
     getBaseSkillName,
     getCanonicalSkillName,
     getDiscountVariants,
+    getGenericSkillIconUrl,
     getOtherVariant,
+    getShowIcons,
     getSkillCostWithDiscount,
-    getSkillIconUrl,
     getVariantsForBaseName,
     isSkillOnUma,
     isValidSkillName,
+    setShowIcons,
     umaHasUpgradedVersion,
     updateSkillVariantsDefault,
 } from './skillHelpers'
@@ -461,7 +465,10 @@ export function renderSkills(): void {
         })
 
         const skillNameSpan = document.createElement('span')
-        skillNameSpan.className = 'skill-name-span flex-1 cursor-pointer hover:text-teal-400'
+        // truncate (with min-w-0 up the flex chain) keeps each skill on a single
+        // line and ellipsizes overflow instead of wrapping to a taller row.
+        skillNameSpan.className =
+            'skill-name-span flex-1 min-w-0 truncate cursor-pointer hover:text-teal-400'
         skillNameSpan.textContent = skillName
         // Tooltip shows the skill's effect/condition summary; falls back to
         // the edit hint when no description is available (unknown name,
@@ -568,15 +575,9 @@ export function renderSkills(): void {
         })
 
         const label = document.createElement('label')
-        label.className = 'flex-1 m-0 flex items-center gap-2'
-        const iconUrl = getSkillIconUrl(skillName)
-        if (iconUrl) {
-            const img = document.createElement('img')
-            img.src = iconUrl
-            img.className = 'w-5 h-5 shrink-0'
-            img.alt = ''
-            label.appendChild(img)
-        }
+        label.className = 'flex-1 min-w-0 m-0 flex items-center gap-2'
+        const icon = createSkillIcon(skillName)
+        if (icon) label.appendChild(icon)
         label.appendChild(skillNameSpan)
 
         div.appendChild(addToUmaButton)
@@ -655,11 +656,28 @@ function updateAvailableSelect(select: HTMLSelectElement): void {
     select.value = getAvailableFilter()
 }
 
+// The icons toggle always shows a skill icon: full color when icons are on,
+// greyscale + dimmed when off, so the button itself previews the two states.
+function updateIconsButton(button: HTMLButtonElement): void {
+    const showIcons = getShowIcons()
+    button.dataset.active = showIcons ? 'true' : 'false'
+    button.title = showIcons ? 'Hide skill icons' : 'Show skill icons'
+    const img = button.querySelector('img')
+    if (img) {
+        img.src = getGenericSkillIconUrl()
+        img.className = showIcons ? 'w-5 h-5' : 'w-5 h-5 grayscale opacity-60'
+    }
+}
+
 function syncFilterControls(): void {
     const ownedButton = document.getElementById(
         'filter-owned-button',
     ) as HTMLButtonElement | null
     if (ownedButton) updateOwnedButton(ownedButton)
+    const iconsButton = document.getElementById(
+        'filter-icons-button',
+    ) as HTMLButtonElement | null
+    if (iconsButton) updateIconsButton(iconsButton)
     const availableSelect = document.getElementById(
         'filter-available-select',
     ) as HTMLSelectElement | null
@@ -679,6 +697,22 @@ export function setupSkillFilters(): void {
             setHideOwned(!getHideOwned())
             updateOwnedButton(ownedButton)
             renderSkills()
+            autoSave()
+        })
+    }
+    const iconsButton = document.getElementById(
+        'filter-icons-button',
+    ) as HTMLButtonElement | null
+    if (iconsButton) {
+        updateIconsButton(iconsButton)
+        iconsButton.addEventListener('click', () => {
+            setShowIcons(!getShowIcons())
+            updateIconsButton(iconsButton)
+            // Icons appear in the skill list, the uma pills, and the results
+            // table, so refresh all three when the toggle flips.
+            renderSkills()
+            callRenderUma()
+            renderResultsTable()
             autoSave()
         })
     }

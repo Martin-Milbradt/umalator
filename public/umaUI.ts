@@ -7,6 +7,7 @@ import {
     compareSkills,
     getCanonicalSkillName,
     getGroupVariantOnUma,
+    getShowIcons,
     getSkillCostWithDiscount,
     getSkillIconUrl,
     isValidSkillName,
@@ -86,7 +87,10 @@ export function renderUma(): void {
             min: -2,
             max: 2,
         },
-        { key: 'unique', label: 'Unique', type: 'text', width: 280 },
+        // 200px is the preferred width; it shows ~93% of unique names in full
+        // and ellipsizes the long tail (min-w-0/max-w-full let it shrink on a
+        // narrow pane). Measured against the global unique-skill name set.
+        { key: 'unique', label: 'Unique', type: 'text', width: 200 },
         { key: 'skillPoints', label: 'SP', type: 'number', width: 65 },
     ]
 
@@ -156,6 +160,27 @@ export function renderUma(): void {
                 // inside the box, and text-ellipsis renders long names as "…"
                 // rather than overflowing.
                 input.classList.add('min-w-0', 'max-w-full', 'text-ellipsis')
+                if (getShowIcons()) {
+                    // Icon for the unique skill, kept in sync as the field is
+                    // typed or picked from autocomplete. Sits between the label
+                    // and the input (which is appended at the end).
+                    const uniqueIcon = document.createElement('img')
+                    uniqueIcon.className = 'w-5 h-5 shrink-0'
+                    uniqueIcon.alt = ''
+                    const syncUniqueIcon = (): void => {
+                        const url = getSkillIconUrl(input.value)
+                        if (url) {
+                            uniqueIcon.src = url
+                            uniqueIcon.classList.remove('hidden')
+                        } else {
+                            uniqueIcon.classList.add('hidden')
+                        }
+                    }
+                    syncUniqueIcon()
+                    input.addEventListener('input', syncUniqueIcon)
+                    input.addEventListener('change', syncUniqueIcon)
+                    wrapper.appendChild(uniqueIcon)
+                }
                 attachSkillAutocomplete(input as HTMLInputElement, 'unique')
             }
         }
@@ -340,7 +365,7 @@ export function renderUma(): void {
             updateSkills(newSkills, [skill])
         })
 
-        const iconUrl = getSkillIconUrl(skill)
+        const iconUrl = getShowIcons() ? getSkillIconUrl(skill) : null
         if (iconUrl) {
             const img = document.createElement('img')
             img.src = iconUrl

@@ -49,6 +49,7 @@ export type AvailableFilter = 'filtered' | 'hint' | 'noHint' | 'unfiltered'
 export interface Filters {
     hideOwned?: boolean
     available?: AvailableFilter
+    showIcons?: boolean
 }
 
 export interface Config {

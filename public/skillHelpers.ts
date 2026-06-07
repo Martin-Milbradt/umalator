@@ -214,6 +214,42 @@ export function getSkillIconUrl(skillName: string): string | null {
     return `${base}data/icons/utx_ico_skill_${iconId}.png`
 }
 
+// "Target in Sight" — a stand-in skill icon used for the icons toggle button
+// itself (it always needs an image to show colored vs greyscale).
+const GENERIC_SKILL_ICON_ID = '10041'
+
+export function getGenericSkillIconUrl(): string {
+    const base = import.meta.env.BASE_URL ?? '/'
+    return `${base}data/icons/utx_ico_skill_${GENERIC_SKILL_ICON_ID}.png`
+}
+
+// Skill icons can be hidden globally (the icons toggle next to "Owned") to make
+// the skill list, uma pills, and results table more compact. Defaults on.
+export function getShowIcons(): boolean {
+    return getCurrentConfig()?.filters?.showIcons ?? true
+}
+
+export function setShowIcons(value: boolean): void {
+    const config = getCurrentConfig()
+    if (!config) return
+    if (!config.filters) config.filters = {}
+    config.filters.showIcons = value
+}
+
+// Build the <img> for a skill's icon, or null when icons are hidden globally or
+// the skill has no icon. Centralises the markup shared by the skill list and
+// the results table.
+export function createSkillIcon(skillName: string): HTMLImageElement | null {
+    if (!getShowIcons()) return null
+    const url = getSkillIconUrl(skillName)
+    if (!url) return null
+    const img = document.createElement('img')
+    img.src = url
+    img.className = 'w-5 h-5 shrink-0'
+    img.alt = ''
+    return img
+}
+
 export function getSkillGroupId(skillName: string): string | null {
     const skillmeta = getSkillmeta()
     if (!skillmeta) return null
