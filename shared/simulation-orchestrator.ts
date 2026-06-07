@@ -651,24 +651,10 @@ export async function runSimulation(
         })
     }
 
-    const calculateCurrentResults = (): SkillResult[] => {
-        const results: SkillResult[] = []
-        for (const skillData of skillRawResultsMap.values()) {
-            if (skillData.rawResults.length > 0) {
-                results.push(
-                    calculateStatsFromRawResults(
-                        skillData.rawResults,
-                        skillData.cost,
-                        skillData.discount,
-                        skillData.skillName,
-                        confidenceInterval,
-                    ),
-                )
-            }
-        }
-        results.sort((a, b) => b.meanLengthPerCost - a.meanLengthPerCost)
-        return results
-    }
+    // Each skill's stats are computed once as its result is processed and
+    // cached here; the final list reuses them rather than recomputing (the
+    // stats pass includes the bootstrap CI, which is not cheap).
+    const computedResults = new Map<string, SkillResult>()
 
     onProgress({
         type: 'phase',
@@ -722,11 +708,14 @@ export async function runSimulation(
                     skillData.skillName,
                     confidenceInterval,
                 )
+                computedResults.set(result.skillName, skillResult)
                 onProgress({ type: 'result', result: skillResult })
             }
         }
     }
 
-    const finalResults = calculateCurrentResults()
+    const finalResults = [...computedResults.values()].sort(
+        (a, b) => b.meanLengthPerCost - a.meanLengthPerCost,
+    )
     onProgress({ type: 'complete', results: finalResults })
 }
