@@ -24,10 +24,10 @@ The remote environment's network policy must allow outbound HTTPS to:
 
 - **github.com** — to clone the `uma-tools` submodule and fetch the pinned
   `uma-skill-tools` commit.
-- **the upstream uma-tools raw data host** — `npm run build` fetches the latest
-  `skill_data.json` / `skill_meta.json` from upstream. If the fetch fails it
-  falls back to the local copies, so a build still succeeds offline, but the
-  bundled game data may be stale.
+- **the upstream uma-tools git remote** — only needed when building with
+  `UPDATE_GAME_DATA=1` (the deploy workflow), which refreshes
+  `skill_data.json` / `skill_meta.json` from upstream `master`. A plain
+  `npm run build` uses the pinned submodule data and needs no extra network.
 - **the npm registry** — for `npm install`.
 
 If you are configuring a Claude Code on the web environment, pick a network
@@ -103,10 +103,12 @@ With the submodule stuck on `6ba5ca0`, `npm run build` / `vite` still transpile
 npm run build
 ```
 
-`tsx build.ts` fetches the latest game data, builds the Node worker
-(`simulation.worker.js`) and the browser worker
-(`static/simulation.browser-worker.js`), and copies the JSON data files into
-`static/data/`. Run this **before** `npm test`, `npx vite`, or the CLI.
+`tsx build.ts` builds the Node worker (`simulation.worker.js`) and the browser
+worker (`static/simulation.browser-worker.js`) and copies the pinned submodule's
+JSON data files into `static/data/`. Run this **before** `npm test`, `npx vite`,
+or the CLI (the worker integration tests spawn the built worker). To refresh the
+game data from upstream (what the deploy workflow does), build with
+`UPDATE_GAME_DATA=1 npm run build`.
 
 ## Running the tests
 
