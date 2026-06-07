@@ -232,7 +232,7 @@ function createDiscountSelect(
     select.addEventListener('change', () => {
         const discount = select.value === '-' ? null : parseInt(select.value, 10)
         setDiscountForVariants(skillName, discount)
-        renderSkills()
+        refreshAffectedSkillRows(skillName)
         autoSave()
     })
 
@@ -244,9 +244,13 @@ export function renderSkills(): void {
     if (!currentConfig) return
     const container = document.getElementById('skills-container')
     if (!container) return
+    // Full rebuilds (filters, add-to-uma, rename, resize) keep the scroll
+    // position so the pane doesn't jump to the top. Discount/default toggles
+    // skip the rebuild entirely via refreshAffectedSkillRows(). Config switches
+    // reset to the top explicitly in loadConfig().
+    const scrollTop = container.scrollTop
     container.innerHTML = ''
     const skills = currentConfig.skills
-    const umaSkills = currentConfig.uma?.skills || []
 
     const skillNames = Object.keys(skills)
     const skillsToRender = new Set<string>()
@@ -323,271 +327,319 @@ export function renderSkills(): void {
     syncFilterControls()
 
     triggerableSkills.forEach((skillName) => {
-        const skill = skills[skillName]
-        if (!skill) return
-
-        if (skill.discount === undefined) {
-            skill.discount = null
-        }
-
-        const div = document.createElement('div')
-        div.className =
-            'flex items-center gap-2 hover:bg-zinc-800 px-1 py-0.5 rounded'
-        div.dataset.skill = skillName
-
-        const currentDiscount = skill.discount
-
-        // Lock state: is the current discount the config's saved default? When
-        // it is, the active discount highlights green (rather than the usual
-        // blue) to signal the value is locked to the default.
-        const skillDefault = skill.default
-        const isDefaultActive =
-            skillDefault !== undefined &&
-            skillDefault !== null &&
-            currentDiscount === skillDefault
-        const isDefaultNull =
-            (skillDefault === undefined || skillDefault === null) &&
-            (currentDiscount === null || currentDiscount === undefined)
-        const isLocked = isDefaultActive || isDefaultNull
-        const activeDiscountClass = isLocked
-            ? `${squareClasses} bg-green-600 text-white border border-green-600 hover:bg-green-700 hover:border-green-700`
-            : `${squareClasses} bg-sky-600 text-white border border-sky-600 hover:bg-sky-700 hover:border-sky-700`
-
-        const discountButtonGroup = document.createElement('div')
-        discountButtonGroup.className = 'discount-options flex gap-1 items-center'
-        discountButtonGroup.dataset.skill = skillName
-
-        // A narrow skills pane gets a dropdown (the button row is too wide to
-        // fit next to the skill name); a wide pane keeps the one-tap button row.
-        if (shouldUseDiscountDropdown()) {
-            discountButtonGroup.appendChild(
-                createDiscountSelect(skillName, currentDiscount, isLocked),
-            )
-        } else {
-            DISCOUNT_OPTIONS.forEach((value) => {
-                const button = document.createElement('button')
-                button.className = `${squareClasses} bg-zinc-700 text-zinc-200 border border-zinc-600 hover:bg-zinc-600 hover:border-zinc-500`
-                button.dataset.skill = skillName
-                button.dataset.discount = value === null ? '-' : value.toString()
-                button.textContent = value === null ? '-' : value.toString()
-                if (
-                    currentDiscount === value ||
-                    (value === null &&
-                        (currentDiscount === null ||
-                            currentDiscount === undefined))
-                ) {
-                    button.className = activeDiscountClass
-                }
-                discountButtonGroup.appendChild(button)
-            })
-        }
-
-        const lockButton = document.createElement('button')
-        lockButton.className = `lock-btn ${squareClasses} bg-transparent text-zinc-500 border-none hover:text-zinc-200 hover:bg-zinc-700`
-        lockButton.dataset.skill = skillName
-        lockButton.textContent = isLocked ? '🔒' : '🔓'
-        lockButton.title = isLocked
-            ? 'Remove default'
-            : 'Set current discount as default'
-        lockButton.addEventListener('click', (e) => {
-            e.stopPropagation()
-            const target = e.target as HTMLElement
-            const skillName = target.dataset.skill
-            const currentConfig = getCurrentConfig()
-            if (!skillName || !currentConfig) return
-            const currentDiscount = currentConfig.skills[skillName]?.discount
-            const skillDefault = currentConfig.skills[skillName]?.default
-            const isCurrentlyDefault =
-                (skillDefault !== undefined &&
-                    skillDefault !== null &&
-                    currentDiscount === skillDefault) ||
-                ((skillDefault === undefined || skillDefault === null) &&
-                    (currentDiscount === null || currentDiscount === undefined))
-            if (isCurrentlyDefault) {
-                updateSkillVariantsDefault(skillName, 'remove')
-            } else if (
-                currentDiscount === null ||
-                currentDiscount === undefined
-            ) {
-                updateSkillVariantsDefault(skillName, 'remove')
-            } else {
-                updateSkillVariantsDefault(skillName, 'set', currentDiscount)
-            }
-            renderSkills()
-            autoSave()
-        })
-        discountButtonGroup.appendChild(lockButton)
-
-        const addToUmaButton = document.createElement('button')
-        const isInUmaSkills = umaSkills.includes(skillName)
-        const hasDiscount =
-            skill.discount !== null && skill.discount !== undefined
-        if (isInUmaSkills) {
-            addToUmaButton.className = `add-to-uma-btn ${squareClasses} bg-red-600 text-white border-none hover:bg-red-700`
-            addToUmaButton.textContent = '-'
-            addToUmaButton.title = 'Remove from Uma skills'
-        } else {
-            if (hasDiscount) {
-                addToUmaButton.className = `add-to-uma-btn ${squareClasses} bg-sky-600 text-white border-none hover:bg-sky-700`
-            } else {
-                addToUmaButton.className = `add-to-uma-btn ${squareClasses} opacity-40 bg-zinc-700 text-zinc-400 border border-zinc-600 hover:bg-zinc-600 hover:border-zinc-500`
-            }
-            addToUmaButton.textContent = '+'
-            addToUmaButton.title = 'Add to Uma skills'
-        }
-        addToUmaButton.dataset.skill = skillName
-        addToUmaButton.addEventListener('click', (e) => {
-            e.stopPropagation()
-            const target = e.target as HTMLElement
-            const skillName = target.dataset.skill
-            const currentConfig = getCurrentConfig()
-            if (!skillName || !currentConfig) return
-            if (!currentConfig.uma) {
-                currentConfig.uma = {}
-            }
-            if (!currentConfig.uma.skills) {
-                currentConfig.uma.skills = []
-            }
-
-            const currentlyInUmaSkills =
-                currentConfig.uma.skills.includes(skillName)
-            if (currentlyInUmaSkills) {
-                // Removing skill
-                removeSkillFromUma(skillName)
-            } else {
-                // Adding skill
-                const cost = getSkillCostWithDiscount(skillName)
-                addSkillToUmaFromTable(skillName, cost)
-            }
-            callRenderUma()
-            renderSkills()
-            autoSave()
-        })
-
-        const skillNameSpan = document.createElement('span')
-        // truncate (with min-w-0 up the flex chain) keeps each skill on a single
-        // line and ellipsizes overflow instead of wrapping to a taller row.
-        skillNameSpan.className =
-            'skill-name-span flex-1 min-w-0 truncate cursor-pointer hover:text-teal-400'
-        skillNameSpan.textContent = skillName
-        // Tooltip shows the skill's effect/condition summary; falls back to
-        // the edit hint when no description is available (unknown name,
-        // skill data not loaded yet).
-        skillNameSpan.title =
-            describeSkill(skillName) ?? 'Click to edit skill name'
-        skillNameSpan.dataset.skill = skillName
-        skillNameSpan.addEventListener('click', (e) => {
-            e.stopPropagation()
-            const target = e.target as HTMLElement
-            const skillName = target.dataset.skill
-            const currentConfig = getCurrentConfig()
-            if (!skillName || !currentConfig) return
-            const originalName = skillName
-            const skillNameInput = document.createElement('input')
-            skillNameInput.type = 'text'
-            skillNameInput.className =
-                'py-0.5 px-1 border-sky-500 min-w-[100px] m-0 bg-zinc-700 text-zinc-200 border rounded text-[13px] focus:outline-none focus:border-sky-400 flex-1'
-            skillNameInput.value = originalName
-            const spanTarget = e.target as HTMLElement
-            skillNameInput.style.width = `${spanTarget.offsetWidth}px`
-            skillNameInput.style.minWidth = '100px'
-
-            // Esc with empty/placeholder value deletes the skill directly and
-            // sets this flag so the blur (fired by renderSkills removing the
-            // input) doesn't re-run the canonicalization path on the stale value.
-            let cancelled = false
-
-            const restoreSpan = () => {
-                renderSkills()
-            }
-
-            const deleteAndCancel = () => {
-                cancelled = true
-                deleteSkill(originalName)
-                pruneFromResults(originalName)
-                renderSkills()
-                callRenderUma()
-                autoSave()
-            }
-
-            const handleBlur = () => {
-                if (cancelled) return
-                const inputName = skillNameInput.value.trim()
-                if (!inputName) {
-                    deleteAndCancel()
-                } else {
-                    const canonicalName = getCanonicalSkillName(inputName)
-                    if (!isValidSkillName(canonicalName)) {
-                        showToast({
-                            type: 'error',
-                            message: `Unknown skill: "${inputName}"`,
-                        })
-                        restoreSpan()
-                    } else if (
-                        canonicalName !== originalName &&
-                        !currentConfig.skills[canonicalName]
-                    ) {
-                        const skillData = currentConfig.skills[originalName]!
-                        deleteSkill(originalName)
-                        pruneFromResults(originalName)
-                        currentConfig.skills[canonicalName] = skillData
-                        renderSkills()
-                        callRenderUma()
-                        triggerCalculationForRenamedSkill(
-                            canonicalName,
-                            skillData.discount,
-                        )
-                        autoSave()
-                    } else {
-                        restoreSpan()
-                    }
-                }
-            }
-
-            const parent = spanTarget.parentNode
-            if (parent) {
-                parent.replaceChild(skillNameInput, spanTarget)
-            }
-            // Attach autocomplete BEFORE the input's own keydown listener so
-            // its Enter/Escape handlers can stopImmediatePropagation and beat
-            // the rename input's blur-on-Enter behavior.
-            attachSkillAutocomplete(skillNameInput, 'regular', {
-                getExclude: () =>
-                    Object.keys(getCurrentConfig()?.skills ?? {}),
-            })
-            skillNameInput.addEventListener('blur', handleBlur)
-            skillNameInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault()
-                    skillNameInput.blur()
-                } else if (e.key === 'Escape') {
-                    const value = skillNameInput.value.trim()
-                    const isPlaceholder = /^New Skill( \d+)?$/.test(value)
-                    if (!value || isPlaceholder) {
-                        deleteAndCancel()
-                    } else {
-                        restoreSpan()
-                    }
-                }
-            })
-            skillNameInput.focus()
-            skillNameInput.select()
-        })
-
-        const label = document.createElement('label')
-        label.className = 'flex-1 min-w-0 m-0 flex items-center gap-2'
-        const icon = createSkillIcon(skillName)
-        if (icon) label.appendChild(icon)
-        label.appendChild(skillNameSpan)
-
-        div.appendChild(addToUmaButton)
-        div.appendChild(label)
-        div.appendChild(discountButtonGroup)
-
-        container.appendChild(div)
+        const row = buildSkillRow(skillName)
+        if (row) container.appendChild(row)
     })
 
+    container.scrollTop = scrollTop
+
     // Event delegation is set up once via setupSkillsContainerDelegation()
+}
+
+/**
+ * Build one skill row: add-to-uma button, name label, and the discount button
+ * group with its lock toggle. Pure construction from current config state, so
+ * renderSkills() lays out the whole list and refreshAffectedSkillRows() can
+ * swap a single row in place after a discount/default change.
+ */
+function buildSkillRow(skillName: string): HTMLDivElement | null {
+    const currentConfig = getCurrentConfig()
+    if (!currentConfig) return null
+    const skill = currentConfig.skills[skillName]
+    if (!skill) return null
+    const umaSkills = currentConfig.uma?.skills || []
+
+    if (skill.discount === undefined) {
+        skill.discount = null
+    }
+
+    const div = document.createElement('div')
+    div.className =
+        'skill-row flex items-center gap-2 hover:bg-zinc-800 px-1 py-0.5 rounded'
+    div.dataset.skill = skillName
+
+    const currentDiscount = skill.discount
+
+    // Lock state: is the current discount the config's saved default? When
+    // it is, the active discount highlights green (rather than the usual
+    // blue) to signal the value is locked to the default.
+    const skillDefault = skill.default
+    const isDefaultActive =
+        skillDefault !== undefined &&
+        skillDefault !== null &&
+        currentDiscount === skillDefault
+    const isDefaultNull =
+        (skillDefault === undefined || skillDefault === null) &&
+        (currentDiscount === null || currentDiscount === undefined)
+    const isLocked = isDefaultActive || isDefaultNull
+    const activeDiscountClass = isLocked
+        ? `${squareClasses} bg-green-600 text-white border border-green-600 hover:bg-green-700 hover:border-green-700`
+        : `${squareClasses} bg-sky-600 text-white border border-sky-600 hover:bg-sky-700 hover:border-sky-700`
+
+    const discountButtonGroup = document.createElement('div')
+    discountButtonGroup.className = 'discount-options flex gap-1 items-center'
+    discountButtonGroup.dataset.skill = skillName
+
+    // A narrow skills pane gets a dropdown (the button row is too wide to
+    // fit next to the skill name); a wide pane keeps the one-tap button row.
+    if (shouldUseDiscountDropdown()) {
+        discountButtonGroup.appendChild(
+            createDiscountSelect(skillName, currentDiscount, isLocked),
+        )
+    } else {
+        DISCOUNT_OPTIONS.forEach((value) => {
+            const button = document.createElement('button')
+            button.className = `${squareClasses} bg-zinc-700 text-zinc-200 border border-zinc-600 hover:bg-zinc-600 hover:border-zinc-500`
+            button.dataset.skill = skillName
+            button.dataset.discount = value === null ? '-' : value.toString()
+            button.textContent = value === null ? '-' : value.toString()
+            if (
+                currentDiscount === value ||
+                (value === null &&
+                    (currentDiscount === null ||
+                        currentDiscount === undefined))
+            ) {
+                button.className = activeDiscountClass
+            }
+            discountButtonGroup.appendChild(button)
+        })
+    }
+
+    const lockButton = document.createElement('button')
+    lockButton.className = `lock-btn ${squareClasses} bg-transparent text-zinc-500 border-none hover:text-zinc-200 hover:bg-zinc-700`
+    lockButton.dataset.skill = skillName
+    lockButton.textContent = isLocked ? '🔒' : '🔓'
+    lockButton.title = isLocked
+        ? 'Remove default'
+        : 'Set current discount as default'
+    lockButton.addEventListener('click', (e) => {
+        e.stopPropagation()
+        const target = e.target as HTMLElement
+        const skillName = target.dataset.skill
+        const currentConfig = getCurrentConfig()
+        if (!skillName || !currentConfig) return
+        const currentDiscount = currentConfig.skills[skillName]?.discount
+        const skillDefault = currentConfig.skills[skillName]?.default
+        const isCurrentlyDefault =
+            (skillDefault !== undefined &&
+                skillDefault !== null &&
+                currentDiscount === skillDefault) ||
+            ((skillDefault === undefined || skillDefault === null) &&
+                (currentDiscount === null || currentDiscount === undefined))
+        if (isCurrentlyDefault) {
+            updateSkillVariantsDefault(skillName, 'remove')
+        } else if (
+            currentDiscount === null ||
+            currentDiscount === undefined
+        ) {
+            updateSkillVariantsDefault(skillName, 'remove')
+        } else {
+            updateSkillVariantsDefault(skillName, 'set', currentDiscount)
+        }
+        refreshAffectedSkillRows(skillName)
+        autoSave()
+    })
+    discountButtonGroup.appendChild(lockButton)
+
+    const addToUmaButton = document.createElement('button')
+    const isInUmaSkills = umaSkills.includes(skillName)
+    const hasDiscount =
+        skill.discount !== null && skill.discount !== undefined
+    if (isInUmaSkills) {
+        addToUmaButton.className = `add-to-uma-btn ${squareClasses} bg-red-600 text-white border-none hover:bg-red-700`
+        addToUmaButton.textContent = '-'
+        addToUmaButton.title = 'Remove from Uma skills'
+    } else {
+        if (hasDiscount) {
+            addToUmaButton.className = `add-to-uma-btn ${squareClasses} bg-sky-600 text-white border-none hover:bg-sky-700`
+        } else {
+            addToUmaButton.className = `add-to-uma-btn ${squareClasses} opacity-40 bg-zinc-700 text-zinc-400 border border-zinc-600 hover:bg-zinc-600 hover:border-zinc-500`
+        }
+        addToUmaButton.textContent = '+'
+        addToUmaButton.title = 'Add to Uma skills'
+    }
+    addToUmaButton.dataset.skill = skillName
+    addToUmaButton.addEventListener('click', (e) => {
+        e.stopPropagation()
+        const target = e.target as HTMLElement
+        const skillName = target.dataset.skill
+        const currentConfig = getCurrentConfig()
+        if (!skillName || !currentConfig) return
+        if (!currentConfig.uma) {
+            currentConfig.uma = {}
+        }
+        if (!currentConfig.uma.skills) {
+            currentConfig.uma.skills = []
+        }
+
+        const currentlyInUmaSkills =
+            currentConfig.uma.skills.includes(skillName)
+        if (currentlyInUmaSkills) {
+            // Removing skill
+            removeSkillFromUma(skillName)
+        } else {
+            // Adding skill
+            const cost = getSkillCostWithDiscount(skillName)
+            addSkillToUmaFromTable(skillName, cost)
+        }
+        callRenderUma()
+        renderSkills()
+        autoSave()
+    })
+
+    const skillNameSpan = document.createElement('span')
+    // truncate (with min-w-0 up the flex chain) keeps each skill on a single
+    // line and ellipsizes overflow instead of wrapping to a taller row.
+    skillNameSpan.className =
+        'skill-name-span flex-1 min-w-0 truncate cursor-pointer hover:text-teal-400'
+    skillNameSpan.textContent = skillName
+    // Tooltip shows the skill's effect/condition summary; falls back to
+    // the edit hint when no description is available (unknown name,
+    // skill data not loaded yet).
+    skillNameSpan.title =
+        describeSkill(skillName) ?? 'Click to edit skill name'
+    skillNameSpan.dataset.skill = skillName
+    skillNameSpan.addEventListener('click', (e) => {
+        e.stopPropagation()
+        const target = e.target as HTMLElement
+        const skillName = target.dataset.skill
+        const currentConfig = getCurrentConfig()
+        if (!skillName || !currentConfig) return
+        const originalName = skillName
+        const skillNameInput = document.createElement('input')
+        skillNameInput.type = 'text'
+        skillNameInput.className =
+            'py-0.5 px-1 border-sky-500 min-w-[100px] m-0 bg-zinc-700 text-zinc-200 border rounded text-[13px] focus:outline-none focus:border-sky-400 flex-1'
+        skillNameInput.value = originalName
+        const spanTarget = e.target as HTMLElement
+        skillNameInput.style.width = `${spanTarget.offsetWidth}px`
+        skillNameInput.style.minWidth = '100px'
+
+        // Esc with empty/placeholder value deletes the skill directly and
+        // sets this flag so the blur (fired by renderSkills removing the
+        // input) doesn't re-run the canonicalization path on the stale value.
+        let cancelled = false
+
+        const restoreSpan = () => {
+            renderSkills()
+        }
+
+        const deleteAndCancel = () => {
+            cancelled = true
+            deleteSkill(originalName)
+            pruneFromResults(originalName)
+            renderSkills()
+            callRenderUma()
+            autoSave()
+        }
+
+        const handleBlur = () => {
+            if (cancelled) return
+            const inputName = skillNameInput.value.trim()
+            if (!inputName) {
+                deleteAndCancel()
+            } else {
+                const canonicalName = getCanonicalSkillName(inputName)
+                if (!isValidSkillName(canonicalName)) {
+                    showToast({
+                        type: 'error',
+                        message: `Unknown skill: "${inputName}"`,
+                    })
+                    restoreSpan()
+                } else if (
+                    canonicalName !== originalName &&
+                    !currentConfig.skills[canonicalName]
+                ) {
+                    const skillData = currentConfig.skills[originalName]!
+                    deleteSkill(originalName)
+                    pruneFromResults(originalName)
+                    currentConfig.skills[canonicalName] = skillData
+                    renderSkills()
+                    callRenderUma()
+                    triggerCalculationForRenamedSkill(
+                        canonicalName,
+                        skillData.discount,
+                    )
+                    autoSave()
+                } else {
+                    restoreSpan()
+                }
+            }
+        }
+
+        const parent = spanTarget.parentNode
+        if (parent) {
+            parent.replaceChild(skillNameInput, spanTarget)
+        }
+        // Attach autocomplete BEFORE the input's own keydown listener so
+        // its Enter/Escape handlers can stopImmediatePropagation and beat
+        // the rename input's blur-on-Enter behavior.
+        attachSkillAutocomplete(skillNameInput, 'regular', {
+            getExclude: () =>
+                Object.keys(getCurrentConfig()?.skills ?? {}),
+        })
+        skillNameInput.addEventListener('blur', handleBlur)
+        skillNameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault()
+                skillNameInput.blur()
+            } else if (e.key === 'Escape') {
+                const value = skillNameInput.value.trim()
+                const isPlaceholder = /^New Skill( \d+)?$/.test(value)
+                if (!value || isPlaceholder) {
+                    deleteAndCancel()
+                } else {
+                    restoreSpan()
+                }
+            }
+        })
+        skillNameInput.focus()
+        skillNameInput.select()
+    })
+
+    const label = document.createElement('label')
+    label.className = 'flex-1 min-w-0 m-0 flex items-center gap-2'
+    const icon = createSkillIcon(skillName)
+    if (icon) label.appendChild(icon)
+    label.appendChild(skillNameSpan)
+
+    div.appendChild(addToUmaButton)
+    div.appendChild(label)
+    div.appendChild(discountButtonGroup)
+
+    return div
+}
+
+/**
+ * Re-render only the rows touched by a discount/default change to `skillName`
+ * (the skill and its ○/◎ siblings), in place, leaving the rest of the list and
+ * the scroll position untouched. Falls back to a full renderSkills() when the
+ * change could alter which rows are shown: the Hint / No-Hint filter keys on
+ * whether a skill has a discount, which this change can flip.
+ */
+function refreshAffectedSkillRows(skillName: string): void {
+    const container = document.getElementById('skills-container')
+    const available = getAvailableFilter()
+    if (!container || available === 'hint' || available === 'noHint') {
+        renderSkills()
+        return
+    }
+    const affected = new Set<string>([
+        ...getDiscountVariants(skillName),
+        getBaseSkillName(skillName),
+    ])
+    for (const name of affected) {
+        const existing = container.querySelector<HTMLDivElement>(
+            `.skill-row[data-skill="${CSS.escape(name)}"]`,
+        )
+        if (!existing) continue
+        const replacement = buildSkillRow(name)
+        if (!replacement) {
+            renderSkills()
+            return
+        }
+        existing.replaceWith(replacement)
+    }
 }
 
 // Set up event delegation for discount buttons (single listener instead of per-button)
@@ -639,7 +691,7 @@ export function setupSkillsContainerDelegation(): void {
             setDiscountForVariants(skillName, discount)
         }
 
-        renderSkills()
+        refreshAffectedSkillRows(skillName)
         autoSave()
     })
 }

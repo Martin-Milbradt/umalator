@@ -101,6 +101,8 @@ export async function loadConfig(filename: string): Promise<void> {
     }
 
     callRenderSkills()
+    // A freshly loaded config opens at the top of its skill list.
+    document.getElementById('skills-container')?.scrollTo({ top: 0 })
     renderTrack()
     callRenderUma()
     callRenderResults()
