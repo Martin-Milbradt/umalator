@@ -369,7 +369,7 @@ describe('simulation worker integration', () => {
         expect(stats.meanLength).toBeGreaterThan(0)
         expect(stats.minLength).toBeLessThanOrEqual(stats.meanLength)
         expect(stats.maxLength).toBeGreaterThanOrEqual(stats.meanLength)
-        expect(stats.ciLower).toBeLessThanOrEqual(stats.ciUpper)
+        expect(stats.rangeLower).toBeLessThanOrEqual(stats.rangeUpper)
     }, 30000)
 
     it('all-random scenario should complete without combinatorial explosion', async () => {

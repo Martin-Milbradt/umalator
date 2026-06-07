@@ -6,6 +6,7 @@ import './api'
 import { runCalculations } from './api'
 import {
     deleteConfig,
+    deleteResults,
     duplicateConfig,
     exportAllConfigs,
     exportConfig,
@@ -462,6 +463,9 @@ async function saveImportedConfig(
         })
         return
     }
+    // Drop any results persisted under this name: an import replaces the config,
+    // so the old results no longer describe it.
+    await deleteResults(filename)
     await loadConfigFiles()
     await loadConfig(filename)
     showToast({ type: 'info', message: summary })
@@ -687,6 +691,7 @@ async function handleConfigMenuAction(action: string): Promise<void> {
         }
         try {
             await deleteConfig(currentConfigFile)
+            await deleteResults(currentConfigFile)
             deleteConfigFromFilesystem(currentConfigFile)
             showToast({ type: 'info', message: `Deleted ${currentConfigFile}` })
             await loadConfigFiles()

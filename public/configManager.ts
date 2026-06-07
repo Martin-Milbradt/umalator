@@ -1,13 +1,20 @@
 import * as configStore from './configStore'
 import { LAST_USED_CONFIG_KEY } from './constants'
 import { writeConfigToFilesystem } from './devConfigSync'
-import { callRenderSkills, callRenderUma } from './renderCallbacks'
+import {
+    callRenderResults,
+    callRenderSkills,
+    callRenderUma,
+} from './renderCallbacks'
 import { renderTrack, waitForCourseData } from './trackUI'
 import {
     clearSaveTimeout,
+    getCalculatedResultsCache,
     getCurrentConfig,
     getCurrentConfigFile,
     getPendingSavePromise,
+    getResultsMap,
+    getSelectedSkills,
     setCurrentConfig,
     setCurrentConfigFile,
     setPendingSavePromise,
@@ -75,9 +82,30 @@ export async function loadConfig(filename: string): Promise<void> {
         console.warn('Failed to save to localStorage:', e)
     }
 
+    // Restore this config's last calculated results (persisted per config) so
+    // they reappear instantly without recomputing. Clearing first scopes the
+    // results to the config being loaded.
+    const resultsMap = getResultsMap()
+    const calculatedResultsCache = getCalculatedResultsCache()
+    const selectedSkills = getSelectedSkills()
+    resultsMap.clear()
+    selectedSkills.clear()
+    calculatedResultsCache.clear()
+    try {
+        for (const result of await configStore.loadResults(filename)) {
+            calculatedResultsCache.set(result.skill, result)
+            resultsMap.set(result.skill, { ...result, status: 'cached' })
+        }
+    } catch (e: unknown) {
+        console.warn('Failed to restore results:', e)
+    }
+
     callRenderSkills()
+    // A freshly loaded config opens at the top of its skill list.
+    document.getElementById('skills-container')?.scrollTo({ top: 0 })
     renderTrack()
     callRenderUma()
+    callRenderResults()
 }
 
 export async function saveConfig(): Promise<void> {

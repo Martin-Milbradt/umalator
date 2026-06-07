@@ -2,11 +2,14 @@
  * IndexedDB-backed config storage for static hosting.
  * Replaces server-side filesystem config management.
  */
-import type { Config } from './types'
+import type { Config, SkillResult } from './types'
 
 const DB_NAME = 'umalator'
-const DB_VERSION = 1
+const DB_VERSION = 2
 const STORE_NAME = 'configs'
+// Last calculated results per config, so they reappear instantly on load
+// without recomputing.
+const RESULTS_STORE = 'results'
 
 let cachedDb: IDBDatabase | null = null
 
@@ -18,6 +21,9 @@ function openDb(): Promise<IDBDatabase> {
             const db = request.result
             if (!db.objectStoreNames.contains(STORE_NAME)) {
                 db.createObjectStore(STORE_NAME)
+            }
+            if (!db.objectStoreNames.contains(RESULTS_STORE)) {
+                db.createObjectStore(RESULTS_STORE)
             }
         }
         request.onsuccess = () => {
@@ -121,6 +127,49 @@ export async function duplicateConfig(
 ): Promise<void> {
     const config = await loadConfig(from)
     await saveConfig(to, config)
+    // Carry the cached results over so the duplicate shows the same table
+    // immediately instead of an empty one.
+    await saveResults(to, await loadResults(from))
+}
+
+/** Persist the last calculated results for a config (keyed by config name). */
+export async function saveResults(
+    name: string,
+    results: SkillResult[],
+): Promise<void> {
+    const db = await openDb()
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(RESULTS_STORE, 'readwrite')
+        const request = tx.objectStore(RESULTS_STORE).put(results, name)
+        request.onsuccess = () => resolve()
+        request.onerror = () => reject(request.error)
+    })
+}
+
+/** Load a config's last calculated results, or [] if none are stored. */
+export async function loadResults(name: string): Promise<SkillResult[]> {
+    const db = await openDb()
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(RESULTS_STORE, 'readonly')
+        const request = tx.objectStore(RESULTS_STORE).get(name)
+        request.onsuccess = () =>
+            resolve(
+                Array.isArray(request.result)
+                    ? (request.result as SkillResult[])
+                    : [],
+            )
+        request.onerror = () => reject(request.error)
+    })
+}
+
+export async function deleteResults(name: string): Promise<void> {
+    const db = await openDb()
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(RESULTS_STORE, 'readwrite')
+        const request = tx.objectStore(RESULTS_STORE).delete(name)
+        request.onsuccess = () => resolve()
+        request.onerror = () => reject(request.error)
+    })
 }
 
 export function exportConfig(name: string, config: Config): void {
@@ -249,6 +298,9 @@ export function importConfig(file: File): Promise<{ name: string; config: Config
                     ? file.name
                     : `${file.name}.json`
                 await saveConfig(name, config)
+                // An import replaces the config, so any results stored under
+                // this name no longer describe it.
+                await deleteResults(name)
                 resolve({ name, config })
             } catch (error) {
                 reject(error)

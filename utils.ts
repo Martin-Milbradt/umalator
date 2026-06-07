@@ -141,10 +141,10 @@ export interface SkillResult {
     maxLength: number
     // Outcome spread: the central percentile band of individual per-race
     // results (e.g. 2.5th–97.5th for 95%). NOT a confidence interval of the
-    // mean. Named ciLower/ciUpper for historical reasons.
-    ciLower: number
-    ciUpper: number
-    // Confidence interval of the MEAN gain (mean ± z·SE): how precisely the
+    // mean.
+    rangeLower: number
+    rangeUpper: number
+    // Confidence interval of the MEAN gain (mean ± t·SE): how precisely the
     // average is estimated.
     ciMeanLower: number
     ciMeanUpper: number
@@ -430,72 +430,199 @@ export function processCourseData(rawCourse: {
     }
 }
 
-// Bootstrap resample count for the mean's confidence interval. Enough for
-// stable 2.5/97.5 percentiles at negligible cost next to the simulation.
-const BOOTSTRAP_RESAMPLES = 2000
-
-/** mulberry32: a tiny deterministic PRNG returning floats in [0, 1). */
-function makeSeededRng(seed: number): () => number {
-    let state = seed >>> 0
-    return () => {
-        state = (state + 0x6d2b79f5) | 0
-        let t = Math.imul(state ^ (state >>> 15), 1 | state)
-        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-        return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-    }
-}
-
 /**
- * Deterministic 32-bit seed derived from the sample (FNV-1a over the values'
- * decimal forms), so the bootstrap CI is reproducible: identical results give an
- * identical interval, with no external seed to thread through.
+ * Standard normal quantile (inverse CDF) via Acklam's rational approximation,
+ * accurate to ~1e-9 over (0,1). Used to turn a confidence level into a z-score.
  */
-function seedFromSamples(values: number[]): number {
-    let hash = 0x811c9dc5
-    for (const value of values) {
-        const text = value.toString()
-        for (let i = 0; i < text.length; i++) {
-            hash ^= text.charCodeAt(i)
-            hash = Math.imul(hash, 0x01000193)
-        }
+export function standardNormalQuantile(p: number): number {
+    if (p <= 0 || p >= 1) {
+        throw new Error(`standardNormalQuantile expects p in (0,1), got ${p}`)
     }
-    return hash >>> 0
-}
+    const a0 = -3.969683028665376e1
+    const a1 = 2.209460984245205e2
+    const a2 = -2.759285104469687e2
+    const a3 = 1.38357751867269e2
+    const a4 = -3.066479806614716e1
+    const a5 = 2.506628277459239
+    const b0 = -5.447609879822406e1
+    const b1 = 1.615858368580409e2
+    const b2 = -1.556989798598866e2
+    const b3 = 6.680131188771972e1
+    const b4 = -1.328068155288572e1
+    const c0 = -7.784894002430293e-3
+    const c1 = -3.223964580411365e-1
+    const c2 = -2.400758277161838
+    const c3 = -2.549732539343734
+    const c4 = 4.374664141464968
+    const c5 = 2.938163982698783
+    const d0 = 7.784695709041462e-3
+    const d1 = 3.224671290700398e-1
+    const d2 = 2.445134137142996
+    const d3 = 3.754408661907416
+    const pLow = 0.02425
+    const pHigh = 1 - pLow
 
-/**
- * Percentile-bootstrap confidence interval of the mean. Non-parametric: it makes
- * no distribution assumption, so it handles the zero-inflated, bimodal gain
- * distributions typical of trigger/recovery skills, and never returns a bound
- * outside the observed range (no spurious negatives when all gains are >= 0).
- * Seeded from the sample so the interval is reproducible.
- */
-export function bootstrapMeanCI(
-    sorted: number[],
-    ciPercent: number,
-): { lower: number; upper: number } {
-    const n = sorted.length
-    if (n === 1) {
-        const only = sorted[0]!
-        return { lower: only, upper: only }
+    if (p < pLow) {
+        const q = Math.sqrt(-2 * Math.log(p))
+        return (
+            (((((c0 * q + c1) * q + c2) * q + c3) * q + c4) * q + c5) /
+            ((((d0 * q + d1) * q + d2) * q + d3) * q + 1)
+        )
     }
-    const rng = makeSeededRng(seedFromSamples(sorted))
-    const means = new Array<number>(BOOTSTRAP_RESAMPLES)
-    for (let b = 0; b < BOOTSTRAP_RESAMPLES; b++) {
-        let sum = 0
-        for (let i = 0; i < n; i++) {
-            sum += sorted[Math.floor(rng() * n)]!
-        }
-        means[b] = sum / n
+    if (p <= pHigh) {
+        const q = p - 0.5
+        const r = q * q
+        return (
+            ((((((a0 * r + a1) * r + a2) * r + a3) * r + a4) * r + a5) * q) /
+            (((((b0 * r + b1) * r + b2) * r + b3) * r + b4) * r + 1)
+        )
     }
-    means.sort((a, b) => a - b)
-    const lowerPercentile = (100 - ciPercent) / 2
-    const upperPercentile = 100 - lowerPercentile
-    const lowerIndex = Math.floor(BOOTSTRAP_RESAMPLES * (lowerPercentile / 100))
-    const upperIndex = Math.min(
-        Math.floor(BOOTSTRAP_RESAMPLES * (upperPercentile / 100)),
-        BOOTSTRAP_RESAMPLES - 1,
+    const q = Math.sqrt(-2 * Math.log(1 - p))
+    return (
+        -(((((c0 * q + c1) * q + c2) * q + c3) * q + c4) * q + c5) /
+        ((((d0 * q + d1) * q + d2) * q + d3) * q + 1)
     )
-    return { lower: means[lowerIndex]!, upper: means[upperIndex]! }
+}
+
+/** Two-sided z-score for a confidence level given as a percentage (e.g. 95). */
+export function zForConfidenceLevel(ciPercent: number): number {
+    return standardNormalQuantile((1 + ciPercent / 100) / 2)
+}
+
+/** Natural log of the gamma function (Lanczos approximation, g=7). */
+function logGamma(x: number): number {
+    const c = [
+        0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+        771.32342877765313, -176.61502916214059, 12.507343278686905,
+        -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7,
+    ]
+    if (x < 0.5) {
+        return Math.log(Math.PI / Math.sin(Math.PI * x)) - logGamma(1 - x)
+    }
+    const y = x - 1
+    let a = c[0]!
+    const t = y + 7.5
+    for (let i = 1; i < 9; i++) a += c[i]! / (y + i)
+    return (
+        0.5 * Math.log(2 * Math.PI) + (y + 0.5) * Math.log(t) - t + Math.log(a)
+    )
+}
+
+/** Lentz continued fraction for the incomplete beta (Numerical Recipes). */
+function betaContinuedFraction(x: number, a: number, b: number): number {
+    const MAX_ITER = 1000
+    const EPS = 1e-15
+    const TINY = 1e-300
+    const qab = a + b
+    const qap = a + 1
+    const qam = a - 1
+    let c = 1
+    let d = 1 - (qab * x) / qap
+    if (Math.abs(d) < TINY) d = TINY
+    d = 1 / d
+    let h = d
+    for (let m = 1; m <= MAX_ITER; m++) {
+        const m2 = 2 * m
+        let aa = (m * (b - m) * x) / ((qam + m2) * (a + m2))
+        d = 1 + aa * d
+        if (Math.abs(d) < TINY) d = TINY
+        c = 1 + aa / c
+        if (Math.abs(c) < TINY) c = TINY
+        d = 1 / d
+        h *= d * c
+        aa = (-(a + m) * (qab + m) * x) / ((a + m2) * (qap + m2))
+        d = 1 + aa * d
+        if (Math.abs(d) < TINY) d = TINY
+        c = 1 + aa / c
+        if (Math.abs(c) < TINY) c = TINY
+        d = 1 / d
+        const del = d * c
+        h *= del
+        if (Math.abs(del - 1) < EPS) break
+    }
+    return h
+}
+
+/** Regularized lower incomplete beta I_x(a, b). */
+function regularizedIncompleteBeta(x: number, a: number, b: number): number {
+    if (x <= 0) return 0
+    if (x >= 1) return 1
+    const front = Math.exp(
+        logGamma(a + b) -
+            logGamma(a) -
+            logGamma(b) +
+            a * Math.log(x) +
+            b * Math.log(1 - x),
+    )
+    if (x < (a + 1) / (a + b + 2)) {
+        return (front * betaContinuedFraction(x, a, b)) / a
+    }
+    return 1 - (front * betaContinuedFraction(1 - x, b, a)) / b
+}
+
+/** Inverse of the regularized incomplete beta via bisection. */
+function inverseRegularizedIncompleteBeta(
+    p: number,
+    a: number,
+    b: number,
+): number {
+    if (p <= 0) return 0
+    if (p >= 1) return 1
+    let lo = 0
+    let hi = 1
+    for (let i = 0; i < 80; i++) {
+        const mid = (lo + hi) / 2
+        if (regularizedIncompleteBeta(mid, a, b) < p) {
+            lo = mid
+        } else {
+            hi = mid
+        }
+    }
+    return (lo + hi) / 2
+}
+
+/**
+ * Cornish-Fisher expansion of the t quantile from the normal quantile. Exact to
+ * the eye for large df; used for df >= 50 where the beta continued fraction
+ * converges slowly as x -> 1.
+ */
+function cornishFisherT(p: number, df: number): number {
+    const z = standardNormalQuantile(p)
+    const z3 = z ** 3
+    const z5 = z ** 5
+    const z7 = z ** 7
+    const z9 = z ** 9
+    const g1 = (z3 + z) / 4
+    const g2 = (5 * z5 + 16 * z3 + 3 * z) / 96
+    const g3 = (3 * z7 + 19 * z5 + 17 * z3 - 15 * z) / 384
+    const g4 = (79 * z9 + 776 * z7 + 1482 * z5 - 1920 * z3 - 945 * z) / 92160
+    return z + g1 / df + g2 / df ** 2 + g3 / df ** 3 + g4 / df ** 4
+}
+
+/**
+ * Student's t quantile (inverse CDF) with `df` degrees of freedom. Small df use
+ * the exact t-beta identity df/(df+T^2) ~ Beta(df/2, 1/2); large df use the
+ * Cornish-Fisher expansion. Converges to the normal quantile as df grows.
+ */
+export function studentTQuantile(p: number, df: number): number {
+    if (p <= 0 || p >= 1) {
+        throw new Error(`studentTQuantile expects p in (0,1), got ${p}`)
+    }
+    if (df <= 0) {
+        throw new Error(`studentTQuantile expects df > 0, got ${df}`)
+    }
+    if (p === 0.5) return 0
+    if (df >= 50) return cornishFisherT(p, df)
+    const upper = p > 0.5
+    const tail = upper ? 1 - p : p
+    const x = inverseRegularizedIncompleteBeta(2 * tail, df / 2, 0.5)
+    const t = Math.sqrt((df * (1 - x)) / x)
+    return upper ? t : -t
+}
+
+/** Two-sided t-score for a confidence level (percentage) at `df` degrees of freedom. */
+export function tForConfidenceLevel(ciPercent: number, df: number): number {
+    return studentTQuantile((1 + ciPercent / 100) / 2, df)
 }
 
 export function calculateStatsFromRawResults(
@@ -524,14 +651,25 @@ export function calculateStatsFromRawResults(
         Math.floor(sorted.length * (upperPercentile / 100)),
         sorted.length - 1,
     )
-    const ciLower = sorted[lowerIndex]!
-    const ciUpper = sorted[upperIndex]!
+    const rangeLower = sorted[lowerIndex]!
+    const rangeUpper = sorted[upperIndex]!
     const meanLengthPerCost = cost > 0 ? mean / cost : 0
 
-    // Non-parametric bootstrap CI of the mean (see bootstrapMeanCI): correct for
-    // the zero-inflated, bimodal gain distributions these skills produce, where
-    // a normal mean ± z·SE interval would be symmetric and could dip below 0.
-    const meanCI = bootstrapMeanCI(sorted, ciPercent)
+    // Confidence interval of the mean: mean ± t_{n-1}·(s/√n), using the sample
+    // standard deviation (n-1). Bounded data is never exactly normal, so the t
+    // pivot is (like z) only asymptotically exact, but it is marginally more
+    // honest at small n and converges to z as n grows. A single sample has
+    // SE = 0, so the margin is 0 and the degrees of freedom are never evaluated.
+    const variance =
+        sorted.length > 1
+            ? sorted.reduce((acc, v) => acc + (v - mean) ** 2, 0) /
+              (sorted.length - 1)
+            : 0
+    const standardError = Math.sqrt(variance) / Math.sqrt(sorted.length)
+    const margin =
+        sorted.length > 1
+            ? tForConfidenceLevel(ciPercent, sorted.length - 1) * standardError
+            : 0
 
     return {
         skill: skillName,
@@ -542,10 +680,10 @@ export function calculateStatsFromRawResults(
         meanLengthPerCost,
         minLength: min,
         maxLength: max,
-        ciLower,
-        ciUpper,
-        ciMeanLower: meanCI.lower,
-        ciMeanUpper: meanCI.upper,
+        rangeLower,
+        rangeUpper,
+        ciMeanLower: mean - margin,
+        ciMeanUpper: mean + margin,
     }
 }
 

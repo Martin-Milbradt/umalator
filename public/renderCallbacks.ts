@@ -5,6 +5,7 @@ type RenderCallback = () => void
 
 let renderUmaCallback: RenderCallback | null = null
 let renderSkillsCallback: RenderCallback | null = null
+let renderResultsCallback: RenderCallback | null = null
 
 export function registerRenderUma(callback: RenderCallback): void {
     renderUmaCallback = callback
@@ -12,6 +13,10 @@ export function registerRenderUma(callback: RenderCallback): void {
 
 export function registerRenderSkills(callback: RenderCallback): void {
     renderSkillsCallback = callback
+}
+
+export function registerRenderResults(callback: RenderCallback): void {
+    renderResultsCallback = callback
 }
 
 export function callRenderUma(): void {
@@ -23,5 +28,11 @@ export function callRenderUma(): void {
 export function callRenderSkills(): void {
     if (renderSkillsCallback) {
         renderSkillsCallback()
+    }
+}
+
+export function callRenderResults(): void {
+    if (renderResultsCallback) {
+        renderResultsCallback()
     }
 }

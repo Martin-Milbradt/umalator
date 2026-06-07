@@ -125,7 +125,7 @@ function buildTour() {
                 popover: {
                     title: 'Reading the results',
                     description:
-                        'Mean and Median are length gain in m. Cost is base SP cost; Disc is your discount. Mean/Cost is the efficiency. Min-Max and 95% CI show the variance. Click headers to sort.',
+                        'Mean and Median are length gain in m. Cost is base SP cost; Disc is your discount. Mean/Cost is the efficiency. Min-Max is the extremes, Range is the spread of per-race outcomes, and Mean CI is how precisely the mean is estimated. Click headers to sort.',
                     side: 'top',
                 },
             },
