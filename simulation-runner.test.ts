@@ -122,7 +122,7 @@ describe('simulation worker integration', () => {
     const workerPath = new URL('./simulation.worker.js', import.meta.url)
 
     // Nakayama Turf 2500 course
-    const nakayama2500 = processCourseData(courseData['10506'])
+    const nakayama2500 = processCourseData(courseData['10506']!)
 
     const runWorkerSimulation = (
         skillId: string,
@@ -374,7 +374,7 @@ describe('simulation worker integration', () => {
 
     it('all-random scenario should complete without combinatorial explosion', async () => {
         // Use two courses to also randomize course selection
-        const suzuka2000 = processCourseData(courseData['10905'])
+        const suzuka2000 = processCourseData(courseData['10905']!)
 
         const task: SimulationTask = {
             skillId: '200492', // Nimble Navigator
@@ -482,7 +482,7 @@ describe('simulation worker integration', () => {
     it('pinned seed with random conditions produces identical raw results across runs', async () => {
         // With a pinned simOptions.seed, shuffleInPlace must use the seeded RNG
         // so the combo->track mapping is identical across runs.
-        const suzuka2000 = processCourseData(courseData['10905'])
+        const suzuka2000 = processCourseData(courseData['10905']!)
 
         // Build the task once: createWeightedSeasonArray etc. shuffle
         // internally with Math.random, so calling them per run would feed

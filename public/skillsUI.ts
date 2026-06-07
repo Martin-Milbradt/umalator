@@ -145,7 +145,7 @@ export function setDiscountForVariants(
         const inputIsBaseItself =
             !skillName.endsWith(' ○') && !skillName.endsWith(' ◎')
         if (twoVariantPair || inputIsBaseItself) {
-            currentConfig.skills[baseName].discount = discount
+            currentConfig.skills[baseName]!.discount = discount
         }
     }
 
@@ -256,8 +256,8 @@ export function renderSkills(): void {
             skillsToHide.add(baseName)
             variants.forEach((variantName) => {
                 skillsToRender.add(variantName)
+                const baseSkill = skills[baseName] || skills[skillName]!
                 if (!skills[variantName]) {
-                    const baseSkill = skills[baseName] || skills[skillName]
                     skills[variantName] = {
                         discount:
                             baseSkill.discount !== null &&
@@ -265,14 +265,11 @@ export function renderSkills(): void {
                                 ? baseSkill.discount
                                 : null,
                     }
-                } else {
-                    const baseSkill = skills[baseName] || skills[skillName]
-                    if (
-                        baseSkill.discount !== null &&
-                        baseSkill.discount !== undefined
-                    ) {
-                        skills[variantName].discount = baseSkill.discount
-                    }
+                } else if (
+                    baseSkill.discount !== null &&
+                    baseSkill.discount !== undefined
+                ) {
+                    skills[variantName].discount = baseSkill.discount
                 }
             })
         } else {
@@ -284,8 +281,8 @@ export function renderSkills(): void {
                 variantsToAdd.forEach((variantName) => {
                     if (!skillsToRender.has(variantName)) {
                         skillsToRender.add(variantName)
+                        const baseSkill = skills[skillName]!
                         if (!skills[variantName]) {
-                            const baseSkill = skills[skillName]
                             skills[variantName] = {
                                 discount:
                                     baseSkill.discount !== null &&
@@ -293,15 +290,11 @@ export function renderSkills(): void {
                                         ? baseSkill.discount
                                         : null,
                             }
-                        } else {
-                            const baseSkill = skills[skillName]
-                            if (
-                                baseSkill.discount !== null &&
-                                baseSkill.discount !== undefined
-                            ) {
-                                skills[variantName].discount =
-                                    baseSkill.discount
-                            }
+                        } else if (
+                            baseSkill.discount !== null &&
+                            baseSkill.discount !== undefined
+                        ) {
+                            skills[variantName].discount = baseSkill.discount
                         }
                     }
                 })
@@ -527,7 +520,7 @@ export function renderSkills(): void {
                         canonicalName !== originalName &&
                         !currentConfig.skills[canonicalName]
                     ) {
-                        const skillData = currentConfig.skills[originalName]
+                        const skillData = currentConfig.skills[originalName]!
                         deleteSkill(originalName)
                         pruneFromResults(originalName)
                         currentConfig.skills[canonicalName] = skillData

@@ -67,7 +67,7 @@ function getAvailableDistances(
 
     const normalizedTrackName = trackName.toLowerCase()
     const trackId = Object.keys(tracknames).find(
-        (id) => tracknames[id][1]?.toLowerCase() === normalizedTrackName,
+        (id) => tracknames[id]![1]?.toLowerCase() === normalizedTrackName,
     )
     if (!trackId) {
         return DISTANCE_CATEGORIES
@@ -351,12 +351,13 @@ export function renderTrack(): void {
                         !isCurrentDistanceValid &&
                         newDistanceOptions.length > 0
                     ) {
-                        distanceSelect.value = newDistanceOptions[0]
-                        if (isDistanceCategory(newDistanceOptions[0])) {
-                            currentConfig.track.distance = newDistanceOptions[0]
+                        const firstOption = newDistanceOptions[0]!
+                        distanceSelect.value = firstOption
+                        if (isDistanceCategory(firstOption)) {
+                            currentConfig.track.distance = firstOption
                         } else {
                             currentConfig.track.distance = parseInt(
-                                newDistanceOptions[0],
+                                firstOption,
                                 10,
                             )
                         }

@@ -5,8 +5,16 @@ import {
     SkillSet,
 } from './uma-tools/components/HorseDefTypes'
 import { runComparison } from './uma-tools/umalator/compare'
-import skillmeta from './uma-tools/skill_meta.json'
+import skillmetaRaw from './uma-tools/skill_meta.json'
 import type { SimulationTask, HorseStateData } from './types'
+
+// The JSON import is typed as a giant object literal with one property per
+// skill id, so indexing it with a runtime string id is an implicit-any error.
+// Re-view it as a record keyed by skill id.
+const skillmeta = skillmetaRaw as Record<
+    string,
+    { baseCost: number; groupId: string; iconId: string; order: number; score: number }
+>
 
 /**
  * Creates a HorseState object compatible with uma-tools runComparison.
@@ -59,6 +67,9 @@ export function runSkillSimulation(task: SimulationTask) {
     const results: number[] = []
     const courses = task.courses
     const numCourses = courses.length
+    if (numCourses === 0) {
+        throw new Error('runSkillSimulation requires at least one course')
+    }
 
     // Convert serialized skills object to array of skill IDs
     const baseSkillIds = convertSkillsToArray(task.baseUma.skills)
@@ -154,10 +165,10 @@ export function runSkillSimulation(task: SimulationTask) {
         let comboIdx = 0
         for (let t = 0; t < numTracks; t++) {
             for (let c = 0; c < combosPerTrack; c++) {
-                const mood = globalMoods[comboIdx] as Mood
-                const season = globalSeasons[comboIdx]
-                const weather = globalWeathers[comboIdx]
-                const condition = globalConditions[comboIdx]
+                const mood = globalMoods[comboIdx]! as Mood
+                const season = globalSeasons[comboIdx]!
+                const weather = globalWeathers[comboIdx]!
+                const condition = globalConditions[comboIdx]!
                 comboIdx++
 
                 const baseUma = createHorseState({ ...task.baseUma, mood }, baseSkillIds)
@@ -175,7 +186,7 @@ export function runSkillSimulation(task: SimulationTask) {
 
                 const { results: comboResults } = runComparison(
                     nsamplesPerCombo,
-                    courses[t],
+                    courses[t]!,
                     racedefForSim,
                     baseUma,
                     umaWithSkill,
@@ -195,7 +206,7 @@ export function runSkillSimulation(task: SimulationTask) {
         : Math.floor(Math.random() * 1000000000)
     const { results: batchResults } = runComparison(
         task.numSimulations,
-        courses[0],
+        courses[0]!,
         task.racedef,
         baseUma,
         umaWithSkill,
@@ -230,7 +241,7 @@ function generateRepresentative<T>(n: number, weightedPool: T[]): T[] {
         }
         let leftover = n - result.length
         allocations.sort((a, b) => b.ideal - b.floor - (a.ideal - a.floor))
-        for (let i = 0; i < leftover; i++) result.push(allocations[i].val)
+        for (let i = 0; i < leftover; i++) result.push(allocations[i]!.val)
         return result
     }
     // n < distinct values: pick the n most probable
@@ -242,7 +253,7 @@ function generateRepresentative<T>(n: number, weightedPool: T[]): T[] {
 function shuffleInPlace<T>(arr: T[]): void {
     for (let i = arr.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1))
-        ;[arr[i], arr[j]] = [arr[j], arr[i]]
+        ;[arr[i], arr[j]] = [arr[j]!, arr[i]!]
     }
 }
 

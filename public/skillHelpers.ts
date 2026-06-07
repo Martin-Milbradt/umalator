@@ -37,7 +37,7 @@ export function buildVariantCache(): void {
         // Match names ending with " ○" or " ◎"
         const match = name.match(/^(.+) ([○◎])$/)
         if (match) {
-            const baseName = match[1]
+            const baseName = match[1]!
             if (!cache.has(baseName)) {
                 cache.set(baseName, [])
             }

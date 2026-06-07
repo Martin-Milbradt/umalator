@@ -159,7 +159,7 @@ describe('calculateSkillCost', () => {
         }
         const cost = calculateSkillCost({
             skillId: 'rare',
-            discount: discounts.rare,
+            discount: discounts.rare!,
             skillMeta,
             skillNames: { rare: ['A'], normal: ['B'] },
             umaSkillIds: [],

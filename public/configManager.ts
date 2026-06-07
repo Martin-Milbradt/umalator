@@ -38,7 +38,7 @@ export async function loadConfigFiles(): Promise<void> {
         const configToLoad =
             lastUsedConfig && files.includes(lastUsedConfig)
                 ? lastUsedConfig
-                : files[0]
+                : files[0]!
         await loadConfig(configToLoad)
     }
 }

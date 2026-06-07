@@ -15,13 +15,13 @@ if (!configArg || configArg === '--help' || configArg === '-h') {
 }
 
 const skillsIdx = process.argv.indexOf('--skills')
-const skillFilter =
-    skillsIdx !== -1 && process.argv[skillsIdx + 1]
-        ? process.argv[skillsIdx + 1]
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean)
-        : undefined
+const skillsArg = skillsIdx !== -1 ? process.argv[skillsIdx + 1] : undefined
+const skillFilter = skillsArg
+    ? skillsArg
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+    : undefined
 
 const configPath = resolve(
     configArg.includes('/') || configArg.includes('\\')

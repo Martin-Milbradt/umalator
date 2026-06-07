@@ -58,7 +58,7 @@ function loadStaticData(): void {
         cachedTracknames = JSON.parse(
             readFileSync(join(umaToolsDir, 'tracknames.json'), 'utf-8'),
         )
-        skillNameLookup = buildSkillNameLookup(cachedSkillnames)
+        skillNameLookup = buildSkillNameLookup(cachedSkillnames!)
     } catch (error) {
         const err = error as Error
         throw new Error(

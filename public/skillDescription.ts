@@ -129,7 +129,7 @@ export function formatClause(name: string, op: string, arg: number): string {
     }
     const table = NAMED_VALUES[name]
     if (table && arg in table) {
-        const value = table[arg]
+        const value = table[arg]!
         return op === '==' ? value : `${name} ${op} ${value}`
     }
     if (PERCENT_NAMES.has(name)) return `${name} ${op} ${arg}%`
@@ -150,7 +150,7 @@ export function describeCondition(condition: string): string {
                         .trim()
                         .match(/^([a-z_]+)\s*(==|!=|<=|>=|<|>)\s*(-?\d+)$/)
                     if (!m) return clause.trim()
-                    return formatClause(m[1], m[2], parseInt(m[3], 10))
+                    return formatClause(m[1]!, m[2]!, parseInt(m[3]!, 10))
                 })
                 .join(' AND '),
         )

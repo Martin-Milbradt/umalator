@@ -130,11 +130,11 @@ function resetUmaSkills(): void {
     if (currentConfig.skills) {
         const skills = currentConfig.skills
         Object.keys(skills).forEach((skillName) => {
-            const skill = skills[skillName]
+            const skill = skills[skillName]!
             if (skill.default !== undefined && skill.default !== null) {
-                skills[skillName].discount = skill.default
+                skill.discount = skill.default
             } else {
-                skills[skillName].discount = null
+                skill.discount = null
             }
         })
     }
@@ -686,7 +686,7 @@ if (importInput) {
 
         if (imported.length > 0) {
             await loadConfigFiles()
-            await loadConfig(imported[imported.length - 1])
+            await loadConfig(imported[imported.length - 1]!)
         }
 
         if (imported.length > 0) {

@@ -134,7 +134,8 @@ export function exportConfig(name: string, config: Config): void {
 export async function exportAllConfigs(): Promise<number> {
     const all = await listAllConfigs()
     for (let i = 0; i < all.length; i++) {
-        exportConfig(all[i].name, all[i].config)
+        const entry = all[i]!
+        exportConfig(entry.name, entry.config)
         // Small stagger so browsers don't drop simultaneous downloads.
         if (i < all.length - 1) {
             await new Promise((r) => setTimeout(r, 120))

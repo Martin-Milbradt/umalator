@@ -334,7 +334,7 @@ export class BrowserSimulationRunner {
                     info: `Found ${matches.length} matching course(s) for random selection`,
                 })
             } else {
-                courses.push(matches[0])
+                courses.push(matches[0]!)
             }
 
             for (const { courseId, course } of courses) {
@@ -555,7 +555,7 @@ export class BrowserSimulationRunner {
             numSimulations: number,
         ): Promise<{ skillName: string; rawResults?: number[] }> => {
             return new Promise((resolve, reject) => {
-                const skillId = skillNameToId[skillName]
+                const skillId = skillNameToId[skillName]!
                 const seed = deterministic
                     ? seedCounter++
                     : Math.floor(Math.random() * 1000000000)
@@ -625,9 +625,9 @@ export class BrowserSimulationRunner {
         }
 
         for (const skillName of availableSkillNames) {
-            const skillId = skillNameToId[skillName]
+            const skillId = skillNameToId[skillName]!
             const configKey = skillNameToConfigKey[skillName] || skillName
-            const skillConfig = configSkills[configKey]
+            const skillConfig = configSkills[configKey]!
             const cost = calculateSkillCost(
                 skillId,
                 skillConfig,

@@ -156,7 +156,7 @@ export function parseSeason(name: string): Season {
 }
 
 export function deriveSeason(turn: string): Season {
-    const month = parseInt(turn.split('_')[0], 10)
+    const month = parseInt(turn.split('_')[0]!, 10)
     if (month >= 3 && month <= 5) return Season.Spring
     if (month >= 6 && month <= 8) return Season.Summer
     if (month >= 9 && month <= 11) return Season.Autumn
@@ -245,7 +245,7 @@ export function shuffleArray<T>(array: T[]): T[] {
     const result = [...array]
     for (let i = result.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1))
-        ;[result[i], result[j]] = [result[j], result[i]]
+        ;[result[i], result[j]] = [result[j]!, result[i]!]
     }
     return result
 }
@@ -284,7 +284,7 @@ export function findAllSkillIdsByName(
     const matches: string[] = []
     const normalizedInput = skillName.toLowerCase()
     for (const [id, names] of Object.entries(skillNames)) {
-        if (names[0].toLowerCase() === normalizedInput) {
+        if (names[0]!.toLowerCase() === normalizedInput) {
             matches.push(id)
         }
     }
@@ -302,7 +302,7 @@ export function findSkillIdByNameWithPreference(
         return null
     }
     if (matches.length === 1) {
-        return matches[0]
+        return matches[0]!
     }
 
     const preferred = matches.filter((id) => {
@@ -311,10 +311,10 @@ export function findSkillIdByNameWithPreference(
     })
 
     if (preferred.length > 0) {
-        return preferred[0]
+        return preferred[0]!
     }
 
-    return matches[0]
+    return matches[0]!
 }
 
 export function findSkillVariantsByName(
@@ -331,7 +331,7 @@ export function findSkillVariantsByName(
     // one variant — the ○ sibling would never be simulated.
     const variantSuffixMatch = /^(.+?) ([○◎])$/.exec(trimmedBaseName)
     const searchBaseName = variantSuffixMatch
-        ? variantSuffixMatch[1]
+        ? variantSuffixMatch[1]!
         : trimmedBaseName
     const normalizedBaseName = searchBaseName.toLowerCase()
 
@@ -345,7 +345,7 @@ export function findSkillVariantsByName(
         if (exactMatchId) {
             const baseCost = skillMeta[exactMatchId]?.baseCost ?? 200
             if (baseCost > 0) {
-                const canonicalName = skillNames[exactMatchId][0]
+                const canonicalName = skillNames[exactMatchId]![0]!
                 variants.push({
                     skillId: exactMatchId,
                     skillName: canonicalName,
@@ -356,7 +356,7 @@ export function findSkillVariantsByName(
     }
 
     for (const [id, names] of Object.entries(skillNames)) {
-        const name = names[0]
+        const name = names[0]!
         const normalizedName = name.toLowerCase()
         if (
             normalizedName === `${normalizedBaseName} ○` ||
@@ -396,7 +396,7 @@ export function processCourseData(rawCourse: {
             ? rawCourse.corners
             : [{ start: rawCourse.distance, length: 0 }]
 
-    const moveLanePoint = corners[0].start
+    const moveLanePoint = corners[0]!.start
 
     return {
         raceTrackId: rawCourse.raceTrackId,
@@ -424,21 +424,27 @@ export function calculateStatsFromRawResults(
     skillName: string,
     ciPercent: number,
 ): SkillResult {
+    if (rawResults.length === 0) {
+        throw new Error('calculateStatsFromRawResults requires at least one result')
+    }
     const sorted = [...rawResults].sort((a, b) => a - b)
     const mean = sorted.reduce((a, b) => a + b, 0) / sorted.length
-    const min = sorted[0]
-    const max = sorted[sorted.length - 1]
+    const min = sorted[0]!
+    const max = sorted[sorted.length - 1]!
     const mid = Math.floor(sorted.length / 2)
     const median =
         sorted.length % 2 === 0
-            ? (sorted[mid - 1] + sorted[mid]) / 2
-            : sorted[mid]
+            ? (sorted[mid - 1]! + sorted[mid]!) / 2
+            : sorted[mid]!
     const lowerPercentile = (100 - ciPercent) / 2
     const upperPercentile = 100 - lowerPercentile
     const lowerIndex = Math.floor(sorted.length * (lowerPercentile / 100))
-    const upperIndex = Math.floor(sorted.length * (upperPercentile / 100))
-    const ciLower = sorted[lowerIndex]
-    const ciUpper = sorted[upperIndex]
+    const upperIndex = Math.min(
+        Math.floor(sorted.length * (upperPercentile / 100)),
+        sorted.length - 1,
+    )
+    const ciLower = sorted[lowerIndex]!
+    const ciUpper = sorted[upperIndex]!
     const meanLengthPerCost = cost > 0 ? mean / cost : 0
 
     return {
@@ -613,7 +619,7 @@ export function formatTrackDetails(
     courseId?: string,
     numUmas?: number,
 ): string {
-    const trackName = trackNames[course.raceTrackId.toString()][1]
+    const trackName = trackNames[course.raceTrackId.toString()]![1]!
     const distanceType = formatDistanceType(course.distanceType)
     const surface = formatSurface(course.surface)
     const turn = formatTurn(course.turn)
@@ -877,8 +883,8 @@ export function parseConditionTerm(
     const field = match[1] as StaticField
     if (!STATIC_FIELDS.includes(field)) return null
 
-    const operator = match[2]
-    const value = parseInt(match[3], 10)
+    const operator = match[2]!
+    const value = parseInt(match[3]!, 10)
     const values = expandComparisonToValues(field, operator, value)
 
     return { field, values }

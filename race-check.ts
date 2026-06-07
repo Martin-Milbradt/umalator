@@ -72,7 +72,7 @@ function parseArgs(): {
                 result.racesPath = args[++i]
                 break
             case '--skills':
-                result.skills = args[++i].split(',').map((s) => {
+                result.skills = args[++i]!.split(',').map((s) => {
                     const trimmed = s.trim()
                     const colonIdx = trimmed.lastIndexOf(':')
                     if (colonIdx === -1)
@@ -90,7 +90,7 @@ function parseArgs(): {
                 result.track = args[++i]
                 break
             case '--distance':
-                result.distance = parseInt(args[++i], 10)
+                result.distance = parseInt(args[++i]!, 10)
                 break
             case '--surface':
                 result.surface = args[++i]
@@ -99,7 +99,7 @@ function parseArgs(): {
                 result.season = args[++i]
                 break
             case '--sims':
-                result.numSims = parseInt(args[++i], 10)
+                result.numSims = parseInt(args[++i]!, 10)
                 break
             case '--json':
                 result.json = true
@@ -256,7 +256,7 @@ function buildMarkdownTable(
     ]
 
     const rows = races.map((race, r) => {
-        const results = allResults[r]
+        const results = allResults[r]!
         return [
             race.raceName,
             race.turn,
@@ -373,7 +373,7 @@ async function main(): Promise<void> {
     const allResults: Map<string, number | null>[] = []
     const total = raceSpecs.length
     for (let i = 0; i < raceSpecs.length; i++) {
-        const race = raceSpecs[i]
+        const race = raceSpecs[i]!
         process.stderr.write(
             `\r[${i + 1}/${total}] ${race.raceName}...`,
         )
@@ -391,7 +391,7 @@ async function main(): Promise<void> {
 
     if (args.json) {
         const output = raceSpecs.map((race, i) => {
-            const results = allResults[i]
+            const results = allResults[i]!
             const skillResults: Record<string, number | null> = {}
             for (const skill of skills) {
                 skillResults[skill.name] = results.get(skill.name) ?? null

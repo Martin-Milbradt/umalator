@@ -2283,7 +2283,7 @@ describe('skill filtering by strategy', () => {
         )
         const settings: CurrentSettings = {
             distanceType: null,
-            runningStyle: STRATEGY_TO_RUNNING_STYLE['Front Runner'], // 1
+            runningStyle: STRATEGY_TO_RUNNING_STYLE['Front Runner']!, // 1
             groundType: null,
             isBasisDistance: null,
             rotation: null,
@@ -2301,7 +2301,7 @@ describe('skill filtering by strategy', () => {
         )
         const settings: CurrentSettings = {
             distanceType: null,
-            runningStyle: STRATEGY_TO_RUNNING_STYLE['Pace Chaser'], // 2
+            runningStyle: STRATEGY_TO_RUNNING_STYLE['Pace Chaser']!, // 2
             groundType: null,
             isBasisDistance: null,
             rotation: null,
@@ -2320,7 +2320,7 @@ describe('skill filtering by strategy', () => {
         )
         const settings: CurrentSettings = {
             distanceType: null,
-            runningStyle: STRATEGY_TO_RUNNING_STYLE['Pace Chaser'], // 2
+            runningStyle: STRATEGY_TO_RUNNING_STYLE['Pace Chaser']!, // 2
             groundType: null,
             isBasisDistance: null,
             rotation: null,
@@ -2338,7 +2338,7 @@ describe('skill filtering by strategy', () => {
         )
         const settings: CurrentSettings = {
             distanceType: null,
-            runningStyle: STRATEGY_TO_RUNNING_STYLE['Front Runner'], // 1
+            runningStyle: STRATEGY_TO_RUNNING_STYLE['Front Runner']!, // 1
             groundType: null,
             isBasisDistance: null,
             rotation: null,
@@ -2357,7 +2357,7 @@ describe('skill filtering by strategy', () => {
         )
         const settings: CurrentSettings = {
             distanceType: null,
-            runningStyle: STRATEGY_TO_RUNNING_STYLE['Late Surger'], // 3
+            runningStyle: STRATEGY_TO_RUNNING_STYLE['Late Surger']!, // 3
             groundType: null,
             isBasisDistance: null,
             rotation: null,
@@ -2376,7 +2376,7 @@ describe('skill filtering by strategy', () => {
         )
         const settings: CurrentSettings = {
             distanceType: null,
-            runningStyle: STRATEGY_TO_RUNNING_STYLE['End Closer'], // 4
+            runningStyle: STRATEGY_TO_RUNNING_STYLE['End Closer']!, // 4
             groundType: null,
             isBasisDistance: null,
             rotation: null,
@@ -2396,7 +2396,7 @@ describe('skill filtering by strategy', () => {
         )
         const settings: CurrentSettings = {
             distanceType: null,
-            runningStyle: STRATEGY_TO_RUNNING_STYLE.Runaway, // 5
+            runningStyle: STRATEGY_TO_RUNNING_STYLE.Runaway!, // 5
             groundType: null,
             isBasisDistance: null,
             rotation: null,
@@ -2414,7 +2414,7 @@ describe('skill filtering by strategy', () => {
         )
         const settings: CurrentSettings = {
             distanceType: null,
-            runningStyle: STRATEGY_TO_RUNNING_STYLE.Runaway, // 5
+            runningStyle: STRATEGY_TO_RUNNING_STYLE.Runaway!, // 5
             groundType: null,
             isBasisDistance: null,
             rotation: null,
@@ -2441,7 +2441,7 @@ describe('A Small Breather filtering', () => {
             groundType: 1,
             isBasisDistance: false,
             rotation: null,
-            runningStyle: STRATEGY_TO_RUNNING_STYLE['Pace Chaser'], // 2
+            runningStyle: STRATEGY_TO_RUNNING_STYLE['Pace Chaser']!, // 2
             season: 4,
             trackId: 10005,
             weather: 1,
@@ -2462,7 +2462,7 @@ describe('A Small Breather filtering', () => {
             groundType: 1,
             isBasisDistance: false,
             rotation: null,
-            runningStyle: STRATEGY_TO_RUNNING_STYLE['Late Surger'], // 3
+            runningStyle: STRATEGY_TO_RUNNING_STYLE['Late Surger']!, // 3
             season: 4,
             trackId: 10005,
             weather: 1,

@@ -23,7 +23,7 @@ describe('random weather consistency', () => {
     const workerPath = new URL('./simulation.worker.js', import.meta.url)
 
     // Hanshin Turf 1600m
-    const hanshin1600 = processCourseData(courseData['10304'])
+    const hanshin1600 = processCourseData(courseData['10304']!)
 
     const baseUma = {
         speed: 1200,

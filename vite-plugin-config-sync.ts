@@ -29,7 +29,7 @@ export function configSyncPlugin(): Plugin {
 
                 const match = req.url.match(/^\/__dev\/configs\/(.+)$/)
                 if (!match) return next()
-                const filename = decodeURIComponent(match[1])
+                const filename = decodeURIComponent(match[1]!)
 
                 if (filename.includes('..') || filename.includes('/')) {
                     res.statusCode = 400
