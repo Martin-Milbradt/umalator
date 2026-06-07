@@ -237,7 +237,10 @@ function copyDataFiles(): void {
     }
 }
 
-// Fetch latest game data from upstream uma-tools (mirrors CI behavior).
+// Fetch latest game data from upstream uma-tools by overwriting the submodule's
+// data files. Opt-in via UPDATE_GAME_DATA=1 (set by the deploy workflow) because
+// it (a) dirties the uma-tools submodule working tree and (b) makes the build
+// non-reproducible. Local builds and PR/push CI use the pinned submodule data.
 // Falls back to local files on network failure.
 function fetchLatestGameData(): void {
     const dataFiles = [
@@ -261,7 +264,13 @@ function fetchLatestGameData(): void {
 }
 
 try {
-    fetchLatestGameData()
+    if (process.env.UPDATE_GAME_DATA === '1') {
+        fetchLatestGameData()
+    } else {
+        console.log(
+            'Using pinned submodule game data (set UPDATE_GAME_DATA=1 to fetch latest)',
+        )
+    }
     copyDataFiles()
     await Promise.all([
         esbuild.build(workerBuildOptions),
