@@ -39,7 +39,7 @@ function runBrowserTask(
             worker.terminate()
             reject(
                 new Error(
-                    `Worker timeout after ${WORKER_TIMEOUT_MS / 1000}s for skill: ${task.skillName}`,
+                    `Worker timeout after ${WORKER_TIMEOUT_MS / 1000}s for skill: ${task.skillName} (seed ${task.simOptions.seed})`,
                 ),
             )
         }, WORKER_TIMEOUT_MS)

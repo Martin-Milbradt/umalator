@@ -676,12 +676,19 @@ export async function runSimulation(
     })
 
     const factories = availableSkillNames.map((skillName) => async () => {
+        const task = buildTask(skillName)
         try {
-            return await adapter.runTask(buildTask(skillName))
+            return await adapter.runTask(task)
         } catch (error) {
+            // Always log the seed so a failing calculation can be reproduced
+            // (set config.seed to it and run just this skill).
+            console.error(
+                `Skill "${skillName}" failed (seed ${task.simOptions.seed}):`,
+                error,
+            )
             onProgress({
                 type: 'error',
-                error: `Skill "${skillName}" failed: ${error}`,
+                error: `Skill "${skillName}" failed (seed ${task.simOptions.seed}): ${error}`,
             })
             return { skillName, rawResults: undefined }
         }
