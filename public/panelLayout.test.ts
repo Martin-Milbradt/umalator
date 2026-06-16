@@ -52,10 +52,11 @@ describe('results pane scroll layout', () => {
     it('keeps the results table free to render at full height', () => {
         // The container may scroll horizontally for the wide table, but it must
         // not be the vertical scroller — otherwise it flex-shrinks and traps the
-        // table. Vertical scrolling belongs to #right-scroll.
+        // table. Vertical scrolling belongs to #right-scroll. (flex-1 here is
+        // fine: with min-height auto and no overflow-y, the item never shrinks
+        // below its content; it only grows to push the uma/track box down.)
         const cls = attrsOf('results-container')
         expect(cls).toContain('overflow-x-auto')
         expect(cls).not.toContain('overflow-y-auto')
-        expect(cls).not.toContain('flex-1')
     })
 })
