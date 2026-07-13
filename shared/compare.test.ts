@@ -7,6 +7,9 @@ import { processCourseData } from '../utils'
 import {
     type CompareHorseState,
     type CompareRaceParams,
+    type RawSkillData,
+    applyDynamicModifierScaling,
+    dynamicModifierFactor,
     runComparison,
     uniqueLevelFactor,
 } from './compare'
@@ -164,5 +167,94 @@ describe('runComparison', () => {
             {},
         )
         expect(Math.abs(meanOf(results))).toBeLessThan(0.05)
+    })
+})
+
+describe('dynamicModifierFactor', () => {
+    it.each([
+        [1, 1],
+        // flat ×1.2 group
+        [3, 1.2],
+        [7, 1.2],
+        [10, 1.2],
+        // gamble roll: 60% ×0, 30% ×0.02, 10% ×0.04 -> expectation 0.01
+        [8, 0.01],
+        [9, 0.01],
+        // random ×1/1.4/1.8 -> expectation 1.4
+        [25, 1.4],
+        // runtime-dependent or pass-through types stay at 1
+        [13, 1],
+        [14, 1],
+        [999, 1],
+    ])('scaling %d scales by %f', (scaling, factor) => {
+        expect(dynamicModifierFactor(scaling)).toBe(factor)
+    })
+})
+
+describe('applyDynamicModifierScaling', () => {
+    // Shaped like Risky Business: +0.25 target speed plus a "gamble" HP drain
+    // stored as -100% with scaling 8.
+    const raw: RawSkillData = {
+        '202032': {
+            alternatives: [
+                {
+                    effects: [
+                        { type: 27, modifier: 2500, scaling: 1 },
+                        { type: 9, modifier: -10000, scaling: 8 },
+                    ],
+                },
+            ],
+        },
+    }
+
+    const entry = (skillId: string) =>
+        ({
+            skillId,
+            effects: [
+                { type: 27, baseDuration: 1.8, modifier: 0.25 },
+                { type: 9, baseDuration: 1.8, modifier: -1 },
+            ],
+        }) as never
+
+    it('rescales dynamic effects and leaves static ones alone', () => {
+        const sd = entry('202032')
+        applyDynamicModifierScaling([sd], raw)
+        const effects = (sd as { effects: { modifier: number }[] }).effects
+        expect(effects[0]!.modifier).toBeCloseTo(0.25, 10)
+        expect(effects[1]!.modifier).toBeCloseTo(-0.01, 10)
+    })
+
+    it('skips entries without a raw record (synthetic skills)', () => {
+        const sd = entry('asitame')
+        applyDynamicModifierScaling([sd], raw)
+        const effects = (sd as { effects: { modifier: number }[] }).effects
+        expect(effects[1]!.modifier).toBe(-1)
+    })
+
+    it('skips entries whose modifiers no longer match the raw data', () => {
+        const sd = entry('202032')
+        ;(sd as { effects: { modifier: number }[] }).effects[0]!.modifier = 0.3
+        applyDynamicModifierScaling([sd], raw)
+        const effects = (sd as { effects: { modifier: number }[] }).effects
+        expect(effects[1]!.modifier).toBe(-1)
+    })
+
+    it('treats missing scaling fields as static (old-format data)', () => {
+        const oldFormat: RawSkillData = {
+            '202032': {
+                alternatives: [
+                    {
+                        effects: [
+                            { type: 27, modifier: 2500 },
+                            { type: 9, modifier: -10000 },
+                        ],
+                    },
+                ],
+            },
+        }
+        const sd = entry('202032')
+        applyDynamicModifierScaling([sd], oldFormat)
+        const effects = (sd as { effects: { modifier: number }[] }).effects
+        expect(effects[1]!.modifier).toBe(-1)
     })
 })

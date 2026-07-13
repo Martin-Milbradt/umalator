@@ -40,6 +40,9 @@ import type {
     SamplePolicyDesc,
 } from '../uma-tools/components/HorseDefTypes'
 import skillmetaRaw from '../uma-tools/skill_meta.json'
+// build.ts redirects this to the umalator-global data in worker bundles, the
+// same redirect the engine's own import gets, so both always see one dataset.
+import rawSkillsJson from '../uma-tools/uma-skill-tools/data/skill_data.json'
 
 // Injected at build time (esbuild define / vitest define).
 declare const CC_GLOBAL: boolean
@@ -85,6 +88,89 @@ export function uniqueLevelFactor(effectType: number, level: number): number {
     const lv = Math.min(Math.max(Math.round(level), 1), 10)
     const table = LEVEL_FACTORS[effectType]
     return table ? table[lv - 1]! : 1 + (lv - 1) * 0.02
+}
+
+export interface RawSkillEffect {
+    type: number
+    modifier: number
+    scaling?: number
+}
+export interface RawSkillAlternative {
+    effects: RawSkillEffect[]
+}
+export type RawSkillData = Record<
+    string,
+    { alternatives: RawSkillAlternative[] }
+>
+
+const rawSkills = rawSkillsJson as unknown as RawSkillData
+
+/**
+ * Expected-value multiplier for a dynamic effect modifier, from the reference
+ * implementation (getScaledModifier in the compiled umalator-global worker):
+ * types 2-7/10/12/26/28/32 are a flat ×1.2; 8/9 roll 60% ×0, 30% ×0.02,
+ * 10% ×0.04 per activation (expectation 0.01) — the "gamble" skills like
+ * Risky Business store their HP drain as -100% and rely on this roll; 25
+ * rolls ×1/×1.4/×1.8 (expectation 1.4); 14 tiers ×0-3 by runtime activation
+ * count, which is unknowable at build time and approximated at ×1; everything
+ * else is ×1.
+ */
+export function dynamicModifierFactor(scaling: number): number {
+    switch (scaling) {
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+        case 6:
+        case 7:
+        case 10:
+        case 12:
+        case 26:
+        case 28:
+        case 32:
+            return 1.2
+        case 8:
+        case 9:
+            return 0.01
+        case 25:
+            return 1.4
+        default:
+            return 1
+    }
+}
+
+/**
+ * The public engine applies effect modifiers literally, but newer game data
+ * encodes some as dynamic (`scaling` on the raw effect), computed per
+ * activation by the reference engine. Rescale built effects by each type's
+ * expected value so those skills produce sensible means instead of e.g. a
+ * -100% max HP drain. Built entries are matched to raw alternatives by their
+ * modifier sequence (buildSkillData maps effects 1:1 in order), so this must
+ * run before anything else mutates modifiers (unique level scaling).
+ */
+export function applyDynamicModifierScaling(
+    skilldata: SkillData[],
+    raw: RawSkillData,
+): void {
+    for (const sd of skilldata) {
+        const alternatives = raw[sd.skillId]?.alternatives
+        // synthetic entries (asitame etc.) have no raw record
+        if (!alternatives) continue
+        const alt = alternatives.find(
+            (a) =>
+                a.effects.length === sd.effects.length &&
+                a.effects.every(
+                    (ef, i) =>
+                        Math.abs(ef.modifier / 10000 - sd.effects[i]!.modifier) <
+                        1e-9,
+                ),
+        )
+        if (!alt) continue
+        sd.effects = sd.effects.map((ef, i) => {
+            const factor = dynamicModifierFactor(alt.effects[i]!.scaling ?? 1)
+            return factor === 1 ? ef : { ...ef, modifier: ef.modifier * factor }
+        })
+    }
 }
 
 interface UniqueAtLevel {
@@ -350,7 +436,15 @@ export function runComparison(
             instantiateSamplePolicy(uma2.samplePolicies.get(id)),
         ),
     )
-    // Level scaling must be hooked before withAsiwotameru (hooks run in order).
+    // Hook order matters: dynamic scaling first (it matches effects against
+    // their raw, unmutated modifiers), then unique level scaling, and
+    // withAsiwotameru last so its power threshold sees the final values.
+    standard._extraSkillHooks.push((skilldata: SkillData[]) =>
+        applyDynamicModifierScaling(skilldata, rawSkills),
+    )
+    compare._extraSkillHooks.push((skilldata: SkillData[]) =>
+        applyDynamicModifierScaling(skilldata, rawSkills),
+    )
     applyUniqueLevelScaling(standard, [
         {
             id: uma1.uniqueSkillId ?? '',
