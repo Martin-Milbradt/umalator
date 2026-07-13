@@ -33,6 +33,7 @@ import { autoSave, loadConfig, loadConfigFiles } from './configManager'
 import { setupPaneResizer } from './paneResizer'
 import {
     renderResultsTable,
+    setupResultsHeaderControls,
     setupResultsTableSorting,
     setupSelectAllCheckbox,
 } from './resultsUI'
@@ -292,6 +293,7 @@ setupDiscountWidthObserver()
 // Set up results table sorting and select-all checkbox
 setupResultsTableSorting()
 setupSelectAllCheckbox()
+setupResultsHeaderControls()
 
 // Configs and Help are native action <select>s: picking an option fires the
 // corresponding action, then the select resets to its placeholder.

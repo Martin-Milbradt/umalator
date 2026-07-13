@@ -3,6 +3,7 @@ import { callRenderUma, registerRenderSkills } from './renderCallbacks'
 import {
     addPendingSkillToResults,
     addSkillToUmaFromTable,
+    refreshOwnedRowsForGroup,
     removeSkillFromUma,
     renderResultsTable,
     updateResultsForDiscountChange,
@@ -171,6 +172,9 @@ export function setDiscountForVariants(
             discount,
         )
     }
+    // Owned (greyed) rows in this group carry refunds computed from the
+    // group's discounts; requeue them like the buy rows above.
+    refreshOwnedRowsForGroup(skillName)
 }
 
 const DISCOUNT_OPTIONS: (number | null)[] = [null, 0, 10, 20, 30, 35, 40]

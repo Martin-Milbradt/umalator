@@ -148,6 +148,13 @@ export interface SkillResult {
     // average is estimated.
     ciMeanLower: number
     ciMeanUpper: number
+    // Rows for skills the uma already has (or its disabled unique). Their
+    // stats are negated (mean = what removing loses, cost = refunded SP);
+    // ownedAction drives the row's button and hasCost=false blanks the cost
+    // and mean/cost columns (unknown refund or unique).
+    owned?: boolean
+    ownedAction?: 'remove' | 'downgrade' | 'disable-unique' | 'enable-unique'
+    hasCost?: boolean
 }
 
 export function parseGroundCondition(name: string): GroundCondition {
@@ -686,7 +693,9 @@ export function calculateStatsFromRawResults(
     )
     const rangeLower = sorted[lowerIndex]!
     const rangeUpper = sorted[upperIndex]!
-    const meanLengthPerCost = cost > 0 ? mean / cost : 0
+    // cost may be negative (refund for removing an owned skill); the double
+    // negation with a negated mean keeps the ratio comparable to buy rows.
+    const meanLengthPerCost = cost !== 0 ? mean / cost : 0
 
     // Confidence interval of the mean: mean ± t_{n-1}·(s/√n), using the sample
     // standard deviation (n-1). Bounded data is never exactly normal, so the t

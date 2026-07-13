@@ -96,6 +96,11 @@ export interface SimulationRunnerConfig {
         skills?: string[]
         unique?: string
         uniqueLv?: number
+        uniqueDisabled?: boolean
+    }
+    filters?: {
+        /** Simulate skills already on the uma as removal rows (default true). */
+        calcOwned?: boolean
     }
     deterministic?: boolean
     confidenceInterval?: number
@@ -419,7 +424,10 @@ export async function runSimulation(
         }
     }
 
-    // Resolve unique skill name to ID
+    // Resolve unique skill name to ID. A disabled unique is left off the
+    // base uma entirely (simulating runs where it never triggers) but keeps
+    // its id so it can get a re-enable row.
+    const uniqueDisabled = umaConfig.uniqueDisabled ?? false
     let uniqueSkillId: string | undefined
     if (umaConfig.unique) {
         const resolved = findSkillIdByNameWithPreference(
@@ -430,7 +438,9 @@ export async function runSimulation(
         )
         if (resolved) {
             uniqueSkillId = resolved
-            umaSkillIds.push(resolved)
+            if (!uniqueDisabled) {
+                umaSkillIds.push(resolved)
+            }
         }
     }
 
@@ -583,7 +593,143 @@ export async function runSimulation(
         }
     }
 
-    let availableSkillNames = Object.keys(skillNameToId)
+    const skillCostContext: SkillCostContext = {
+        skillMeta,
+        baseUmaSkillIds: umaSkillIds,
+        skillNames,
+        configSkills,
+        skillIdToName,
+        skillNameToConfigKey,
+    }
+
+    // --- Owned-skill rows ---------------------------------------------------
+    // Skills already on the uma are simulated the other way around (uma
+    // without the skill vs uma with it) and reported negated: mean = what
+    // removing loses, cost = the refunded SP, so mean/cost stays positive and
+    // comparable to buy rows. Each owned skill gets a removal row plus one
+    // downgrade row per less-advanced tier of its group; the unique gets a
+    // disable/re-enable row without cost columns.
+    interface OwnedRowSpec {
+        taskSkillId: string
+        baseSkills: string[]
+        negate: boolean
+        cost: number
+        discount: number
+        hasCost: boolean
+        action: 'remove' | 'downgrade' | 'disable-unique' | 'enable-unique'
+    }
+    const ownedRowSpecs = new Map<string, OwnedRowSpec>()
+    const calcOwned = config.filters?.calcOwned ?? true
+
+    const configKeyForName = (name: string): string | null => {
+        if (configSkills[name]) return name
+        const base = name.replace(/ [○◎]$/, '')
+        if (base !== name && configSkills[base]) return base
+        return null
+    }
+    const discountForId = (skillId: string): number | null => {
+        const name = skillNames[skillId]?.[0]
+        if (!name) return null
+        const key = configKeyForName(name)
+        if (!key) return null
+        return configSkills[key]?.discount ?? null
+    }
+    // Full chain cost of a skill as if nothing of its group were owned; null
+    // when its discount isn't configured (absent or "-" in the skills table).
+    const fullChainCost = (
+        skillId: string,
+        strippedUmaSkills: string[],
+    ): number | null => {
+        const discount = discountForId(skillId)
+        if (discount === null) return null
+        return calculateSkillCost(
+            skillId,
+            { discount },
+            { ...skillCostContext, baseUmaSkillIds: strippedUmaSkills },
+        )
+    }
+    // Make group siblings resolvable for prerequisite discount lookups (the
+    // candidate loop above only registers purchasable candidates).
+    const registerForCosts = (skillId: string): void => {
+        const name = skillNames[skillId]?.[0]
+        if (!name) return
+        skillIdToName[skillId] ??= name
+        const key = configKeyForName(name)
+        if (key) skillNameToConfigKey[name] ??= key
+    }
+
+    if (calcOwned) {
+        for (const ownedId of umaSkillIds) {
+            if (ownedId === uniqueSkillId) continue
+            const ownedName = skillNames[ownedId]?.[0]
+            if (!ownedName || !skillData[ownedId]) continue
+            const ownedMeta = skillMeta[ownedId]
+            const stripped = umaSkillIds.filter((id) => id !== ownedId)
+            registerForCosts(ownedId)
+            const groupId = ownedMeta?.groupId
+            const ownedOrder = ownedMeta?.order ?? 0
+            const siblings: string[] = []
+            if (groupId) {
+                for (const [sibId, sibMeta] of Object.entries(skillMeta)) {
+                    if (sibMeta.groupId !== groupId || sibId === ownedId) {
+                        continue
+                    }
+                    if ((sibMeta.order ?? 0) <= ownedOrder) continue
+                    if ((sibMeta.score ?? 1) < 0) continue // purple variants
+                    if (!skillNames[sibId]?.[0] || !skillData[sibId]) continue
+                    registerForCosts(sibId)
+                    siblings.push(sibId)
+                }
+            }
+            const ownCost = fullChainCost(ownedId, stripped)
+            ownedRowSpecs.set(ownedName, {
+                taskSkillId: ownedId,
+                baseSkills: stripped,
+                negate: true,
+                cost: ownCost !== null ? -ownCost : 0,
+                discount: discountForId(ownedId) ?? 0,
+                hasCost: ownCost !== null,
+                action: 'remove',
+            })
+            for (const sibId of siblings) {
+                const sibName = skillNames[sibId]![0]!
+                const sibCost = fullChainCost(sibId, stripped)
+                const diff =
+                    ownCost !== null && sibCost !== null
+                        ? ownCost - sibCost
+                        : null
+                ownedRowSpecs.set(sibName, {
+                    taskSkillId: ownedId,
+                    baseSkills: [...stripped, sibId],
+                    negate: true,
+                    cost: diff !== null ? -diff : 0,
+                    discount: 0,
+                    hasCost: diff !== null,
+                    action: 'downgrade',
+                })
+            }
+        }
+    }
+    // The unique's disable row is gated like other owned rows, but the
+    // re-enable row always shows so a disabled unique can't get stranded.
+    if (uniqueSkillId && skillData[uniqueSkillId]) {
+        const uniqueName = skillNames[uniqueSkillId]?.[0]
+        if (uniqueName && (calcOwned || uniqueDisabled)) {
+            ownedRowSpecs.set(uniqueName, {
+                taskSkillId: uniqueSkillId,
+                baseSkills: umaSkillIds.filter((id) => id !== uniqueSkillId),
+                negate: !uniqueDisabled,
+                cost: 0,
+                discount: 0,
+                hasCost: false,
+                action: uniqueDisabled ? 'enable-unique' : 'disable-unique',
+            })
+        }
+    }
+
+    let availableSkillNames = [
+        ...new Set([...Object.keys(skillNameToId), ...ownedRowSpecs.keys()]),
+    ]
 
     // Apply skill filter if provided
     if (skillFilter && skillFilter.length > 0) {
@@ -606,7 +752,8 @@ export async function runSimulation(
     const concurrency = adapter.concurrency(availableSkillNames.length)
 
     const buildTask = (skillName: string): SimulationTask => {
-        const skillId = skillNameToId[skillName]!
+        const ownedSpec = ownedRowSpecs.get(skillName)
+        const skillId = ownedSpec?.taskSkillId ?? skillNameToId[skillName]!
         const seed =
             seedBase !== null
                 ? seedBase + seedCounter++
@@ -616,7 +763,9 @@ export async function runSimulation(
             skillName,
             courses: courses.map((c) => c.course),
             racedef,
-            baseUma,
+            baseUma: ownedSpec
+                ? { ...baseUma, skills: ownedSpec.baseSkills }
+                : baseUma,
             simOptions: { ...baseSimOptions, seed },
             numSimulations: numSims,
             useRandomMood: conditions.mood.isRandom,
@@ -632,16 +781,17 @@ export async function runSimulation(
 
     const skillRawResultsMap: Map<string, SkillRawResults> = new Map()
 
-    const skillCostContext: SkillCostContext = {
-        skillMeta,
-        baseUmaSkillIds: umaSkillIds,
-        skillNames,
-        configSkills,
-        skillIdToName,
-        skillNameToConfigKey,
-    }
-
     for (const skillName of availableSkillNames) {
+        const ownedSpec = ownedRowSpecs.get(skillName)
+        if (ownedSpec) {
+            skillRawResultsMap.set(skillName, {
+                skillName,
+                rawResults: [],
+                cost: ownedSpec.cost,
+                discount: ownedSpec.discount,
+            })
+            continue
+        }
         const skillId = skillNameToId[skillName]!
         const configKey = skillNameToConfigKey[skillName] || skillName
         const skillConfig = configSkills[configKey]!
@@ -693,7 +843,13 @@ export async function runSimulation(
         if (result.rawResults) {
             const skillData = skillRawResultsMap.get(result.skillName)
             if (skillData) {
-                skillData.rawResults.push(...result.rawResults)
+                const ownedSpec = ownedRowSpecs.get(result.skillName)
+                // Removal rows report the loss of removing the skill, so the
+                // raw gains of having it are negated before the stats pass.
+                const raw = ownedSpec?.negate
+                    ? result.rawResults.map((x) => -x)
+                    : result.rawResults
+                skillData.rawResults.push(...raw)
                 if (!reportedSampleSize) {
                     reportedSampleSize = true
                     const actual = result.rawResults.length
@@ -711,6 +867,11 @@ export async function runSimulation(
                     skillData.skillName,
                     confidenceInterval,
                 )
+                if (ownedSpec) {
+                    skillResult.owned = true
+                    skillResult.ownedAction = ownedSpec.action
+                    skillResult.hasCost = ownedSpec.hasCost
+                }
                 computedResults.set(result.skillName, skillResult)
                 onProgress({ type: 'result', result: skillResult })
             }

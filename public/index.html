@@ -222,7 +222,23 @@
                         class="text-zinc-400 mb-2 flex items-center justify-between"
                     >
                         <span id="results-count">No results yet</span>
-                        <span id="results-last-run"></span>
+                        <span class="flex items-center gap-3">
+                            <button
+                                id="undo-uma-btn"
+                                class="py-0.5 px-2 bg-zinc-700 text-zinc-200 border border-zinc-600 rounded text-[13px] cursor-pointer hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-default disabled:hover:bg-zinc-700"
+                                title="Undo the last uma skill change"
+                                disabled
+                            >
+                                Undo
+                            </button>
+                            <label
+                                class="flex items-center gap-1 cursor-pointer select-none"
+                                title="Also simulate skills already on the uma (as removal rows)"
+                            >
+                                <input type="checkbox" id="calc-owned-checkbox" checked />
+                                Owned
+                            </label>
+                        </span>
                     </div>
                     <div id="results-totals" class="hidden mb-2 p-2 bg-zinc-900 rounded border border-teal-700">
                         <span class="text-teal-400 font-semibold">Selection Total:</span>

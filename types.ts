@@ -111,6 +111,8 @@ export interface SkillMeta {
     groupId?: string
     order?: number
     iconId?: string
+    /** Negative for purple (debuff) skills; used to exclude them as tiers. */
+    score?: number
 }
 
 /**

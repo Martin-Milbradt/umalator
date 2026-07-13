@@ -41,6 +41,8 @@ export interface Uma {
     mood?: number | null
     unique?: string
     uniqueLv?: number | null
+    /** When true the unique is not simulated (greyed in the uma block). */
+    uniqueDisabled?: boolean
     skills?: string[]
     skillPoints?: number | null
 }
@@ -51,6 +53,8 @@ export interface Filters {
     hideOwned?: boolean
     available?: AvailableFilter
     showIcons?: boolean
+    /** Simulate skills already on the uma as removal rows. Defaults to true. */
+    calcOwned?: boolean
 }
 
 export interface Config {
@@ -79,6 +83,12 @@ export interface SkillResult {
     // Confidence interval of the mean gain (mean ± t·SE).
     ciMeanLower: number
     ciMeanUpper: number
+    // Rows for skills the uma already has (or its disabled unique). Stats are
+    // negated (mean = what removing loses, cost = refunded SP); ownedAction
+    // drives the row's button and hasCost=false blanks cost and mean/cost.
+    owned?: boolean
+    ownedAction?: 'remove' | 'downgrade' | 'disable-unique' | 'enable-unique'
+    hasCost?: boolean
 }
 
 export interface SkillResultWithStatus extends SkillResult {

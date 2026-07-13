@@ -168,6 +168,13 @@ export function renderUma(): void {
                 // inside the box, and text-ellipsis renders long names as "…"
                 // rather than overflowing.
                 input.classList.add('min-w-0', 'max-w-full', 'text-ellipsis')
+                // A disabled unique isn't simulated; grey the field until the
+                // green + in the results table re-enables it.
+                if (uma.uniqueDisabled) {
+                    wrapper.classList.add('opacity-50')
+                    input.title =
+                        'Unique disabled (not simulated) — re-enable it with the green + in the results table'
+                }
                 if (getShowIcons()) {
                     // Icon for the unique skill, kept in sync as the field is
                     // typed or picked from autocomplete. Sits between the label

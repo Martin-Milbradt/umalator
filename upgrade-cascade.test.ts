@@ -59,6 +59,10 @@ function seedGroup(umaSkills: string[]): void {
             [MEDIUM_NORMAL]: { discount: 10 },
         },
         uma: { skills: umaSkills },
+        // These tests cover the cache-invalidation cascade for buy rows;
+        // owned-row generation (calcOwned, on by default) is covered by
+        // owned-rows.test.ts.
+        filters: { calcOwned: false },
     })
     const cache = getCalculatedResultsCache()
     cache.clear()
@@ -168,6 +172,7 @@ describe('refreshGroupResults', () => {
                 [MEDIUM_NORMAL]: { discount: 10 },
             },
             uma: { skills: [MEDIUM_NORMAL] },
+            filters: { calcOwned: false },
         })
         refreshGroupResults(MEDIUM_NORMAL)
 
@@ -215,6 +220,7 @@ describe('addSkillToUmaFromTable restores the replaced variant (#33)', () => {
                 [MEDIUM_NORMAL]: { discount: 10 },
             },
             uma: { skills: [MEDIUM_RARE] },
+            filters: { calcOwned: false },
         })
         const cache = getCalculatedResultsCache()
         cache.clear()
@@ -253,6 +259,7 @@ describe('addSkillToUmaFromTable restores the replaced variant (#33)', () => {
                 [MEDIUM_NORMAL]: { discount: 10 },
             },
             uma: { skills: [MEDIUM_NORMAL] },
+            filters: { calcOwned: false },
         })
         const results = getResultsMap()
         results.clear()

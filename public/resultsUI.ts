@@ -19,13 +19,16 @@ import {
     getCalculatedResultsCache,
     getCurrentConfig,
     getCurrentConfigFile,
-    getLastCalculationTime,
     getResultsMap,
     getSelectedSkills,
+    getSkillData,
     getSkillmeta,
     getSkillnames,
     getSortColumn,
     getSortDirection,
+    hasUmaUndo,
+    popUmaUndoSnapshot,
+    pushUmaUndoSnapshot,
     setAutoCalculationTimeout,
     getAutoCalculationTimeout,
     isAutoCalculationInProgress,
@@ -35,6 +38,28 @@ import {
     setSortDirection,
 } from './state'
 import type { SkillResult, SkillResultWithStatus } from './types'
+
+function getCalcOwned(): boolean {
+    return getCurrentConfig()?.filters?.calcOwned ?? true
+}
+
+/** Snapshot the uma's skill state so the header Undo button can restore it. */
+function recordUmaUndoSnapshot(): void {
+    const uma = getCurrentConfig()?.uma
+    pushUmaUndoSnapshot({
+        skills: [...(uma?.skills ?? [])],
+        skillPoints: uma?.skillPoints,
+        uniqueDisabled: uma?.uniqueDisabled,
+    })
+    updateUndoButton()
+}
+
+function updateUndoButton(): void {
+    const btn = document.getElementById(
+        'undo-uma-btn',
+    ) as HTMLButtonElement | null
+    if (btn) btn.disabled = !hasUmaUndo()
+}
 
 // Render a "lo-hi" interval to two decimals.
 function formatInterval(lo: number, hi: number): string {
@@ -85,29 +110,41 @@ export function renderResultsTable(): void {
     const selectedSkills = getSelectedSkills()
     const sortColumn = getSortColumn()
     const sortDirection = getSortDirection()
-    const lastCalculationTime = getLastCalculationTime()
+    const calcOwned = getCalcOwned()
 
     const tbody = document.getElementById('results-tbody')
     const countEl = document.getElementById('results-count')
-    const lastRunEl = document.getElementById('results-last-run')
     if (!tbody) return
 
     tbody.innerHTML = ''
 
-    // Filter out:
-    // 1. Skills that are on Uma (exact match)
-    // 2. Basic skills where Uma has the upgraded version
+    // Keep the header checkbox and undo button in sync with the loaded config.
+    const calcOwnedCheckbox = document.getElementById(
+        'calc-owned-checkbox',
+    ) as HTMLInputElement | null
+    if (calcOwnedCheckbox) calcOwnedCheckbox.checked = calcOwned
+    updateUndoButton()
+
     const results = Array.from(resultsMap.values()).filter((result) => {
-        // Don't show skills that are on Uma
+        // Owned rows (removal/downgrade/unique) are gated by the header
+        // checkbox; the unique re-enable row always shows so a disabled
+        // unique can't get stranded.
+        if (result.owned) {
+            return calcOwned || result.ownedAction === 'enable-unique'
+        }
+        // Stale buy rows for skills that are now on Uma (or dominated by an
+        // upgraded version) hide until recalculation replaces them.
         if (isSkillOnUma(result.skill)) return false
-        // Don't show basic skills when Uma has the upgraded version
         if (umaHasUpgradedVersion(result.skill)) return false
         return true
     })
 
     // Clean up selectedSkills to remove any filtered-out skills
     for (const skill of selectedSkills) {
-        if (isSkillOnUma(skill) || umaHasUpgradedVersion(skill)) {
+        if (
+            !resultsMap.get(skill)?.owned &&
+            (isSkillOnUma(skill) || umaHasUpgradedVersion(skill))
+        ) {
             selectedSkills.delete(skill)
         }
     }
@@ -137,7 +174,9 @@ export function renderResultsTable(): void {
         const row = document.createElement('tr')
         row.className =
             'border-b border-zinc-700 hover:bg-zinc-700 ' +
-            (result.status === 'pending' ? 'opacity-50' : '')
+            (result.status === 'pending' ? 'opacity-50' : '') +
+            // Grey out uma-state rows to set them apart from buy candidates.
+            (result.owned ? ' text-zinc-500' : '')
         row.dataset.skill = result.skill
 
         // Checkbox cell
@@ -158,18 +197,65 @@ export function renderResultsTable(): void {
         checkCell.appendChild(checkbox)
         row.appendChild(checkCell)
 
-        // Add to Uma button cell
+        // Uma action button cell: add for buy rows; remove / downgrade /
+        // unique toggle for owned rows.
         const addCell = document.createElement('td')
         addCell.className = 'p-1'
         const addBtn = document.createElement('button')
-        addBtn.className =
-            'bg-sky-600 text-white border-none rounded w-5 h-5 text-sm leading-none cursor-pointer flex items-center justify-center p-0 transition-colors hover:bg-sky-700 active:bg-sky-800'
-        addBtn.textContent = '+'
-        addBtn.title = 'Add to Uma skills'
-        addBtn.setAttribute('aria-label', `Add ${result.skill} to uma skills`)
-        addBtn.addEventListener('click', () => {
-            addSkillToUmaFromTable(result.skill, result.cost)
-        })
+        const btnBase =
+            'text-white border-none rounded w-5 h-5 text-sm leading-none cursor-pointer flex items-center justify-center p-0 transition-colors'
+        const action = result.owned ? result.ownedAction : undefined
+        if (action === 'remove' || action === 'disable-unique') {
+            addBtn.className = `${btnBase} bg-red-600 hover:bg-red-700 active:bg-red-800`
+            addBtn.textContent = '-'
+            addBtn.title =
+                action === 'remove'
+                    ? 'Remove from Uma skills'
+                    : 'Disable the unique skill'
+            addBtn.setAttribute(
+                'aria-label',
+                `Remove ${result.skill} from uma skills`,
+            )
+            addBtn.addEventListener('click', () => {
+                if (action === 'remove') {
+                    removeSkillFromUma(result.skill)
+                } else {
+                    setUniqueDisabled(true)
+                }
+            })
+        } else if (action === 'downgrade' || action === 'enable-unique') {
+            addBtn.className = `${btnBase} bg-green-600 hover:bg-green-700 active:bg-green-800`
+            addBtn.textContent = '+'
+            addBtn.title =
+                action === 'downgrade'
+                    ? 'Downgrade to this version'
+                    : 'Re-enable the unique skill'
+            addBtn.setAttribute(
+                'aria-label',
+                `Switch uma skills to ${result.skill}`,
+            )
+            addBtn.addEventListener('click', () => {
+                if (action === 'downgrade') {
+                    addSkillToUmaFromTable(
+                        result.skill,
+                        getSkillCostWithDiscount(result.skill),
+                    )
+                } else {
+                    setUniqueDisabled(false)
+                }
+            })
+        } else {
+            addBtn.className = `${btnBase} bg-sky-600 hover:bg-sky-700 active:bg-sky-800`
+            addBtn.textContent = '+'
+            addBtn.title = 'Add to Uma skills'
+            addBtn.setAttribute(
+                'aria-label',
+                `Add ${result.skill} to uma skills`,
+            )
+            addBtn.addEventListener('click', () => {
+                addSkillToUmaFromTable(result.skill, result.cost)
+            })
+        }
         addCell.appendChild(addBtn)
         row.appendChild(addCell)
 
@@ -190,10 +276,12 @@ export function renderResultsTable(): void {
         }
         row.appendChild(skillCell)
 
-        // Cost
+        // Cost: blank for owned rows without a known refund (skill absent
+        // from the skills table or set to "-") and for the unique.
+        const costHidden = result.owned === true && result.hasCost !== true
         const costCell = document.createElement('td')
         costCell.className = 'p-1 text-right'
-        costCell.textContent = result.cost.toString()
+        costCell.textContent = costHidden ? '-' : result.cost.toString()
         row.appendChild(costCell)
 
         // Discount
@@ -223,7 +311,9 @@ export function renderResultsTable(): void {
         effCell.textContent =
             result.status === 'pending'
                 ? '...'
-                : (result.meanLengthPerCost * 1000).toFixed(2)
+                : costHidden
+                  ? '-'
+                  : (result.meanLengthPerCost * 1000).toFixed(2)
         row.appendChild(effCell)
 
         // Min-Max
@@ -260,11 +350,6 @@ export function renderResultsTable(): void {
     const completedCount = results.filter((r) => r.status !== 'pending').length
     if (countEl) {
         countEl.textContent = `Calculated ${completedCount}/${results.length} skills`
-    }
-
-    // Update last run time
-    if (lastRunEl && lastCalculationTime) {
-        lastRunEl.textContent = `Last run: ${lastCalculationTime.toLocaleTimeString()}`
     }
 
     updateTotalsRow()
@@ -361,6 +446,8 @@ export function addSkillToUmaFromTable(skillName: string, cost: number): void {
     // Check if skill is already on Uma
     if (currentConfig.uma.skills.includes(skillName)) return
 
+    recordUmaUndoSnapshot()
+
     // Check if a variant from the same group is already on Uma
     const existingVariant = getGroupVariantOnUma(skillName)
     const existingVariantOrder = existingVariant
@@ -396,6 +483,8 @@ export function removeSkillFromUma(skillName: string): void {
     const skillIndex = currentConfig.uma.skills.indexOf(skillName)
     if (skillIndex === -1) return
 
+    recordUmaUndoSnapshot()
+
     const skillCost = getSkillCostWithDiscount(skillName)
     currentConfig.uma.skills.splice(skillIndex, 1)
     adjustSkillPoints(skillCost)
@@ -421,6 +510,15 @@ export function updateResultsForDiscountChange(
 
     const hadDiscount = oldDiscount !== null && oldDiscount !== undefined
     const hasDiscount = newDiscount !== null
+
+    // An owned row's discount only affects its refund; recompute via a fresh
+    // simulation pass instead of the buy-cost paths below (the row itself
+    // stays regardless of table membership).
+    const existingRow = resultsMap.get(skillName)
+    if (existingRow?.owned) {
+        addPendingOwnedRow(skillName, existingRow.ownedAction ?? 'remove')
+        return
+    }
 
     if (hadDiscount && !hasDiscount) {
         // discount -> None: remove skill from table
@@ -451,7 +549,9 @@ export function updateResultsForDiscountChange(
 export function refreshResultsCosts(): void {
     const resultsMap = getResultsMap()
     for (const [skillName, result] of resultsMap) {
-        if (result.status !== 'pending') {
+        // Owned rows carry a negated refund, not a buy cost; they are
+        // recomputed by the next simulation instead.
+        if (result.status !== 'pending' && !result.owned) {
             const newCost = getSkillCostWithDiscount(skillName)
             result.cost = newCost
             result.meanLengthPerCost =
@@ -497,6 +597,8 @@ export function refreshGroupResults(skillName: string): void {
         return
     }
 
+    const calcOwned = getCalcOwned()
+    const skillDataMap = getSkillData()
     for (const [siblingId, siblingMeta] of Object.entries(skillmeta)) {
         if (siblingMeta.groupId !== groupId) continue
         const siblingName = skillnames[siblingId]?.[0]
@@ -504,13 +606,195 @@ export function refreshGroupResults(skillName: string): void {
 
         calculatedResultsCache.delete(siblingName)
 
-        if (isSkillOnUma(siblingName) || umaHasUpgradedVersion(siblingName)) {
+        // Purple variants and phantom entries never get rows of any kind.
+        const simulatable =
+            (siblingMeta.score ?? 1) >= 0 &&
+            (!skillDataMap || siblingId in skillDataMap)
+        const owned = isSkillOnUma(siblingName)
+        const dominated = !owned && umaHasUpgradedVersion(siblingName)
+        if (owned || dominated) {
+            if (calcOwned && simulatable) {
+                addPendingOwnedRow(siblingName, owned ? 'remove' : 'downgrade')
+            } else {
+                resultsMap.delete(siblingName)
+                selectedSkills.delete(siblingName)
+            }
+            continue
+        }
+        // A sibling that is no longer owned/dominated must not keep a stale
+        // owned row (e.g. right after a removal).
+        if (resultsMap.get(siblingName)?.owned) {
             resultsMap.delete(siblingName)
             selectedSkills.delete(siblingName)
-            continue
         }
         void returnSkillToResultsTable(siblingName)
     }
+}
+
+/**
+ * Requeue every owned row in `skillName`'s group. Their refunds depend on the
+ * discounts of all tiers in the group (a gold's refund includes the white
+ * prerequisite, a downgrade's refund is the tier difference), so any discount
+ * change in the group invalidates them — mirroring how buy rows update.
+ */
+export function refreshOwnedRowsForGroup(skillName: string): void {
+    const skillmeta = getSkillmeta()
+    const skillnames = getSkillnames()
+    const resultsMap = getResultsMap()
+    if (!skillmeta || !skillnames) return
+    const skillId = findSkillId(skillName)
+    const groupId = skillId ? skillmeta[skillId]?.groupId : null
+    if (!groupId) return
+    for (const [siblingId, siblingMeta] of Object.entries(skillmeta)) {
+        if (siblingMeta.groupId !== groupId) continue
+        const siblingName = skillnames[siblingId]?.[0]
+        if (!siblingName) continue
+        const row = resultsMap.get(siblingName)
+        if (row?.owned) {
+            getCalculatedResultsCache().delete(siblingName)
+            addPendingOwnedRow(siblingName, row.ownedAction ?? 'remove')
+        }
+    }
+}
+
+/**
+ * Insert a pending owned row (removal/downgrade/unique toggle); the next
+ * calculation pass fills in the negated stats and refund.
+ */
+function addPendingOwnedRow(
+    skillName: string,
+    action: NonNullable<SkillResult['ownedAction']>,
+): void {
+    getResultsMap().set(skillName, {
+        skill: skillName,
+        cost: 0,
+        discount: 0,
+        meanLength: 0,
+        medianLength: 0,
+        meanLengthPerCost: 0,
+        minLength: 0,
+        maxLength: 0,
+        rangeLower: 0,
+        rangeUpper: 0,
+        ciMeanLower: 0,
+        ciMeanUpper: 0,
+        owned: true,
+        ownedAction: action,
+        hasCost: false,
+        status: 'pending',
+    })
+    renderResultsTable()
+    scheduleAutoCalculation()
+}
+
+/** Display name of the configured unique (matches simulation row naming). */
+function uniqueDisplayName(): string | null {
+    const unique = getCurrentConfig()?.uma?.unique
+    if (!unique) return null
+    const id = findSkillId(unique)
+    return (id && getSkillnames()?.[id]?.[0]) || unique
+}
+
+/** Invalidate and re-queue the unique's disable/enable row. */
+function refreshUniqueRow(): void {
+    const config = getCurrentConfig()
+    const name = uniqueDisplayName()
+    if (!name) return
+    getCalculatedResultsCache().delete(name)
+    const disabled = config?.uma?.uniqueDisabled ?? false
+    if (disabled || getCalcOwned()) {
+        addPendingOwnedRow(name, disabled ? 'enable-unique' : 'disable-unique')
+    } else {
+        getResultsMap().delete(name)
+        getSelectedSkills().delete(name)
+    }
+}
+
+/** Disable or re-enable the uma's unique skill (greyed in the uma block). */
+export function setUniqueDisabled(disabled: boolean): void {
+    const config = getCurrentConfig()
+    if (!config?.uma?.unique) return
+    if ((config.uma.uniqueDisabled ?? false) === disabled) return
+    recordUmaUndoSnapshot()
+    config.uma.uniqueDisabled = disabled
+    refreshUniqueRow()
+    renderResultsTable()
+    callRenderUma()
+    autoSave()
+}
+
+/** Restore the uma skill state from before the last add/remove/replace. */
+export function undoLastUmaAction(): void {
+    const snapshot = popUmaUndoSnapshot()
+    if (!snapshot) return
+    const config = getCurrentConfig()
+    if (!config) return
+    if (!config.uma) config.uma = {}
+    const before = new Set(config.uma.skills ?? [])
+    const after = new Set(snapshot.skills)
+    const uniqueToggled =
+        (config.uma.uniqueDisabled ?? false) !==
+        (snapshot.uniqueDisabled ?? false)
+    config.uma.skills = [...snapshot.skills]
+    config.uma.skillPoints = snapshot.skillPoints
+    config.uma.uniqueDisabled = snapshot.uniqueDisabled
+    for (const skill of new Set([...before, ...after])) {
+        if (before.has(skill) !== after.has(skill)) {
+            refreshGroupResults(skill)
+        }
+    }
+    if (uniqueToggled) refreshUniqueRow()
+    refreshResultsCosts()
+    callRenderUma()
+    callRenderSkills()
+    autoSave()
+    updateUndoButton()
+}
+
+/**
+ * Rebuild all owned rows from the current uma state (used when the header
+ * checkbox turns on).
+ */
+function rebuildOwnedRows(): void {
+    const config = getCurrentConfig()
+    for (const skill of config?.uma?.skills ?? []) {
+        refreshGroupResults(skill)
+    }
+    refreshUniqueRow()
+}
+
+/** Wire the header Undo button and the "Owned" calculation checkbox. */
+export function setupResultsHeaderControls(): void {
+    const undoBtn = document.getElementById(
+        'undo-uma-btn',
+    ) as HTMLButtonElement | null
+    undoBtn?.addEventListener('click', () => {
+        undoLastUmaAction()
+    })
+
+    const checkbox = document.getElementById(
+        'calc-owned-checkbox',
+    ) as HTMLInputElement | null
+    checkbox?.addEventListener('change', () => {
+        const config = getCurrentConfig()
+        if (!config) return
+        if (!config.filters) config.filters = {}
+        config.filters.calcOwned = checkbox.checked
+        if (checkbox.checked) {
+            rebuildOwnedRows()
+        } else {
+            const resultsMap = getResultsMap()
+            const selectedSkills = getSelectedSkills()
+            for (const [name, row] of resultsMap) {
+                if (row.owned && row.ownedAction !== 'enable-unique') {
+                    resultsMap.delete(name)
+                    selectedSkills.delete(name)
+                }
+            }
+        }
+        renderResultsTable()
+        autoSave()
+    })
 }
 
 /**
@@ -612,18 +896,28 @@ export async function calculatePendingSkills(): Promise<void> {
         // For each pending skill, check frontend cache first
         for (const pending of pendingSkills) {
             const cachedResult = calculatedResultsCache.get(pending.skill)
-            if (cachedResult) {
-                const cost = getSkillCostWithDiscount(pending.skill)
-                resultsMap.set(pending.skill, {
-                    ...cachedResult,
-                    skill: pending.skill,
-                    cost,
-                    discount: pending.discount,
-                    meanLengthPerCost:
-                        cost > 0 ? cachedResult.meanLength / cost : 0,
-                    status: 'cached',
-                })
+            if (!cachedResult) continue
+            // Owned rows carry negated stats and a refund cost; reuse them
+            // as-is (getSkillCostWithDiscount would compute a buy cost).
+            if (cachedResult.owned || pending.owned) {
+                if (cachedResult.owned && pending.owned) {
+                    resultsMap.set(pending.skill, {
+                        ...cachedResult,
+                        skill: pending.skill,
+                        status: 'cached',
+                    })
+                }
+                continue
             }
+            const cost = getSkillCostWithDiscount(pending.skill)
+            resultsMap.set(pending.skill, {
+                ...cachedResult,
+                skill: pending.skill,
+                cost,
+                discount: pending.discount,
+                meanLengthPerCost: cost > 0 ? cachedResult.meanLength / cost : 0,
+                status: 'cached',
+            })
         }
 
         renderResultsTable()

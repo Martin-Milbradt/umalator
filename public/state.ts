@@ -33,7 +33,16 @@ const resultsMap = new Map<string, SkillResultWithStatus>()
 const selectedSkills = new Set<string>()
 let sortColumn: keyof SkillResult = 'meanLengthPerCost'
 let sortDirection: 'asc' | 'desc' = 'desc'
-let lastCalculationTime: Date | null = null
+
+// Undo history for uma skill actions (add / remove / replace / unique
+// toggle). Snapshots are per-config and cleared when another config loads.
+export interface UmaSkillsSnapshot {
+    skills: string[]
+    skillPoints: number | null | undefined
+    uniqueDisabled: boolean | undefined
+}
+const umaUndoStack: UmaSkillsSnapshot[] = []
+const UMA_UNDO_LIMIT = 50
 
 // Frontend cache for calculated results (persists when skills are removed from table)
 // Key: skillName, Value: result without status (raw calculation data)
@@ -108,8 +117,21 @@ export function getSortDirection(): 'asc' | 'desc' {
     return sortDirection
 }
 
-export function getLastCalculationTime(): Date | null {
-    return lastCalculationTime
+export function pushUmaUndoSnapshot(snapshot: UmaSkillsSnapshot): void {
+    umaUndoStack.push(snapshot)
+    if (umaUndoStack.length > UMA_UNDO_LIMIT) umaUndoStack.shift()
+}
+
+export function popUmaUndoSnapshot(): UmaSkillsSnapshot | undefined {
+    return umaUndoStack.pop()
+}
+
+export function hasUmaUndo(): boolean {
+    return umaUndoStack.length > 0
+}
+
+export function clearUmaUndoStack(): void {
+    umaUndoStack.length = 0
 }
 
 export function getCalculatedResultsCache(): Map<string, SkillResult> {
@@ -183,10 +205,6 @@ export function setSortColumn(column: keyof SkillResult): void {
 
 export function setSortDirection(direction: 'asc' | 'desc'): void {
     sortDirection = direction
-}
-
-export function setLastCalculationTime(time: Date | null): void {
-    lastCalculationTime = time
 }
 
 export function setAutoCalculationTimeout(

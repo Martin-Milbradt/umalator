@@ -9,6 +9,7 @@ import {
 import { renderTrack, waitForCourseData } from './trackUI'
 import {
     clearSaveTimeout,
+    clearUmaUndoStack,
     getCalculatedResultsCache,
     getCurrentConfig,
     getCurrentConfigFile,
@@ -65,6 +66,8 @@ export async function loadConfig(filename: string): Promise<void> {
     }
     setCurrentConfig(config)
     setCurrentConfigFile(filename)
+    // Undo history belongs to the config it was recorded against.
+    clearUmaUndoStack()
     const select = document.getElementById('config-select') as HTMLSelectElement
     if (select) {
         select.value = filename

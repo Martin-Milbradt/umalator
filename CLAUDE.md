@@ -124,6 +124,7 @@ npx tsx race-check.ts --races path/to/races.json --sims 200
 - **Skill Resolution**: Skills referenced by global English names; cost > 0 for regular skills, cost 0 for unique skills. Handles ○/◎ variants automatically.
 - **Auto-save**: Web UI automatically persists config changes to IndexedDB (500ms debounce)
 - **Per-Combination Batching**: When random conditions (mood, weather, etc.) are enabled, simulations are batched per unique combination to preserve internal variance from `runComparison`
+- **Owned rows** (`SkillResult.owned`, gated by `filters.calcOwned`, default on): skills already on the uma are simulated as uma-without vs uma-with and reported negated — mean = the loss from removing, cost = the refunded SP — so mean/cost stays positive and sorts against buy rows. Each owned skill gets a removal row plus downgrade rows per lower tier; the unique gets a disable/re-enable row (`uma.uniqueDisabled`) without cost columns.
 - **Limit changes to uma-tools**: Use the already-implemented tools in this repository. Avoid modifying the uma-tools submodule or its nested uma-skill-tools.
 
 ## Implementation Guidance

@@ -15,7 +15,6 @@ import {
     getSkillmeta,
     getSkillnames,
     getTrackNames,
-    setLastCalculationTime,
 } from './state'
 import { showToast } from './toast'
 import type { Config, SkillResult } from './types'
@@ -113,7 +112,6 @@ export async function runCalculations(): Promise<void> {
                 renderResultsTable()
             } else if (progress.type === 'complete') {
                 button.disabled = false
-                setLastCalculationTime(new Date())
 
                 if (progress.results) {
                     for (const result of progress.results) {
