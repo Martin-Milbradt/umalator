@@ -91,6 +91,14 @@ export function renderUma(): void {
         // and ellipsizes the long tail (min-w-0/max-w-full let it shrink on a
         // narrow pane). Measured against the global unique-skill name set.
         { key: 'unique', label: 'Unique', type: 'text', width: 200 },
+        {
+            key: 'uniqueLv',
+            label: 'Lv',
+            type: 'number',
+            width: 45,
+            min: 1,
+            max: 10,
+        },
         { key: 'skillPoints', label: 'SP', type: 'number', width: 65 },
     ]
 
@@ -220,6 +228,8 @@ export function renderUma(): void {
                 'surfaceAptitude',
                 'styleAptitude',
                 'mood',
+                'unique',
+                'uniqueLv',
             ]
             if (simulationAffectingFields.includes(field.key)) {
                 getCalculatedResultsCache().clear()

@@ -3,8 +3,17 @@
  * These types replace `any` usages for better type safety.
  */
 
-import type { Mood } from './uma-tools/uma-skill-tools/RaceParameters'
+import type {
+    Mood,
+    RaceParameters,
+} from './uma-tools/uma-skill-tools/RaceParameters'
 import type { CourseData } from './utils'
+
+/**
+ * Race parameters as umalator uses them: mood and popularity are per-uma
+ * (they ride on HorseStateData), not per-race.
+ */
+export type RaceDef = Omit<RaceParameters, 'mood' | 'popularity'>
 
 /**
  * Serialized horse state data passed to worker threads.
@@ -25,6 +34,10 @@ export interface HorseStateData {
     aptitudes?: string[]
     mood?: Mood
     popularity?: number
+    /** Skill ID of the unique skill (also present in `skills`); enables level scaling. */
+    uniqueSkillId?: string
+    /** Unique skill level, 1-10. Defaults to 1. */
+    uniqueLv?: number
     /** Skill IDs as either an array or a Record (from immutable Map serialization) */
     skills: Record<string, string> | string[]
 }
@@ -56,7 +69,7 @@ export interface SimulationTask {
     skillId: string
     skillName: string
     courses: CourseData[]
-    racedef: import('./uma-tools/uma-skill-tools/RaceParameters').RaceParameters
+    racedef: RaceDef
     baseUma: HorseStateData
     simOptions: SimulationOptions
     numSimulations: number

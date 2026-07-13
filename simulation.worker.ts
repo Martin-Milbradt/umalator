@@ -1,10 +1,7 @@
 import { parentPort, workerData } from 'node:worker_threads'
 import type { Mood } from './uma-tools/uma-skill-tools/RaceParameters'
-import {
-    type HorseState,
-    SkillSet,
-} from './uma-tools/components/HorseDefTypes'
-import { runComparison } from './uma-tools/umalator/compare'
+import { SkillSet } from './uma-tools/components/HorseDefTypes'
+import { type CompareHorseState, runComparison } from './shared/compare'
 import skillmetaRaw from './uma-tools/skill_meta.json'
 import type { SimulationTask, HorseStateData } from './types'
 
@@ -21,38 +18,40 @@ const skillmeta = skillmetaRaw as Record<
 const DEFAULT_APTITUDES = ['S', 'S', 'S', 'S', 'A', 'A', 'A', 'A', 'A', 'A']
 
 /**
- * Creates a HorseState object compatible with uma-tools runComparison.
- * mood and popularity live here (HorseParameters) since uma-skill-tools 24f0a88.
+ * Creates a horse state object for the vendored runComparison.
+ * mood and popularity are carried per-uma and applied per-builder.
  */
 function createHorseState(
     props: HorseStateData,
     skillIds: string[],
-): HorseState {
+): CompareHorseState {
     return {
         outfitId: '',
-        starCount: (props.starCount ?? 3) as HorseState['starCount'],
+        starCount: (props.starCount ?? 3) as CompareHorseState['starCount'],
         speed: props.speed,
         stamina: props.stamina,
         power: props.power,
         guts: props.guts,
         wisdom: props.wisdom,
-        mood: (props.mood ?? 2) as HorseState['mood'],
+        mood: (props.mood ?? 2) as CompareHorseState['mood'],
         popularity: props.popularity ?? 1,
-        strategy: props.strategy as HorseState['strategy'],
+        strategy: props.strategy as CompareHorseState['strategy'],
         distanceAptitude:
-            props.distanceAptitude as HorseState['distanceAptitude'],
-        surfaceAptitude: props.surfaceAptitude as HorseState['surfaceAptitude'],
+            props.distanceAptitude as CompareHorseState['distanceAptitude'],
+        surfaceAptitude: props.surfaceAptitude as CompareHorseState['surfaceAptitude'],
         strategyAptitude:
-            props.strategyAptitude as HorseState['strategyAptitude'],
-        // HorseState['aptitudes'] is declared `Aptitude[10]` upstream, which TS
+            props.strategyAptitude as CompareHorseState['strategyAptitude'],
+        // CompareHorseState['aptitudes'] is declared `Aptitude[10]` upstream, which TS
         // collapses to the indexed type `Aptitude` (a bare string) rather than a
         // 10-tuple, so an array can't be assigned without a double cast. The
         // runtime value is the correct 10-element array; this is the one
         // uma-tools impedance point we cannot type away.
         aptitudes: (props.aptitudes ??
-            DEFAULT_APTITUDES) as unknown as HorseState['aptitudes'],
+            DEFAULT_APTITUDES) as unknown as CompareHorseState['aptitudes'],
         skills: SkillSet(skillIds),
         samplePolicies: new Map(),
+        uniqueLv: props.uniqueLv ?? 1,
+        uniqueSkillId: props.uniqueSkillId,
     }
 }
 

@@ -8,11 +8,8 @@
 // worker_threads vs browser Web Worker) and how many to run at once.
 //
 // Do not import node-only or browser-only APIs here.
-import type {
-    Mood,
-    RaceParameters,
-} from '../uma-tools/uma-skill-tools/RaceParameters'
-import type { RawCourseData, SimulationTask, SkillMeta } from '../types'
+import type { Mood } from '../uma-tools/uma-skill-tools/RaceParameters'
+import type { RaceDef, RawCourseData, SimulationTask, SkillMeta } from '../types'
 import {
     type CourseData,
     type CurrentSettings,
@@ -98,6 +95,7 @@ export interface SimulationRunnerConfig {
         mood?: number
         skills?: string[]
         unique?: string
+        uniqueLv?: number
     }
     deterministic?: boolean
     confidenceInterval?: number
@@ -162,6 +160,8 @@ interface BaseUmaData {
     surfaceAptitude: string
     strategyAptitude: string
     skills: string[] // Skill IDs - worker converts to SkillSet
+    uniqueSkillId?: string
+    uniqueLv?: number
 }
 
 function parseRaceCondition<T>(
@@ -391,9 +391,8 @@ export async function runSimulation(
     const strategyName = parseStrategyName(umaConfig.strategy)
     const conditions = parseRaceConditions(config.track, umaConfig)
 
-    // mood and popularity live on HorseParameters (baseUma), not on
-    // RaceParameters.
-    const racedef: RaceParameters = {
+    // mood and popularity are per-uma (they ride on baseUma), not per-race.
+    const racedef: RaceDef = {
         groundCondition: conditions.groundCondition.value,
         weather: conditions.weather.value,
         season: conditions.season.value,
@@ -421,15 +420,17 @@ export async function runSimulation(
     }
 
     // Resolve unique skill name to ID
+    let uniqueSkillId: string | undefined
     if (umaConfig.unique) {
-        const uniqueSkillId = findSkillIdByNameWithPreference(
+        const resolved = findSkillIdByNameWithPreference(
             umaConfig.unique,
             skillNames,
             skillMeta,
             false,
         )
-        if (uniqueSkillId) {
-            umaSkillIds.push(uniqueSkillId)
+        if (resolved) {
+            uniqueSkillId = resolved
+            umaSkillIds.push(resolved)
         }
     }
 
@@ -447,6 +448,8 @@ export async function runSimulation(
         surfaceAptitude: umaConfig.surfaceAptitude ?? 'A',
         strategyAptitude: umaConfig.styleAptitude ?? 'A',
         skills: umaSkillIds,
+        uniqueSkillId,
+        uniqueLv: umaConfig.uniqueLv ?? 1,
     }
 
     const deterministic = config.deterministic ?? false

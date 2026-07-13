@@ -1,17 +1,16 @@
 #!/usr/bin/env node
 // Pin the nested uma-skill-tools submodule to the exact commit the app depends on.
 //
-// 24f0a88 is one commit ahead of upstream uma-skill-tools master and carries two
-// changes our code relies on: the otherHorse() API used by
-// uma-tools/umalator/compare.ts, and the move of mood/popularity from
-// RaceParameters onto HorseParameters. The parent uma-tools submodule still
-// records an older commit (6ba5ca0), so a vanilla `git submodule update
-// --recursive` lands on the wrong commit. This script re-pins it and is the
-// single source of truth for the SHA (postinstall, npm run setup, start_web.ps1
-// and CI all call it).
+// The target is upstream uma-skill-tools master. The parent uma-tools
+// submodule records an older nested commit (6ba5ca0) in its gitlink, so a
+// vanilla `git submodule update --recursive` lands on the wrong commit. This
+// script re-pins it and is the single source of truth for the SHA
+// (postinstall, npm run setup, start_web.ps1 and CI all call it).
 //
-// 24f0a88 is a loose commit (not a branch tip), so a plain `git fetch` won't
-// retrieve it; we fetch the full 40-char SHA explicitly.
+// The per-uma mood/popularity handling, the otherHorse-style other-uma wisdom,
+// unique level scaling, and the over-1200 mechanics gating all live in
+// shared/compare.ts (vendored, adapted to this engine API), so master is
+// sufficient; no out-of-branch commit is required.
 //
 // Idempotent and safe to run from `postinstall`: it no-ops when the submodule is
 // absent or already on the target commit. Pass --strict (CI / `npm run setup`)
@@ -23,7 +22,8 @@ import { existsSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
-export const TARGET_SHA = '24f0a8862106dd4aaeea55e90e975acc9ca5d019'
+// uma-skill-tools master as of 2026-07 ("implement run_at_full_speed_random").
+export const TARGET_SHA = '8b3f5e27e939e77431679876403d3fb2f0709e2a'
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const SUBMODULE_PATH = join(REPO_ROOT, 'uma-tools', 'uma-skill-tools')

@@ -40,6 +40,7 @@ export interface Uma {
     styleAptitude?: string
     mood?: number | null
     unique?: string
+    uniqueLv?: number | null
     skills?: string[]
     skillPoints?: number | null
 }

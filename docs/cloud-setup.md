@@ -24,10 +24,6 @@ The remote environment's network policy must allow outbound HTTPS to:
 
 - **github.com** — to clone the `uma-tools` submodule and fetch the pinned
   `uma-skill-tools` commit.
-- **the upstream uma-tools git remote** — only needed when building with
-  `UPDATE_GAME_DATA=1` (the deploy workflow), which refreshes
-  `skill_data.json` / `skill_meta.json` from upstream `master`. A plain
-  `npm run build` uses the pinned submodule data and needs no extra network.
 - **the npm registry** — for `npm install`.
 
 If you are configuring a Claude Code on the web environment, pick a network
@@ -52,33 +48,29 @@ This lands `uma-tools/uma-skill-tools` on the commit the parent `uma-tools`
 records (`6ba5ca0` as of writing), which is **not** the commit we need. Do not
 skip Step 3.
 
-## Step 3 — Pin `uma-skill-tools` to `24f0a88` (the easy-to-miss step)
+## Step 3 — Pin `uma-skill-tools` to upstream master (the easy-to-miss step)
 
 > `node scripts/pin-submodule.mjs` (run for you by `postinstall` and
 > `npm run setup`) does exactly this step, idempotently. The manual commands
 > below are the fallback when you need to do it by hand.
 
-We depend on commit `24f0a88`, which is **one commit ahead of upstream
-`uma-skill-tools` master**. It carries two changes our code relies on:
-
-- the `otherHorse()` API used by `uma-tools/umalator/compare.ts`, and
-- the move of `mood` / `popularity` from `RaceParameters` onto
-  `HorseParameters`.
-
-Because `24f0a88` is a loose commit that is not the tip of any branch, a plain
-`git fetch` will **not** retrieve it, and `git checkout 24f0a88` fails with
-`pathspec '24f0a88' did not match any file(s) known to git`. You must fetch the
-**full 40-character SHA** explicitly:
+We depend on `8b3f5e2`, the tip of **upstream `uma-skill-tools` master**. The
+parent `uma-tools` repo records a stale nested gitlink (`6ba5ca0`, ~9 commits
+behind its own code's requirements), so a vanilla recursive submodule update
+always lands too old. Everything umalator needs beyond the engine itself
+(per-uma mood/popularity handling, the other-uma wisdom for skill activation,
+unique level scaling, over-1200 mechanics gating) lives in our vendored
+`shared/compare.ts`, so plain master is sufficient:
 
 ```bash
 cd uma-tools/uma-skill-tools
-git fetch origin 24f0a8862106dd4aaeea55e90e975acc9ca5d019
-git checkout 24f0a8862106dd4aaeea55e90e975acc9ca5d019
+git fetch origin 8b3f5e27e939e77431679876403d3fb2f0709e2a
+git checkout 8b3f5e27e939e77431679876403d3fb2f0709e2a
 cd ../..
 
 # Verify:
 git -C uma-tools/uma-skill-tools rev-parse HEAD
-# -> 24f0a8862106dd4aaeea55e90e975acc9ca5d019
+# -> 8b3f5e27e939e77431679876403d3fb2f0709e2a
 ```
 
 This is exactly what `.github/workflows/deploy.yml` and `start_web.ps1` do after
@@ -89,13 +81,10 @@ something to commit. See [Cleanup](#cleanup-expected-git-noise) below.
 ### Symptom if you skip Step 3
 
 With the submodule stuck on `6ba5ca0`, `npm run build` / `vite` still transpile
-(esbuild and `tsx` do not type-check), but:
-
-- `npx tsc --noEmit` reports type errors in our own files where `mood` /
-  `popularity` flow through `HorseParameters` (the pre-`24f0a88` types differ),
-  and
-- running an actual simulation can fail at runtime because `otherHorse()` is
-  missing.
+(esbuild and `tsx` do not type-check), but `npx tsc --noEmit` reports type
+errors where `shared/compare.ts` uses builder APIs that postdate `6ba5ca0`
+(e.g. `otherRawWisdom`), and simulations can fail at runtime for the same
+reason.
 
 ## Step 4 — Build the workers and copy data
 
@@ -104,11 +93,12 @@ npm run build
 ```
 
 `tsx build.ts` builds the Node worker (`simulation.worker.js`) and the browser
-worker (`static/simulation.browser-worker.js`) and copies the pinned submodule's
-JSON data files into `static/data/`. Run this **before** `npm test`, `npx vite`,
-or the CLI (the worker integration tests spawn the built worker). To refresh the
-game data from upstream (what the deploy workflow does), build with
-`UPDATE_GAME_DATA=1 npm run build`.
+worker (`static/simulation.browser-worker.js`) and copies the checked-out
+submodule's JSON data files into `static/data/`. Run this **before**
+`npm test`, `npx vite`, or the CLI (the worker integration tests spawn the
+built worker). To refresh the game data, advance the `uma-tools` submodule to
+upstream master (what `start_web.ps1` does on launch) and rebuild; committing
+the resulting gitlink is what ships the new data to the deploy.
 
 ## Running the tests
 
@@ -183,8 +173,8 @@ After Step 3, `git status` shows:
  m uma-tools
 ```
 
-This is the nested `uma-skill-tools` sitting on `24f0a88` while the parent
-`uma-tools` still records `6ba5ca0`. It is the **required** working state and
+This is the nested `uma-skill-tools` sitting on upstream master (`8b3f5e2`)
+while the parent `uma-tools` still records `6ba5ca0`. It is the **required** working state and
 must **not** be committed. When committing your changes, stage files explicitly
 (`git add <your files>`) rather than `git add -A`, so the submodule pointer and
 any throwaway tooling are left out. To return to a fully clean tree (e.g. before

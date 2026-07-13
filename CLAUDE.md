@@ -13,11 +13,11 @@ Fully client-side static site deployed to GitHub Pages. Simulations run in brows
 Running in an ephemeral Cloud / CI container (Claude Code on the web, GitHub
 Actions, fresh clone) has gotchas that the README "Getting Started" glosses over
 — `node_modules` is absent, submodules need init, and the nested
-`uma-skill-tools` must be pinned to a loose commit that a plain `git fetch`
-won't retrieve. See **[docs/cloud-setup.md](docs/cloud-setup.md)** for the full
-step-by-step (install → submodule init → pin `24f0a88` via full SHA → build),
-plus how to drive a headless browser for UI verification and which `git status`
-noise is expected.
+`uma-skill-tools` must be re-checked-out to upstream master because the parent
+`uma-tools` records a stale gitlink. See
+**[docs/cloud-setup.md](docs/cloud-setup.md)** for the full step-by-step
+(install → submodule init → pin `8b3f5e2` → build), plus how to drive a
+headless browser for UI verification and which `git status` noise is expected.
 
 ## Commands
 
@@ -66,7 +66,7 @@ npx tsx race-check.ts --races path/to/races.json --sims 200
 - `shared/simulation-orchestrator.ts` - Runtime-neutral orchestration (config validation, course resolution, skill filtering, seeding, stats) shared by the Node and browser runners
 - `cli.ts` - CLI entry point: loads data at runtime, runs `SimulationRunner`, outputs JSON; supports `--seed`
 - `simulation-runner.ts` - Node worker transport over the shared orchestrator (used by `cli.ts`, `race-check.ts`, tests)
-- `build.ts` - esbuild config: bundles Node worker + browser worker, copies data files to `static/data/`; fetches latest upstream game data only when `UPDATE_GAME_DATA=1` (set by the deploy workflow)
+- `build.ts` - esbuild config: bundles Node worker + browser worker, copies data files from the checked-out submodule to `static/data/`
 - `utils.ts` - Pure utility functions for parsing, formatting, statistics, and skill resolution
 - `types.ts` - Shared type definitions (worker messages, simulation tasks, skill metadata)
 
@@ -95,8 +95,9 @@ npx tsx race-check.ts --races path/to/races.json --sims 200
 
 - `./uma-tools` is a git submodule (clone with `--recursive`)
 - `./uma-tools/uma-skill-tools/` is derived from <https://github.com/alpha123/uma-skill-tools> - understanding this code helps when working on simulation logic, but **never modify it**; pull latest from upstream instead
-- `uma-skill-tools` is pinned to commit `24f0a88`, which is one commit ahead of upstream `master` (`8b3f5e2` as of 2026-05). The pin carries two changes we depend on that haven't merged upstream: the `otherHorse()` API used by `uma-tools/umalator/compare.ts`, and the move of `mood`/`popularity` from `RaceParameters` onto `HorseParameters`. The parent `uma-tools` submodule still records an older `uma-skill-tools` commit (`6ba5ca0`), so a vanilla `git submodule update --recursive` lands ~9 commits before the pin — CI and `start_web.ps1` re-checkout `24f0a88` after init for that reason. Note a plain `git fetch` will not retrieve `24f0a88` (it is not a branch tip); fetch the full SHA: `git -C uma-tools/uma-skill-tools fetch origin 24f0a8862106dd4aaeea55e90e975acc9ca5d019 && git -C uma-tools/uma-skill-tools checkout 24f0a8862106dd4aaeea55e90e975acc9ca5d019`. Verify locally: `git -C uma-tools/uma-skill-tools rev-parse HEAD`. Full setup walkthrough in [docs/cloud-setup.md](docs/cloud-setup.md).
-- Ignore type checking errors from `./uma-tools` package. Our own files type-check cleanly; `mood` and `popularity` flow through `baseUma` (HorseParameters) end-to-end, matching the post-24f0a88 API.
+- `uma-skill-tools` is pinned to upstream `master` (`8b3f5e2`; the full SHA lives in `scripts/pin-submodule.mjs`). The parent `uma-tools` submodule records a stale `uma-skill-tools` gitlink (`6ba5ca0`), so a vanilla `git submodule update --recursive` lands ~9 commits behind master — `postinstall`, CI and `start_web.ps1` run `node scripts/pin-submodule.mjs` after init for that reason. Manual fallback: `git -C uma-tools/uma-skill-tools fetch origin 8b3f5e27e939e77431679876403d3fb2f0709e2a && git -C uma-tools/uma-skill-tools checkout 8b3f5e27e939e77431679876403d3fb2f0709e2a`. Full setup walkthrough in [docs/cloud-setup.md](docs/cloud-setup.md).
+- `shared/compare.ts` is our vendored, master-API adaptation of `uma-tools/umalator/compare.ts` (which requires unpublished engine changes and cannot run against any public `uma-skill-tools` commit). It carries the per-uma mood/popularity handling, the other-uma wisdom for skill activation, unique-skill level scaling, and the over-1200 mechanics gating (Asiwotameru on everywhere, StaminaSyoubu JP-only). When pulling a newer `uma-tools`, diff its `umalator/compare.ts` against ours and port behavior changes.
+- Ignore type checking errors from `./uma-tools` package. Our own files (including `shared/compare.ts`) type-check cleanly; mood and popularity are per-uma and applied per-builder in `shared/compare.ts`.
 - `driver.js` (npm dependency) powers the onboarding tour in `public/tour.ts`. CSS is imported in the same file (`driver.js/dist/driver.css`).
 
 ### Build Pipeline
@@ -105,7 +106,7 @@ npx tsx race-check.ts --races path/to/races.json --sims 200
   1. Copies 5 JSON data files from `uma-tools/umalator-global/` to `static/data/`
   2. Builds Node worker (`simulation.worker.js` in repo root)
   3. Builds browser worker (`static/simulation.browser-worker.js`)
-  - With `UPDATE_GAME_DATA=1` (set only by the deploy workflow) it first overwrites the submodule's `skill_data.json`/`skill_meta.json` from upstream `master`. Local builds and PR/push CI skip this, so they use the pinned submodule data and don't dirty the submodule.
+  - Game data always comes from the checked-out submodule, so local dev, CI, and the deploy all build the same data for a given submodule state. New game data ships by advancing the submodule (`start_web.ps1` does this on launch) and committing the gitlink.
 - `npm run build:frontend` runs `vite build` which bundles `public/` into `dist/`
 - `static/` is Vite's publicDir (configured in `vite.config.ts`) - files are copied as-is to `dist/`
 - GitHub Pages deploy sets `VITE_BASE=/umalator/` so asset paths resolve correctly
@@ -113,7 +114,7 @@ npx tsx race-check.ts --races path/to/races.json --sims 200
 
 ### Static vs Runtime Data
 
-- **Browser** uses bundled data files in `static/data/` (copied at build time). The deploy build refreshes them from upstream; local builds use the pinned submodule data.
+- **Browser** uses bundled data files in `static/data/` (copied from the submodule at build time).
 - **CLI** loads data from `uma-tools/umalator-global/` at runtime, so it reflects whatever the submodule currently has.
 
 ## Key Patterns
