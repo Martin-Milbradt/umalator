@@ -11,7 +11,9 @@ tsconfig.tsbuildinfo
 .prettierrc
 biome.json
 .markdownlint.json
-configs/
+# Ignore contents, not the directory itself, so the negation below works
+# (git does not descend into ignored directories).
+configs/*
 !configs/config.example.json
 race-check-results.md
 tmp/
