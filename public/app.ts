@@ -54,6 +54,7 @@ import {
     getCurrentConfigFile,
     getResultsMap,
     getSelectedSkills,
+    getSkillData,
     getSkillmeta,
     getSkillnames,
     setCourseData,
@@ -63,6 +64,7 @@ import {
     setSkillnames,
     setTrackNames,
 } from './state'
+import { buildSkillNameToIdMap } from '../utils'
 import { showToast } from './toast'
 import { maybeAutoStartTour, startTour } from './tour'
 import { renderTrack } from './trackUI'
@@ -95,19 +97,35 @@ async function loadJsonResource<T>(
     }
 }
 
+// Name resolution prefers ids that can actually be simulated, so the map is
+// rebuilt as each data file arrives (they load in parallel).
+function rebuildSkillNameToId(): void {
+    const skillnames = getSkillnames()
+    if (!skillnames) return
+    setSkillNameToId(
+        buildSkillNameToIdMap(skillnames, getSkillmeta(), getSkillData()),
+    )
+}
+
 loadJsonResource<SkillNames>('skillnames.json', 'skill names', (skillnames) => {
     setSkillnames(skillnames)
-    setSkillNameToId(
-        Object.fromEntries(
-            Object.entries(skillnames).map(([id, names]) => [names[0], id]),
-        ),
-    )
+    rebuildSkillNameToId()
     buildVariantCache()
     buildSkillNameLookup()
 })
 
-loadJsonResource<SkillMeta>('skill_meta.json', 'skill metadata', setSkillmeta)
-loadJsonResource<SkillData>('skill_data.json', 'skill data', setSkillData)
+loadJsonResource<SkillMeta>(
+    'skill_meta.json',
+    'skill metadata',
+    setSkillmeta,
+    rebuildSkillNameToId,
+)
+loadJsonResource<SkillData>(
+    'skill_data.json',
+    'skill data',
+    setSkillData,
+    rebuildSkillNameToId,
+)
 loadJsonResource<CourseData>('course_data.json', 'course data', setCourseData, () => {
     if (getCurrentConfig()) renderTrack()
 })

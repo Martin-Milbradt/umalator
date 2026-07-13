@@ -20,6 +20,7 @@ import {
     getSkillCostWithDiscount,
     getVariantsForBaseName,
     isPlaceholderSkillName,
+    isSimulatableSkill,
     isSkillOnUma,
     isValidSkillName,
     setShowIcons,
@@ -323,7 +324,16 @@ export function renderSkills(): void {
         }
     })
 
-    const sortedSkillNames = Array.from(skillsToRender).sort(compareSkills)
+    // Drop only the auto-generated "X (inherited)" phantoms (they have no
+    // skill_data record by construction). Any other skill stays visible even
+    // when its data or icon is missing, so a data problem shows up as a
+    // broken row instead of a silently vanished skill.
+    const sortedSkillNames = Array.from(skillsToRender)
+        .filter(
+            (name) =>
+                isSimulatableSkill(name) || !name.endsWith(' (inherited)'),
+        )
+        .sort(compareSkills)
 
     // Filter out skills that cannot trigger under current settings (skipped
     // when the user picks Unfiltered), then apply Owned / Hint filters.

@@ -318,7 +318,13 @@ export function findSkillIdByNameWithPreference(
         return matches[0]!
     }
 
-    const preferred = matches.filter((id) => {
+    // Ids that only exist in skillnames (e.g. evolved skills in newer game
+    // data) have no meta entry and cannot be simulated; when a name maps to
+    // several ids, only consider the ones with real metadata.
+    const withMeta = matches.filter((id) => skillMeta[id] != null)
+    const candidates = withMeta.length > 0 ? withMeta : matches
+
+    const preferred = candidates.filter((id) => {
         const baseCost = skillMeta[id]?.baseCost ?? 200
         return preferCostGreaterThanZero ? baseCost > 0 : baseCost === 0
     })
@@ -327,7 +333,34 @@ export function findSkillIdByNameWithPreference(
         return preferred[0]!
     }
 
-    return matches[0]!
+    return candidates[0]!
+}
+
+/**
+ * Builds the display-name -> skill id map used for name resolution. Newer
+ * game data can list several ids for one name (e.g. an evolved skill
+ * alongside the regular one, where only the regular one has meta/data);
+ * prefer ids that can be simulated (present in skillData), then ids with
+ * metadata (cost/icon), then the first one seen.
+ */
+export function buildSkillNameToIdMap(
+    skillNames: Record<string, string[]>,
+    skillMeta?: Record<string, unknown> | null,
+    skillData?: Record<string, unknown> | null,
+): Record<string, string> {
+    const rank = (id: string): number =>
+        (skillData && id in skillData ? 2 : 0) +
+        (skillMeta && id in skillMeta ? 1 : 0)
+    const map: Record<string, string> = {}
+    for (const [id, names] of Object.entries(skillNames)) {
+        const name = names[0]
+        if (!name) continue
+        const current = map[name]
+        if (current === undefined || rank(id) > rank(current)) {
+            map[name] = id
+        }
+    }
+    return map
 }
 
 export function findSkillVariantsByName(

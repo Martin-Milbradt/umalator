@@ -8,6 +8,7 @@ import {
 import {
     applyDiscount,
     buildSkillNameLookup,
+    buildSkillNameToIdMap,
     type CurrentSettings,
     calculateSkillCost,
     calculateStatsFromRawResults,
@@ -2630,5 +2631,54 @@ describe('distance category filtering', () => {
         }
         // Skills without distance restriction should still show
         expect(canSkillTrigger({}, settings)).toBe(true)
+    })
+})
+
+// Newer game data lists evolved skills in skillnames.json under the same
+// display name as the regular skill, but without meta or data entries
+// (e.g. "Glittering Star": gold 210062 vs evolved 100502211).
+describe('duplicate skill names across ids', () => {
+    const skillNames = {
+        '210062': ['Glittering Star'],
+        '100502211': ['Glittering Star'],
+        '900502211': ['Glittering Star (inherited)'],
+    }
+    const skillMeta = {
+        '210062': { baseCost: 200 },
+    }
+    const skillData = {
+        '210062': {},
+    }
+
+    describe('buildSkillNameToIdMap', () => {
+        it('prefers the id that has meta and data', () => {
+            const map = buildSkillNameToIdMap(skillNames, skillMeta, skillData)
+            expect(map['Glittering Star']).toBe('210062')
+            expect(map['Glittering Star (inherited)']).toBe('900502211')
+        })
+
+        it('prefers a meta-only id over a name-only id', () => {
+            const map = buildSkillNameToIdMap(skillNames, skillMeta, null)
+            expect(map['Glittering Star']).toBe('210062')
+        })
+
+        it('keeps the first id seen when nothing has meta or data', () => {
+            const map = buildSkillNameToIdMap(skillNames, null, null)
+            // integer-like keys iterate in ascending numeric order
+            expect(map['Glittering Star']).toBe('210062')
+        })
+    })
+
+    describe('findSkillIdByNameWithPreference', () => {
+        it('ignores ids without a meta entry when several ids share a name', () => {
+            expect(
+                findSkillIdByNameWithPreference(
+                    'Glittering Star',
+                    skillNames,
+                    skillMeta,
+                    true,
+                ),
+            ).toBe('210062')
+        })
     })
 })
