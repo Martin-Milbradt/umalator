@@ -653,6 +653,10 @@ export function refreshOwnedRowsForGroup(skillName: string): void {
         if (row?.owned) {
             getCalculatedResultsCache().delete(siblingName)
             addPendingOwnedRow(siblingName, row.ownedAction ?? 'remove')
+        } else if (getCalculatedResultsCache().get(siblingName)?.owned) {
+            // The Owned toggle is off (no row), but a cached owned result
+            // would otherwise be restored with a stale refund later.
+            getCalculatedResultsCache().delete(siblingName)
         }
     }
 }
@@ -752,15 +756,78 @@ export function undoLastUmaAction(): void {
 }
 
 /**
- * Rebuild all owned rows from the current uma state (used when the header
- * checkbox turns on).
+ * Enumerate the owned rows the current uma state implies: a removal row per
+ * owned skill, a downgrade row per dominated group tier, and the unique's
+ * disable/re-enable row. Mirrors the row set a calculation run produces.
  */
-function rebuildOwnedRows(): void {
+function forEachOwnedRow(
+    callback: (
+        skillName: string,
+        action: NonNullable<SkillResult['ownedAction']>,
+    ) => void,
+): void {
     const config = getCurrentConfig()
-    for (const skill of config?.uma?.skills ?? []) {
-        refreshGroupResults(skill)
+    const skillmeta = getSkillmeta()
+    const skillnames = getSkillnames()
+    const skillDataMap = getSkillData()
+    if (!config || !skillmeta || !skillnames) return
+    const seen = new Set<string>()
+    for (const umaSkill of config.uma?.skills ?? []) {
+        const skillId = findSkillId(umaSkill)
+        if (!skillId) continue
+        const groupId = skillmeta[skillId]?.groupId
+        if (!groupId) {
+            const name = skillnames[skillId]?.[0] ?? umaSkill
+            if (!seen.has(name)) {
+                seen.add(name)
+                callback(name, 'remove')
+            }
+            continue
+        }
+        for (const [siblingId, siblingMeta] of Object.entries(skillmeta)) {
+            if (siblingMeta.groupId !== groupId) continue
+            const name = skillnames[siblingId]?.[0]
+            if (!name || seen.has(name)) continue
+            const simulatable =
+                (siblingMeta.score ?? 1) >= 0 &&
+                (!skillDataMap || siblingId in skillDataMap)
+            if (!simulatable) continue
+            if (isSkillOnUma(name)) {
+                seen.add(name)
+                callback(name, 'remove')
+            } else if (umaHasUpgradedVersion(name)) {
+                seen.add(name)
+                callback(name, 'downgrade')
+            }
+        }
     }
-    refreshUniqueRow()
+    const uniqueName = uniqueDisplayName()
+    if (uniqueName && !seen.has(uniqueName)) {
+        callback(
+            uniqueName,
+            (config.uma?.uniqueDisabled ?? false)
+                ? 'enable-unique'
+                : 'disable-unique',
+        )
+    }
+}
+
+/**
+ * Re-add all owned rows when the header checkbox turns on. Previously
+ * calculated values are restored from the cache; only rows without a cached
+ * result (or whose action flipped since) are queued for calculation.
+ */
+export function restoreOwnedRows(): void {
+    const cache = getCalculatedResultsCache()
+    const resultsMap = getResultsMap()
+    forEachOwnedRow((skillName, action) => {
+        const cached = cache.get(skillName)
+        if (cached?.owned && cached.ownedAction === action) {
+            resultsMap.set(skillName, { ...cached, status: 'cached' })
+        } else {
+            addPendingOwnedRow(skillName, action)
+        }
+    })
 }
 
 /** Wire the header Undo button and the "Owned" calculation checkbox. */
@@ -781,7 +848,7 @@ export function setupResultsHeaderControls(): void {
         if (!config.filters) config.filters = {}
         config.filters.calcOwned = checkbox.checked
         if (checkbox.checked) {
-            rebuildOwnedRows()
+            restoreOwnedRows()
         } else {
             const resultsMap = getResultsMap()
             const selectedSkills = getSelectedSkills()
