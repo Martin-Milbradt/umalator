@@ -4,6 +4,7 @@ import {
 } from '../shared/skill-cost'
 import {
     getCurrentConfig,
+    getSkillData,
     getSkillmeta,
     getSkillNameLookup,
     getSkillnames,
@@ -219,6 +220,23 @@ export function findSkillId(skillName: string): string | null {
     }
 
     return null
+}
+
+/**
+ * Whether a skill resolves to an id the simulation engine can actually run.
+ * `skillnames.json` carries phantom entries with no `skill_data` record (most
+ * notably the auto-generated "X (inherited)" names for uniques that have no real
+ * inherited skill in the game, plus a few debug/removed entries). Feeding one to
+ * the engine throws "bad skill ID", so we hide them from the picker and list.
+ *
+ * Returns true while skill data is still loading so nothing is hidden prematurely.
+ */
+export function isSimulatableSkill(skillName: string): boolean {
+    const skillData = getSkillData()
+    if (!skillData) return true
+    const skillId = findSkillId(skillName)
+    if (!skillId) return true
+    return skillId in skillData
 }
 
 export function getSkillIconUrl(skillName: string): string | null {

@@ -1,5 +1,5 @@
-import { getSkillmeta, getSkillnames } from './state'
-import type { SkillMeta, SkillNames } from './types'
+import { getSkillData, getSkillmeta, getSkillnames } from './state'
+import type { SkillData, SkillMeta, SkillNames } from './types'
 
 export type AutocompleteMode = 'regular' | 'unique' | 'all'
 
@@ -27,6 +27,7 @@ export function filterSkillSuggestions(
     skillmeta: SkillMeta | null,
     limit: number = DEFAULT_LIMIT,
     exclude: Iterable<string> | null = null,
+    skillData: SkillData | null = null,
 ): string[] {
     if (!skillnames) return []
     const normalizedQuery = query.toLowerCase().trim()
@@ -39,6 +40,10 @@ export function filterSkillSuggestions(
     for (const [id, names] of Object.entries(skillnames)) {
         const canonical = names?.[0]
         if (!canonical) continue
+        // Skip phantom names with no simulatable skill_data record (e.g. the
+        // auto-generated "X (inherited)" uniques). Only filters once data has
+        // loaded so the picker isn't empty mid-load.
+        if (skillData && !(id in skillData)) continue
         if (!passesMode(skillmeta?.[id]?.baseCost, mode)) continue
         if (excludeSet?.has(canonical)) continue
 
@@ -69,6 +74,7 @@ interface AttachOptions {
     /** Override the data source for tests; defaults to live state. */
     getNames?: () => SkillNames | null
     getMeta?: () => SkillMeta | null
+    getData?: () => SkillData | null
     limit?: number
     /** Names to suppress from suggestions (e.g. skills already in the list). */
     getExclude?: () => Iterable<string> | null
@@ -98,6 +104,7 @@ export function attachSkillAutocomplete(
 ): () => void {
     const getNames = options.getNames ?? getSkillnames
     const getMeta = options.getMeta ?? getSkillmeta
+    const getData = options.getData ?? getSkillData
     const limit = options.limit ?? DEFAULT_LIMIT
     const getExclude = options.getExclude
 
@@ -160,6 +167,7 @@ export function attachSkillAutocomplete(
             getMeta(),
             limit,
             getExclude?.() ?? null,
+            getData(),
         )
         if (suggestions.length === 0) {
             closeList()
