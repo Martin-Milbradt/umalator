@@ -54,15 +54,38 @@ if (-not (Test-Path $umaToolsPath)) {
     }
 }
 
-# Update submodules, then re-pin the nested uma-skill-tools to the loose commit
-# we depend on. scripts/pin-submodule.mjs owns the SHA and the rationale; see it
-# (and docs/cloud-setup.md) for why a plain submodule update lands on the wrong
-# commit.
-Write-Host "Updating submodules and pinning uma-skill-tools..."
-git submodule update --init --recursive uma-tools
+# Take the latest upstream uma-tools on every start (newest game data/UI),
+# falling back to the current checkout when offline or dirty. The nested
+# uma-skill-tools is then re-pinned by scripts/pin-submodule.mjs, which owns
+# the SHA and the rationale; see it (and docs/cloud-setup.md) for why a plain
+# submodule update lands on the wrong commit.
+if (-not (Test-Path (Join-Path $umaToolsPath ".git"))) {
+    Write-Host "Initialising submodules..."
+    git submodule update --init --recursive uma-tools
+}
+Write-Host "Updating uma-tools to upstream master..."
+git -C uma-tools fetch origin master
+if ($LASTEXITCODE -eq 0) {
+    git -C uma-tools checkout --detach origin/master
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "Could not check out uma-tools origin/master (dirty checkout?); keeping the current version."
+    }
+}
+else {
+    Write-Warning "Could not fetch uma-tools upstream (offline?); keeping the current version."
+}
 node scripts/pin-submodule.mjs --strict
 if ($LASTEXITCODE -ne 0) {
     Write-Warning "Failed to pin uma-skill-tools, continuing anyway..."
+}
+
+# The deploy builds from the committed submodule pointer, so a moved submodule
+# only reaches production once the gitlink is committed.
+$recorded = (git ls-tree HEAD uma-tools) -split '\s+' | Select-Object -Index 2
+$actual = git -C uma-tools rev-parse HEAD
+if ($recorded -and $actual -and $recorded -ne $actual) {
+    Write-Host "uma-tools is on $($actual.Substring(0,7)) but the last commit records $($recorded.Substring(0,7))." -ForegroundColor Yellow
+    Write-Host "To deploy this version, commit the submodule pointer: git add uma-tools" -ForegroundColor Yellow
 }
 
 # Build workers before starting servers

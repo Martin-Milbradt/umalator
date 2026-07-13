@@ -1,6 +1,5 @@
 import * as esbuild from 'esbuild'
-import { execSync } from 'node:child_process'
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
 import * as path from 'node:path'
 
 const root = path.join(import.meta.dirname, 'uma-tools')
@@ -237,40 +236,11 @@ function copyDataFiles(): void {
     }
 }
 
-// Fetch latest game data from upstream uma-tools by overwriting the submodule's
-// data files. Opt-in via UPDATE_GAME_DATA=1 (set by the deploy workflow) because
-// it (a) dirties the uma-tools submodule working tree and (b) makes the build
-// non-reproducible. Local builds and PR/push CI use the pinned submodule data.
-// Falls back to local files on network failure.
-function fetchLatestGameData(): void {
-    const dataFiles = [
-        'umalator-global/skill_data.json',
-        'umalator-global/skill_meta.json',
-        'skill_meta.json',
-    ]
-    try {
-        execSync('git fetch origin master', { cwd: root, stdio: 'pipe' })
-        for (const file of dataFiles) {
-            const content = execSync(`git show origin/master:${file}`, {
-                cwd: root,
-                maxBuffer: 10 * 1024 * 1024,
-            })
-            writeFileSync(path.join(root, file), content)
-        }
-        console.log('Fetched latest game data from upstream uma-tools')
-    } catch {
-        console.log('Could not fetch latest game data, using local files')
-    }
-}
-
+// Game data always comes from the checked-out uma-tools submodule, so every
+// environment (local dev, CI, deploy) builds the same data for a given
+// submodule state. start_web.ps1 advances the submodule to upstream master;
+// committing the resulting gitlink is what ships new data.
 try {
-    if (process.env.UPDATE_GAME_DATA === '1') {
-        fetchLatestGameData()
-    } else {
-        console.log(
-            'Using pinned submodule game data (set UPDATE_GAME_DATA=1 to fetch latest)',
-        )
-    }
     copyDataFiles()
     await Promise.all([
         esbuild.build(workerBuildOptions),
