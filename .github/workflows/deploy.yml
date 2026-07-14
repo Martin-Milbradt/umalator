@@ -27,21 +27,22 @@ jobs:
           node-version: 22
           cache: npm
 
-      # npm ci runs the postinstall pin, but it is lenient (never breaks an
-      # install); re-run with --strict so CI fails loudly if uma-skill-tools
-      # can't be pinned to the commit we depend on. scripts/pin-submodule.mjs
-      # owns the SHA and explains why a vanilla submodule update is wrong.
+      # npm ci runs the postinstall submodule update, but it is lenient
+      # (never breaks an install); re-run with --strict so the deploy fails
+      # loudly if the submodules can't be brought to upstream master.
+      # scripts/update-submodules.mjs explains why a vanilla submodule
+      # update is wrong.
       - run: npm ci
-      - name: Pin uma-skill-tools
-        run: node scripts/pin-submodule.mjs --strict
+      - name: Update submodules to upstream master
+        run: node scripts/update-submodules.mjs --strict
       # Gate the deploy: a red typecheck or test must never reach Pages. The
       # build steps (esbuild/vite) do not type-check, so this is the only guard.
       # Build first: the worker integration tests spawn the built worker.
       - name: Typecheck
         run: npm run typecheck
-      # The build uses the committed submodule's game data, so the deploy
-      # ships exactly the state that was tested locally (start_web.ps1 moves
-      # the submodule; committing the gitlink publishes it).
+      # The build copies game data from the just-updated submodule, so every
+      # deploy ships the latest upstream data; the committed gitlink is only
+      # a recorded baseline.
       - run: npm run build
       - name: Test
         run: npm test

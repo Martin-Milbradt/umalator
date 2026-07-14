@@ -1,6 +1,7 @@
 [submodule "uma-tools"]
 	path = uma-tools
 	url = https://github.com/alpha123/uma-tools.git
-	# uma-skill-tools is pinned past the recorded gitlink (scripts/pin-submodule.mjs),
-	# so the submodule is permanently "dirty"; only report real gitlink changes.
+	# The nested uma-skill-tools floats on upstream master past the gitlink
+	# uma-tools records (scripts/update-submodules.mjs), so the submodule is
+	# permanently "dirty"; only report real gitlink changes.
 	ignore = dirty

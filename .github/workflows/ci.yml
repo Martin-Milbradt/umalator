@@ -20,10 +20,10 @@ jobs:
           cache: npm
 
       - run: npm ci
-      # The submodule must sit on the commit we depend on before any build/type
-      # step; --strict so CI fails loudly if it can't be pinned.
-      - name: Pin uma-skill-tools
-        run: node scripts/pin-submodule.mjs --strict
+      # Always check against upstream master for both submodules: an
+      # unnoticed outdated version is worse than a loud failure here.
+      - name: Update submodules to upstream master
+        run: node scripts/update-submodules.mjs --strict
 
       - name: Typecheck
         run: npm run typecheck

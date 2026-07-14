@@ -7,23 +7,23 @@ display. For everyday local development on your own machine, the
 [README](../README.md) "Getting Started" section is enough; this doc covers the
 extra steps and gotchas that bite in automation.
 
-> TL;DR — one command does all four steps (submodule init, pin, build):
+> TL;DR — one command does all four steps (submodule init, update, build):
 >
 > ```bash
-> npm install      # postinstall pins uma-skill-tools if the submodule is present
-> npm run setup    # init submodules + pin uma-skill-tools + build workers
+> npm install      # postinstall updates the submodules if they are present
+> npm run setup    # init submodules + update to upstream master + build workers
 > ```
 >
-> `npm run setup` wraps `scripts/pin-submodule.mjs`, the single source of truth
-> for the pinned SHA. The equivalent manual steps (useful when something goes
-> wrong) are below.
+> `npm run setup` wraps `scripts/update-submodules.mjs`, which brings both
+> submodules to upstream master. The equivalent manual steps (useful when
+> something goes wrong) are below.
 
 ## Prerequisites: network access
 
 The remote environment's network policy must allow outbound HTTPS to:
 
-- **github.com** — to clone the `uma-tools` submodule and fetch the pinned
-  `uma-skill-tools` commit.
+- **github.com** — to clone the `uma-tools` submodule and fetch upstream
+  master for both submodules.
 - **the npm registry** — for `npm install`.
 
 If you are configuring a Claude Code on the web environment, pick a network
@@ -44,47 +44,45 @@ npm install      # or `npm ci` if package-lock.json is trusted/unchanged
 git submodule update --init --recursive
 ```
 
-This lands `uma-tools/uma-skill-tools` on the commit the parent `uma-tools`
-records (`6ba5ca0` as of writing), which is **not** the commit we need. Do not
-skip Step 3.
+This lands the submodules on the commits the gitlinks record, which for the
+nested `uma-tools/uma-skill-tools` is **not** a commit we can run (the parent
+`uma-tools` records a stale gitlink, behind its own code's requirements). Do
+not skip Step 3.
 
-## Step 3 — Pin `uma-skill-tools` to upstream master (the easy-to-miss step)
+## Step 3 — Update both submodules to upstream master (the easy-to-miss step)
 
-> `node scripts/pin-submodule.mjs` (run for you by `postinstall` and
+> `node scripts/update-submodules.mjs` (run for you by `postinstall` and
 > `npm run setup`) does exactly this step, idempotently. The manual commands
 > below are the fallback when you need to do it by hand.
 
-We depend on `8b3f5e2`, the tip of **upstream `uma-skill-tools` master**. The
-parent `uma-tools` repo records a stale nested gitlink (`6ba5ca0`, ~9 commits
-behind its own code's requirements), so a vanilla recursive submodule update
-always lands too old. Everything umalator needs beyond the engine itself
-(per-uma mood/popularity handling, the other-uma wisdom for skill activation,
-unique level scaling, over-1200 mechanics gating) lives in our vendored
-`shared/compare.ts`, so plain master is sufficient:
+We always run the tip of **upstream master** for both `uma-tools` (game data,
+UI components) and the nested `uma-skill-tools` (simulation engine). Nothing
+is pinned: silently running an outdated version is worse than a loud failure
+from an upstream change, so CI and the deploy float to master too and
+breakage surfaces in their typecheck/test gates. Everything umalator needs
+beyond the engine itself (per-uma mood/popularity handling, the other-uma
+wisdom for skill activation, unique level scaling, over-1200 mechanics
+gating) lives in our vendored `shared/compare.ts`, so plain master is
+sufficient:
 
 ```bash
-cd uma-tools/uma-skill-tools
-git fetch origin 8b3f5e27e939e77431679876403d3fb2f0709e2a
-git checkout 8b3f5e27e939e77431679876403d3fb2f0709e2a
-cd ../..
-
-# Verify:
-git -C uma-tools/uma-skill-tools rev-parse HEAD
-# -> 8b3f5e27e939e77431679876403d3fb2f0709e2a
+git -C uma-tools fetch origin master
+git -C uma-tools checkout --detach FETCH_HEAD
+git -C uma-tools/uma-skill-tools fetch origin master
+git -C uma-tools/uma-skill-tools checkout --detach FETCH_HEAD
 ```
 
-This is exactly what `.github/workflows/deploy.yml` and `start_web.ps1` do after
-submodule init. After this checkout, `git status` will show
-`m uma-tools` ("modified content") forever — that is the **expected** state, not
-something to commit. See [Cleanup](#cleanup-expected-git-noise) below.
+This is exactly what CI, `.github/workflows/deploy.yml` and `start_web.ps1`
+do after submodule init. See [Cleanup](#cleanup-expected-git-noise) below for
+the `git status` noise this leaves.
 
 ### Symptom if you skip Step 3
 
-With the submodule stuck on `6ba5ca0`, `npm run build` / `vite` still transpile
-(esbuild and `tsx` do not type-check), but `npx tsc --noEmit` reports type
-errors where `shared/compare.ts` uses builder APIs that postdate `6ba5ca0`
-(e.g. `otherRawWisdom`), and simulations can fail at runtime for the same
-reason.
+With the nested submodule stuck on the recorded gitlink, `npm run build` /
+`vite` still transpile (esbuild and `tsx` do not type-check), but
+`npx tsc --noEmit` reports type errors where `shared/compare.ts` uses newer
+builder APIs (e.g. `otherRawWisdom`), and simulations can fail at runtime for
+the same reason.
 
 ## Step 4 — Build the workers and copy data
 
@@ -96,9 +94,10 @@ npm run build
 worker (`static/simulation.browser-worker.js`) and copies the checked-out
 submodule's JSON data files into `static/data/`. Run this **before**
 `npm test`, `npx vite`, or the CLI (the worker integration tests spawn the
-built worker). To refresh the game data, advance the `uma-tools` submodule to
-upstream master (what `start_web.ps1` does on launch) and rebuild; committing
-the resulting gitlink is what ships the new data to the deploy.
+built worker). To refresh the game data, re-run
+`node scripts/update-submodules.mjs` and rebuild. Deploys update to upstream
+master themselves, so no gitlink commit is needed to ship new data;
+committing the pointer just keeps the recorded baseline current.
 
 ## Running the tests
 
@@ -167,22 +166,24 @@ Notes:
 
 ## Cleanup: expected git noise
 
-After Step 3, `git status` shows:
+After Step 3, `git status` may show:
 
 ```text
- m uma-tools
+ M uma-tools
 ```
 
-This is the nested `uma-skill-tools` sitting on upstream master (`8b3f5e2`)
-while the parent `uma-tools` still records `6ba5ca0`. It is the **required** working state and
-must **not** be committed. When committing your changes, stage files explicitly
-(`git add <your files>`) rather than `git add -A`, so the submodule pointer and
-any throwaway tooling are left out. To return to a fully clean tree (e.g. before
-a Stop hook git check), restore the submodule:
+This is the `uma-tools` checkout sitting ahead of the gitlink the last commit
+records. (The nested `uma-skill-tools` sitting ahead of *its* recorded
+gitlink is hidden by `ignore = dirty` in `.gitmodules`.) Committing the
+pointer bump (`git add uma-tools`) is fine and keeps the recorded baseline
+current, but it ships nothing by itself: CI and deploys update to upstream
+master on their own. When committing unrelated changes, stage files
+explicitly (`git add <your files>`) rather than `git add -A`, so the pointer
+bump stays a deliberate act. To return to the recorded state:
 
 ```bash
 git submodule update --init --recursive --force uma-tools
 ```
 
-(Note: restoring like this puts `uma-skill-tools` back on `6ba5ca0`, so re-run
-Step 3 before running simulations again.)
+(Note: this puts the nested `uma-skill-tools` back on the stale recorded
+gitlink, so re-run Step 3 before running simulations again.)

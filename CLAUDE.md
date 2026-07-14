@@ -12,11 +12,11 @@ Fully client-side static site deployed to GitHub Pages. Simulations run in brows
 
 Running in an ephemeral Cloud / CI container (Claude Code on the web, GitHub
 Actions, fresh clone) has gotchas that the README "Getting Started" glosses over
-— `node_modules` is absent, submodules need init, and the nested
-`uma-skill-tools` must be re-checked-out to upstream master because the parent
-`uma-tools` records a stale gitlink. See
+— `node_modules` is absent, submodules need init, and both submodules must
+then be updated to upstream master because the parent `uma-tools` records a
+stale nested gitlink. See
 **[docs/cloud-setup.md](docs/cloud-setup.md)** for the full step-by-step
-(install → submodule init → pin `8b3f5e2` → build), plus how to drive a
+(install → submodule init → update to master → build), plus how to drive a
 headless browser for UI verification and which `git status` noise is expected.
 
 ## Commands
@@ -95,7 +95,7 @@ npx tsx race-check.ts --races path/to/races.json --sims 200
 
 - `./uma-tools` is a git submodule (clone with `--recursive`)
 - `./uma-tools/uma-skill-tools/` is derived from <https://github.com/alpha123/uma-skill-tools> - understanding this code helps when working on simulation logic, but **never modify it**; pull latest from upstream instead
-- `uma-skill-tools` is pinned to upstream `master` (`8b3f5e2`; the full SHA lives in `scripts/pin-submodule.mjs`). The parent `uma-tools` submodule records a stale `uma-skill-tools` gitlink (`6ba5ca0`), so a vanilla `git submodule update --recursive` lands ~9 commits behind master — `postinstall`, CI and `start_web.ps1` run `node scripts/pin-submodule.mjs` after init for that reason. Manual fallback: `git -C uma-tools/uma-skill-tools fetch origin 8b3f5e27e939e77431679876403d3fb2f0709e2a && git -C uma-tools/uma-skill-tools checkout 8b3f5e27e939e77431679876403d3fb2f0709e2a`. Full setup walkthrough in [docs/cloud-setup.md](docs/cloud-setup.md).
+- Both submodules always run upstream `master`; nothing is pinned (silently running an outdated version is worse than a loud failure from an upstream change). `scripts/update-submodules.mjs` fetches and checks out `origin/master` for `uma-tools` and the nested `uma-skill-tools` — run by `postinstall`, CI, the deploy, and `start_web.ps1`. A vanilla `git submodule update --recursive` is never sufficient: the parent `uma-tools` records a stale `uma-skill-tools` gitlink. Full setup walkthrough in [docs/cloud-setup.md](docs/cloud-setup.md).
 - `shared/compare.ts` is our vendored, master-API adaptation of `uma-tools/umalator/compare.ts` (which requires unpublished engine changes and cannot run against any public `uma-skill-tools` commit). It carries the per-uma mood/popularity handling, the other-uma wisdom for skill activation, unique-skill level scaling, and the over-1200 mechanics gating (Asiwotameru on everywhere, StaminaSyoubu JP-only). When pulling a newer `uma-tools`, diff its `umalator/compare.ts` against ours and port behavior changes.
 - Ignore type checking errors from `./uma-tools` package. Our own files (including `shared/compare.ts`) type-check cleanly; mood and popularity are per-uma and applied per-builder in `shared/compare.ts`.
 - `driver.js` (npm dependency) powers the onboarding tour in `public/tour.ts`. CSS is imported in the same file (`driver.js/dist/driver.css`).
@@ -106,7 +106,7 @@ npx tsx race-check.ts --races path/to/races.json --sims 200
   1. Copies 5 JSON data files from `uma-tools/umalator-global/` to `static/data/`
   2. Builds Node worker (`simulation.worker.js` in repo root)
   3. Builds browser worker (`static/simulation.browser-worker.js`)
-  - Game data always comes from the checked-out submodule, so local dev, CI, and the deploy all build the same data for a given submodule state. New game data ships by advancing the submodule (`start_web.ps1` does this on launch) and committing the gitlink.
+  - Game data comes from the checked-out submodule, which local dev (`start_web.ps1`), CI, and the deploy all update to upstream master first (`scripts/update-submodules.mjs`), so every deploy ships the latest data. The committed gitlink is only a recorded baseline.
 - `npm run build:frontend` runs `vite build` which bundles `public/` into `dist/`
 - `static/` is Vite's publicDir (configured in `vite.config.ts`) - files are copied as-is to `dist/`
 - GitHub Pages deploy sets `VITE_BASE=/umalator/` so asset paths resolve correctly
