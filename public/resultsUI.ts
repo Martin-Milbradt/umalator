@@ -1,3 +1,4 @@
+import { invertSkillResult } from '../utils'
 import { saveResults } from './configStore'
 import { autoSave } from './configManager'
 import {
@@ -10,6 +11,7 @@ import {
     createSkillIcon,
     findSkillId,
     getGroupVariantOnUma,
+    getSkillChainCost,
     getSkillCostWithDiscount,
     getSkillOrder,
     isSkillOnUma,
@@ -66,6 +68,17 @@ function formatInterval(lo: number, hi: number): string {
     return `${lo.toFixed(2)}-${hi.toFixed(2)}`
 }
 
+/** Drop the transient row fields so a result can go into the cache. */
+function toPlainResult(row: SkillResultWithStatus): SkillResult {
+    const {
+        status: _status,
+        rawResults: _rawResults,
+        errorMessage: _errorMessage,
+        ...plain
+    } = row
+    return plain
+}
+
 // Persist the current table to IndexedDB (debounced) so it reappears on the next
 // load without recomputing. Only completed rows are stored; pending/error rows
 // are transient. Keyed by the open config.
@@ -79,13 +92,7 @@ function persistResults(): void {
         const results: SkillResult[] = []
         for (const row of getResultsMap().values()) {
             if (row.status === 'pending' || row.status === 'error') continue
-            const {
-                status: _status,
-                rawResults: _rawResults,
-                errorMessage: _errorMessage,
-                ...plain
-            } = row
-            results.push(plain)
+            results.push(toPlainResult(row))
         }
         void saveResults(configFile, results).catch((error) => {
             console.warn('Failed to persist results:', error)
@@ -262,7 +269,10 @@ export function renderResultsTable(): void {
         // Skill name
         const skillCell = document.createElement('td')
         skillCell.className = 'p-1'
-        const icon = createSkillIcon(result.skill)
+        const icon = createSkillIcon(
+            result.skill,
+            action === 'disable-unique' || action === 'enable-unique',
+        )
         if (icon) {
             const wrapper = document.createElement('div')
             wrapper.className = 'flex items-center gap-1'
@@ -446,6 +456,10 @@ export function addSkillToUmaFromTable(skillName: string, cost: number): void {
     // Check if skill is already on Uma
     if (currentConfig.uma.skills.includes(skillName)) return
 
+    // Snapshot the buy row before refreshGroupResults wipes it; the removal
+    // row is derived from it below.
+    const buyRow = resultsMap.get(skillName)
+
     recordUmaUndoSnapshot()
 
     // Check if a variant from the same group is already on Uma
@@ -469,6 +483,29 @@ export function addSkillToUmaFromTable(skillName: string, cost: number): void {
 
     refreshGroupResults(skillName)
 
+    // Taking a skill runs the exact comparison its buy row already holds,
+    // sign flipped, so derive the removal row by inversion instead of the
+    // re-simulation refreshGroupResults queued; the next Run replaces it
+    // with a fresh result. Replacing a group variant changes the simulation
+    // baseline, so that case still recalculates.
+    if (
+        !existingVariant &&
+        buyRow &&
+        !buyRow.owned &&
+        (buyRow.status === 'fresh' || buyRow.status === 'cached')
+    ) {
+        const removalRow: SkillResult = {
+            ...invertSkillResult(toPlainResult(buyRow)),
+            owned: true,
+            ownedAction: 'remove',
+            hasCost: true,
+        }
+        getCalculatedResultsCache().set(skillName, removalRow)
+        if (getCalcOwned()) {
+            resultsMap.set(skillName, { ...removalRow, status: 'cached' })
+        }
+    }
+
     // Re-render
     refreshResultsCosts()
     callRenderUma()
@@ -478,10 +515,15 @@ export function addSkillToUmaFromTable(skillName: string, cost: number): void {
 
 export function removeSkillFromUma(skillName: string): void {
     const currentConfig = getCurrentConfig()
+    const resultsMap = getResultsMap()
     if (!currentConfig?.uma?.skills) return
 
     const skillIndex = currentConfig.uma.skills.indexOf(skillName)
     if (skillIndex === -1) return
+
+    // Snapshot the owned row before refreshGroupResults wipes it; the
+    // returning buy row is derived from it below.
+    const ownedRow = resultsMap.get(skillName)
 
     recordUmaUndoSnapshot()
 
@@ -490,6 +532,28 @@ export function removeSkillFromUma(skillName: string): void {
     adjustSkillPoints(skillCost)
 
     refreshGroupResults(skillName)
+
+    // The removal row already holds the buy comparison (negated), so derive
+    // the returning buy row by inversion instead of the re-simulation
+    // refreshGroupResults queued. The pending-row guard keeps skills without
+    // a configured discount out of the table.
+    if (
+        ownedRow?.owned &&
+        ownedRow.ownedAction === 'remove' &&
+        ownedRow.hasCost &&
+        (ownedRow.status === 'fresh' || ownedRow.status === 'cached') &&
+        resultsMap.get(skillName)?.status === 'pending'
+    ) {
+        const {
+            owned: _owned,
+            ownedAction: _ownedAction,
+            hasCost: _hasCost,
+            ...plain
+        } = toPlainResult(ownedRow)
+        const buyRow = invertSkillResult(plain)
+        getCalculatedResultsCache().set(skillName, buyRow)
+        resultsMap.set(skillName, { ...buyRow, status: 'cached' })
+    }
 
     // Refresh costs since Uma skills changed
     refreshResultsCosts()
@@ -511,14 +575,12 @@ export function updateResultsForDiscountChange(
     const hadDiscount = oldDiscount !== null && oldDiscount !== undefined
     const hasDiscount = newDiscount !== null
 
-    // An owned row's discount only affects its refund; recompute via a fresh
-    // simulation pass instead of the buy-cost paths below (the row itself
-    // stays regardless of table membership).
+    // An owned row's discount only affects its refund, which
+    // refreshOwnedRowsForGroup (invoked by setDiscountForVariants after the
+    // per-variant updates) recomputes in place; the simulated stats don't
+    // depend on discounts. The row stays regardless of table membership.
     const existingRow = resultsMap.get(skillName)
-    if (existingRow?.owned) {
-        addPendingOwnedRow(skillName, existingRow.ownedAction ?? 'remove')
-        return
-    }
+    if (existingRow?.owned) return
 
     if (hadDiscount && !hasDiscount) {
         // discount -> None: remove skill from table
@@ -592,15 +654,17 @@ export function refreshGroupResults(skillName: string): void {
     if (!skillId) return
 
     const groupId = skillmeta[skillId]?.groupId
-    if (!groupId) {
-        calculatedResultsCache.delete(skillName)
-        return
-    }
 
     const calcOwned = getCalcOwned()
     const skillDataMap = getSkillData()
-    for (const [siblingId, siblingMeta] of Object.entries(skillmeta)) {
-        if (siblingMeta.groupId !== groupId) continue
+    // A group-less skill is its own only "sibling", so it still gets its
+    // owned row on take and its buy row back on removal.
+    const siblings = groupId
+        ? Object.entries(skillmeta).filter(
+              ([, meta]) => meta.groupId === groupId,
+          )
+        : [[skillId, skillmeta[skillId] ?? {}] as const]
+    for (const [siblingId, siblingMeta] of siblings) {
         const siblingName = skillnames[siblingId]?.[0]
         if (!siblingName) continue
 
@@ -632,33 +696,70 @@ export function refreshGroupResults(skillName: string): void {
 }
 
 /**
- * Requeue every owned row in `skillName`'s group. Their refunds depend on the
- * discounts of all tiers in the group (a gold's refund includes the white
- * prerequisite, a downgrade's refund is the tier difference), so any discount
- * change in the group invalidates them — mirroring how buy rows update.
+ * Recompute the refunds of every owned row in `skillName`'s group after a
+ * discount change. Refunds depend on the discounts of all tiers in the group
+ * (a gold's refund includes the white prerequisite, a downgrade's refund is
+ * the tier difference), but the simulated stats don't depend on discounts at
+ * all, so the rows and their cache entries update in place — no
+ * re-simulation.
  */
 export function refreshOwnedRowsForGroup(skillName: string): void {
     const skillmeta = getSkillmeta()
     const skillnames = getSkillnames()
     const resultsMap = getResultsMap()
+    const cache = getCalculatedResultsCache()
     if (!skillmeta || !skillnames) return
     const skillId = findSkillId(skillName)
-    const groupId = skillId ? skillmeta[skillId]?.groupId : null
-    if (!groupId) return
-    for (const [siblingId, siblingMeta] of Object.entries(skillmeta)) {
-        if (siblingMeta.groupId !== groupId) continue
+    if (!skillId) return
+    const groupId = skillmeta[skillId]?.groupId
+    // A group-less skill (like an inherited unique) is its own only
+    // "sibling"; its removal refund still tracks its discount.
+    const siblings = groupId
+        ? Object.entries(skillmeta).filter(
+              ([, meta]) => meta.groupId === groupId,
+          )
+        : [[skillId, skillmeta[skillId] ?? {}] as const]
+
+    let changed = false
+    for (const [siblingId] of siblings) {
         const siblingName = skillnames[siblingId]?.[0]
         if (!siblingName) continue
         const row = resultsMap.get(siblingName)
-        if (row?.owned) {
-            getCalculatedResultsCache().delete(siblingName)
-            addPendingOwnedRow(siblingName, row.ownedAction ?? 'remove')
-        } else if (getCalculatedResultsCache().get(siblingName)?.owned) {
-            // The Owned toggle is off (no row), but a cached owned result
-            // would otherwise be restored with a stale refund later.
-            getCalculatedResultsCache().delete(siblingName)
+        const cached = cache.get(siblingName)
+        if (!row?.owned && !cached?.owned) continue
+        const action = row?.ownedAction ?? cached?.ownedAction
+        // Unique rows never show cost columns.
+        if (action === 'disable-unique' || action === 'enable-unique') continue
+
+        let refund: number | null
+        let discount = 0
+        if (action === 'remove') {
+            refund = getSkillChainCost(siblingName)
+            discount = getCurrentConfig()?.skills[siblingName]?.discount ?? 0
+        } else {
+            // Downgrade: refund is the chain-cost difference between the
+            // owned tier and this one.
+            const ownedVariant = getGroupVariantOnUma(siblingName)
+            const ownCost = ownedVariant
+                ? getSkillChainCost(ownedVariant)
+                : null
+            const sibCost = getSkillChainCost(siblingName)
+            refund =
+                ownCost !== null && sibCost !== null ? ownCost - sibCost : null
         }
+        const cost = refund !== null ? -refund : 0
+        const hasCost = refund !== null
+        for (const target of [row, cached]) {
+            if (!target?.owned) continue
+            target.cost = cost
+            target.discount = discount
+            target.hasCost = hasCost
+            target.meanLengthPerCost =
+                cost !== 0 ? target.meanLength / cost : 0
+        }
+        if (row?.owned) changed = true
     }
+    if (changed) renderResultsTable()
 }
 
 /**

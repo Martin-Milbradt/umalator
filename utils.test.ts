@@ -29,6 +29,7 @@ import {
     GroundCondition,
     getCanonicalSkillName,
     getDistanceType,
+    invertSkillResult,
     isRandomLocation,
     isRandomValue,
     normalizeConfigSkillNames,
@@ -2667,6 +2668,20 @@ describe('duplicate skill names across ids', () => {
             // integer-like keys iterate in ascending numeric order
             expect(map['Glittering Star']).toBe('210062')
         })
+
+        it('prefers the purchasable id when a unique shares its name with the inherited version', () => {
+            const names = {
+                '100041': ['Red Shift/LP1211-M'],
+                '900041': ['Red Shift/LP1211-M'],
+            }
+            const meta = {
+                '100041': { baseCost: 0 },
+                '900041': { baseCost: 200 },
+            }
+            const data = { '100041': {}, '900041': {} }
+            const map = buildSkillNameToIdMap(names, meta, data)
+            expect(map['Red Shift/LP1211-M']).toBe('900041')
+        })
     })
 
     describe('findSkillIdByNameWithPreference', () => {
@@ -2680,5 +2695,44 @@ describe('duplicate skill names across ids', () => {
                 ),
             ).toBe('210062')
         })
+    })
+})
+
+describe('invertSkillResult', () => {
+    const buy: SkillResult = {
+        skill: 'Professor of Curvature',
+        cost: 160,
+        discount: 20,
+        meanLength: 0.5,
+        medianLength: 0.45,
+        meanLengthPerCost: 0.5 / 160,
+        minLength: -0.1,
+        maxLength: 1.2,
+        rangeLower: 0.05,
+        rangeUpper: 1,
+        ciMeanLower: 0.4,
+        ciMeanUpper: 0.6,
+    }
+
+    it('negates every stat and swaps paired bounds', () => {
+        const inverted = invertSkillResult(buy)
+        expect(inverted.cost).toBe(-160)
+        expect(inverted.meanLength).toBe(-0.5)
+        expect(inverted.medianLength).toBe(-0.45)
+        // Both mean and cost flip sign, so the ratio is unchanged.
+        expect(inverted.meanLengthPerCost).toBe(buy.meanLengthPerCost)
+        expect(inverted.minLength).toBe(-1.2)
+        expect(inverted.maxLength).toBe(0.1)
+        expect(inverted.rangeLower).toBe(-1)
+        expect(inverted.rangeUpper).toBe(-0.05)
+        expect(inverted.ciMeanLower).toBe(-0.6)
+        expect(inverted.ciMeanUpper).toBe(-0.4)
+        // Untouched fields carry over.
+        expect(inverted.skill).toBe(buy.skill)
+        expect(inverted.discount).toBe(20)
+    })
+
+    it('is its own inverse', () => {
+        expect(invertSkillResult(invertSkillResult(buy))).toEqual(buy)
     })
 })

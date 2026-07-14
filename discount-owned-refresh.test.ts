@@ -64,7 +64,7 @@ const buyRow = (skill: string): SkillResultWithStatus => ({
     status: 'fresh',
 })
 
-describe('discount changes requeue owned rows in the group', () => {
+describe('discount changes update owned refunds in the group', () => {
     beforeAll(() => {
         setSkillmeta({
             '201103': { baseCost: 150, groupId: '20110', order: 20290 },
@@ -108,16 +108,26 @@ describe('discount changes requeue owned rows in the group', () => {
         results.set(OTHER, buyRow(OTHER))
     })
 
-    it('requeues every owned row of the group', () => {
+    it('updates every owned refund in place without requeueing', () => {
         refreshOwnedRowsForGroup(GOLD)
         const results = getResultsMap()
-        expect(results.get(GOLD)?.status).toBe('pending')
-        expect(results.get(RARE)?.status).toBe('pending')
-        expect(results.get(NORMAL)?.status).toBe('pending')
+        // Stats are discount-independent, so the rows stay fresh...
+        expect(results.get(GOLD)?.status).toBe('fresh')
+        expect(results.get(RARE)?.status).toBe('fresh')
+        expect(results.get(NORMAL)?.status).toBe('fresh')
+        // ...and only the refunds recompute: full chain for the removal row
+        // (10% off 150+110+100), tier difference for the downgrades.
+        expect(results.get(GOLD)?.cost).toBe(-324)
+        expect(results.get(GOLD)?.discount).toBe(10)
+        expect(results.get(GOLD)?.hasCost).toBe(true)
+        expect(results.get(RARE)?.cost).toBe(-135)
+        expect(results.get(NORMAL)?.cost).toBe(-234)
+        expect(results.get(GOLD)?.meanLengthPerCost).toBeCloseTo(-0.5 / -324)
         expect(results.get(OTHER)?.status).toBe('fresh')
+        expect(results.get(OTHER)?.cost).toBe(100)
     })
 
-    it('keeps the owned flags on the requeued rows', () => {
+    it('keeps the owned flags on the updated rows', () => {
         refreshOwnedRowsForGroup(NORMAL)
         const results = getResultsMap()
         expect(results.get(GOLD)?.owned).toBe(true)
@@ -125,14 +135,28 @@ describe('discount changes requeue owned rows in the group', () => {
         expect(results.get(RARE)?.ownedAction).toBe('downgrade')
     })
 
-    it('a discount change on a tier requeues the whole group', () => {
+    it('a discount change on a tier updates the whole group refunds', () => {
         setDiscountForVariants(RARE, 20)
         const results = getResultsMap()
-        // The removal row's refund includes the tier's cost, so it recomputes.
-        expect(results.get(GOLD)?.status).toBe('pending')
-        expect(results.get(RARE)?.status).toBe('pending')
-        expect(results.get(NORMAL)?.status).toBe('pending')
+        // The removal row's refund includes the tier's cost, so it recomputes
+        // (135 + 20% off 110 + 90); no row goes back to pending.
+        expect(results.get(GOLD)?.status).toBe('fresh')
+        expect(results.get(GOLD)?.cost).toBe(-313)
+        expect(results.get(RARE)?.status).toBe('fresh')
+        expect(results.get(RARE)?.cost).toBe(-135)
+        expect(results.get(NORMAL)?.cost).toBe(-223)
         expect(results.get(OTHER)?.status).toBe('fresh')
+    })
+
+    it('clearing the owned skill discount blanks the refunds', () => {
+        setDiscountForVariants(GOLD, null)
+        const results = getResultsMap()
+        // Refund unknown: the rows stay but their cost columns blank.
+        expect(results.get(GOLD)?.status).toBe('fresh')
+        expect(results.get(GOLD)?.hasCost).toBe(false)
+        expect(results.get(GOLD)?.cost).toBe(0)
+        expect(results.get(RARE)?.hasCost).toBe(false)
+        expect(results.get(NORMAL)?.hasCost).toBe(false)
     })
 })
 
@@ -193,15 +217,16 @@ describe('Owned toggle restores cached rows without recalculating', () => {
         expect(getResultsMap().get(RARE)?.ownedAction).toBe('downgrade')
     })
 
-    it('discount changes while the toggle is off invalidate the cache', () => {
-        // Toggle off: no rows in the results map, but cached owned values.
+    it('discount changes while the toggle is off update the cache in place', () => {
+        // Toggle off: no rows in the results map, but cached owned values
+        // must not be restored with a stale refund later.
         getCalculatedResultsCache().set(GOLD, ownedRow(GOLD, 'remove'))
         getCalculatedResultsCache().set(RARE, ownedRow(RARE, 'downgrade'))
 
         refreshOwnedRowsForGroup(GOLD)
 
-        expect(getCalculatedResultsCache().has(GOLD)).toBe(false)
-        expect(getCalculatedResultsCache().has(RARE)).toBe(false)
+        expect(getCalculatedResultsCache().get(GOLD)?.cost).toBe(-324)
+        expect(getCalculatedResultsCache().get(RARE)?.cost).toBe(-135)
         // No rows appear (the toggle is off, results map untouched).
         expect(getResultsMap().size).toBe(0)
     })

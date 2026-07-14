@@ -10,6 +10,7 @@ import {
     getShowIcons,
     getSkillCostWithDiscount,
     getSkillIconUrl,
+    getUniqueSkillIconUrl,
     isValidSkillName,
 } from './skillHelpers'
 import { attachSkillAutocomplete } from './skillAutocomplete'
@@ -183,7 +184,7 @@ export function renderUma(): void {
                     uniqueIcon.className = 'w-5 h-5 shrink-0'
                     uniqueIcon.alt = ''
                     const syncUniqueIcon = (): void => {
-                        const url = getSkillIconUrl(input.value)
+                        const url = getUniqueSkillIconUrl(input.value)
                         if (url) {
                             uniqueIcon.src = url
                             uniqueIcon.classList.remove('hidden')

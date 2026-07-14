@@ -2,6 +2,7 @@ import {
     applyDiscount,
     calculateSkillCost,
 } from '../shared/skill-cost'
+import { findSkillIdByNameWithPreference } from '../utils'
 import {
     getCurrentConfig,
     getSkillData,
@@ -239,14 +240,38 @@ export function isSimulatableSkill(skillName: string): boolean {
     return skillId in skillData
 }
 
-export function getSkillIconUrl(skillName: string): string | null {
-    const skillId = findSkillId(skillName)
-    if (!skillId) return null
+function iconUrlForSkillId(skillId: string): string | null {
     const meta = getSkillmeta()
     const iconId = meta?.[skillId]?.iconId
     if (!iconId) return null
     const base = import.meta.env.BASE_URL ?? '/'
     return `${base}data/icons/utx_ico_skill_${iconId}.png`
+}
+
+export function getSkillIconUrl(skillName: string): string | null {
+    const skillId = findSkillId(skillName)
+    if (!skillId) return null
+    return iconUrlForSkillId(skillId)
+}
+
+/**
+ * Icon for the uma's unique skill. Every unique shares its exact name with
+ * its purchasable inherited version, which findSkillId prefers; the unique
+ * field and the unique's results row want the actual unique's icon.
+ */
+export function getUniqueSkillIconUrl(skillName: string): string | null {
+    const skillnames = getSkillnames()
+    const skillmeta = getSkillmeta()
+    if (skillnames && skillmeta) {
+        const uniqueId = findSkillIdByNameWithPreference(
+            skillName,
+            skillnames,
+            skillmeta,
+            false,
+        )
+        if (uniqueId) return iconUrlForSkillId(uniqueId)
+    }
+    return getSkillIconUrl(skillName)
 }
 
 // "Target in Sight" — a stand-in skill icon used for the icons toggle button
@@ -273,10 +298,16 @@ export function setShowIcons(value: boolean): void {
 
 // Build the <img> for a skill's icon, or null when icons are hidden globally or
 // the skill has no icon. Centralises the markup shared by the skill list and
-// the results table.
-export function createSkillIcon(skillName: string): HTMLImageElement | null {
+// the results table. `preferUnique` picks the actual unique's icon for rows
+// that represent the uma's unique rather than the inherited skill.
+export function createSkillIcon(
+    skillName: string,
+    preferUnique = false,
+): HTMLImageElement | null {
     if (!getShowIcons()) return null
-    const url = getSkillIconUrl(skillName)
+    const url = preferUnique
+        ? getUniqueSkillIconUrl(skillName)
+        : getSkillIconUrl(skillName)
     if (!url) return null
     const img = document.createElement('img')
     img.src = url
@@ -485,6 +516,38 @@ export function getSkillCostWithDiscount(skillName: string): number {
         skillMeta: skillmeta,
         skillNames: skillnames,
         umaSkillIds,
+        getPrereqDiscount: (_prereqId, prereqName) =>
+            currentConfig?.skills[prereqName]?.discount ?? 0,
+    })
+}
+
+/**
+ * Full chain cost of `skillName` as if the uma owned nothing of its group,
+ * mirroring the orchestrator's owned-row refund: the skill plus every
+ * positive lower tier, each at its configured discount. Null when the
+ * skill's own discount isn't configured (absent or "-" in the skills table).
+ */
+export function getSkillChainCost(skillName: string): number | null {
+    const currentConfig = getCurrentConfig()
+    const skillmeta = getSkillmeta()
+    const skillnames = getSkillnames()
+    const discount = currentConfig?.skills[skillName]?.discount
+    if (discount === null || discount === undefined) return null
+
+    if (!skillmeta || !skillnames) {
+        return applyDiscount(getSkillBaseCost(skillName), discount)
+    }
+    const skillId = findSkillId(skillName)
+    if (!skillId) {
+        return applyDiscount(getSkillBaseCost(skillName), discount)
+    }
+
+    return calculateSkillCost({
+        skillId,
+        discount,
+        skillMeta: skillmeta,
+        skillNames: skillnames,
+        umaSkillIds: [],
         getPrereqDiscount: (_prereqId, prereqName) =>
             currentConfig?.skills[prereqName]?.discount ?? 0,
     })

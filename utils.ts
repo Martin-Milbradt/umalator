@@ -348,16 +348,19 @@ export function findSkillIdByNameWithPreference(
  * game data can list several ids for one name (e.g. an evolved skill
  * alongside the regular one, where only the regular one has meta/data);
  * prefer ids that can be simulated (present in skillData), then ids with
- * metadata (cost/icon), then the first one seen.
+ * metadata (cost/icon), then purchasable ids (every unique shares its exact
+ * name with its inherited version, and cost math needs the one with a real
+ * baseCost), then the first one seen.
  */
 export function buildSkillNameToIdMap(
     skillNames: Record<string, string[]>,
-    skillMeta?: Record<string, unknown> | null,
+    skillMeta?: Record<string, { baseCost?: number }> | null,
     skillData?: Record<string, unknown> | null,
 ): Record<string, string> {
     const rank = (id: string): number =>
-        (skillData && id in skillData ? 2 : 0) +
-        (skillMeta && id in skillMeta ? 1 : 0)
+        (skillData && id in skillData ? 4 : 0) +
+        (skillMeta && id in skillMeta ? 2 : 0) +
+        ((skillMeta?.[id]?.baseCost ?? 0) > 0 ? 1 : 0)
     const map: Record<string, string> = {}
     for (const [id, names] of Object.entries(skillNames)) {
         const name = names[0]
@@ -726,6 +729,29 @@ export function calculateStatsFromRawResults(
         rangeUpper,
         ciMeanLower: mean - margin,
         ciMeanUpper: mean + margin,
+    }
+}
+
+/**
+ * Statistics of the opposite action on the same skill: removing a skill is
+ * the same comparison as taking it with the sign flipped, so every stat
+ * (including the cost/refund) negates and paired bounds swap. Lets the UI
+ * derive an owned-removal row from its buy row (and back) without
+ * re-simulating. Ownership flags are left to the caller.
+ */
+export function invertSkillResult(result: SkillResult): SkillResult {
+    return {
+        ...result,
+        cost: -result.cost,
+        meanLength: -result.meanLength,
+        medianLength: -result.medianLength,
+        meanLengthPerCost: result.meanLengthPerCost,
+        minLength: -result.maxLength,
+        maxLength: -result.minLength,
+        rangeLower: -result.rangeUpper,
+        rangeUpper: -result.rangeLower,
+        ciMeanLower: -result.ciMeanUpper,
+        ciMeanUpper: -result.ciMeanLower,
     }
 }
 
