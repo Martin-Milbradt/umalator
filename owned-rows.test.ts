@@ -97,6 +97,8 @@ describe('owned skill rows', () => {
         expect(downgrade).toBeDefined()
         expect(downgrade!.ownedAction).toBe('downgrade')
         expect(downgrade!.cost).toBe(-144)
+        // The downgrade tier's discount column shows its configured value.
+        expect(downgrade!.discount).toBe(0)
         // Downgrading loses at most the removal's full effect.
         expect(downgrade!.meanLength).toBeLessThanOrEqual(0)
         expect(downgrade!.meanLength).toBeGreaterThanOrEqual(
@@ -112,6 +114,47 @@ describe('owned skill rows', () => {
         expect(unique!.ownedAction).toBe('disable-unique')
         expect(unique!.hasCost).toBe(false)
         expect(unique!.meanLength).toBeLessThan(0)
+    }, 60000)
+
+    it('shows the downgrade tier its own configured discount', async () => {
+        const results = await runToCompletion({
+            ...baseConfig,
+            skills: {
+                Concentration: { discount: 0 },
+                'Professor of Curvature': { discount: 20 },
+                'Corner Adept ○': { discount: 30 },
+            },
+            numSimulations: 25,
+        })
+        const downgrade = results.get('Corner Adept ○')
+        expect(downgrade).toBeDefined()
+        expect(downgrade!.ownedAction).toBe('downgrade')
+        expect(downgrade!.discount).toBe(30)
+    }, 60000)
+
+    it('skips owned rows for skills without a configured discount', async () => {
+        const results = await runToCompletion({
+            ...baseConfig,
+            skills: {
+                Concentration: { discount: 0 },
+                'Professor of Curvature': { discount: null },
+                'Corner Adept ○': { discount: 0 },
+            },
+            numSimulations: 25,
+        })
+        // The owned gold's discount is "-": no removal row at all.
+        expect(results.has('Professor of Curvature')).toBe(false)
+        // The configured white tier still gets its downgrade row, but the
+        // refund is unknown without the gold's chain cost.
+        const downgrade = results.get('Corner Adept ○')
+        expect(downgrade).toBeDefined()
+        expect(downgrade!.ownedAction).toBe('downgrade')
+        expect(downgrade!.hasCost).toBe(false)
+        // Buy candidates and the unique are unaffected.
+        expect(results.has('Concentration')).toBe(true)
+        expect(results.get('Luck Runs My Way')?.ownedAction).toBe(
+            'disable-unique',
+        )
     }, 60000)
 
     it('skips owned rows when calcOwned is off', async () => {

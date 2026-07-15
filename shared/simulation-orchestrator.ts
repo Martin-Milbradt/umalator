@@ -608,7 +608,9 @@ export async function runSimulation(
     // removing loses, cost = the refunded SP, so mean/cost stays positive and
     // comparable to buy rows. Each owned skill gets a removal row plus one
     // downgrade row per less-advanced tier of its group; the unique gets a
-    // disable/re-enable row without cost columns.
+    // disable/re-enable row without cost columns. Like buy candidates, a
+    // skill only gets a row when its discount is configured (a "-" in the
+    // skills table keeps it out entirely).
     interface OwnedRowSpec {
         taskSkillId: string
         baseSkills: string[]
@@ -682,28 +684,28 @@ export async function runSimulation(
                 }
             }
             const ownCost = fullChainCost(ownedId, stripped)
-            ownedRowSpecs.set(ownedName, {
-                taskSkillId: ownedId,
-                baseSkills: stripped,
-                negate: true,
-                cost: ownCost !== null ? -ownCost : 0,
-                discount: discountForId(ownedId) ?? 0,
-                hasCost: ownCost !== null,
-                action: 'remove',
-            })
+            if (ownCost !== null) {
+                ownedRowSpecs.set(ownedName, {
+                    taskSkillId: ownedId,
+                    baseSkills: stripped,
+                    negate: true,
+                    cost: -ownCost,
+                    discount: discountForId(ownedId) ?? 0,
+                    hasCost: true,
+                    action: 'remove',
+                })
+            }
             for (const sibId of siblings) {
                 const sibName = skillNames[sibId]![0]!
                 const sibCost = fullChainCost(sibId, stripped)
-                const diff =
-                    ownCost !== null && sibCost !== null
-                        ? ownCost - sibCost
-                        : null
+                if (sibCost === null) continue
+                const diff = ownCost !== null ? ownCost - sibCost : null
                 ownedRowSpecs.set(sibName, {
                     taskSkillId: ownedId,
                     baseSkills: [...stripped, sibId],
                     negate: true,
                     cost: diff !== null ? -diff : 0,
-                    discount: 0,
+                    discount: discountForId(sibId) ?? 0,
                     hasCost: diff !== null,
                     action: 'downgrade',
                 })

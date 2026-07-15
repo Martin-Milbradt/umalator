@@ -6,6 +6,7 @@ import {
     callRenderSkills,
     callRenderUma,
 } from './renderCallbacks'
+import { hasConfiguredDiscount } from './skillHelpers'
 import { renderTrack, waitForCourseData } from './trackUI'
 import {
     clearSaveTimeout,
@@ -97,6 +98,15 @@ export async function loadConfig(filename: string): Promise<void> {
     try {
         for (const result of await configStore.loadResults(filename)) {
             calculatedResultsCache.set(result.skill, result)
+            // A removal/downgrade row for a skill whose discount is "-" stays
+            // out of the table (it remains cached so setting a discount
+            // brings it back without a run).
+            const gatedOwnedRow =
+                result.owned === true &&
+                (result.ownedAction === 'remove' ||
+                    result.ownedAction === 'downgrade') &&
+                !hasConfiguredDiscount(result.skill)
+            if (gatedOwnedRow) continue
             resultsMap.set(result.skill, { ...result, status: 'cached' })
         }
     } catch (e: unknown) {

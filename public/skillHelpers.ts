@@ -486,6 +486,16 @@ export function getSkillBaseCost(skillName: string): number {
 }
 
 /**
+ * Whether the skills table has a discount set for `skillName` (anything but
+ * "-"/None). Skills without one stay out of the results table, buy and owned
+ * rows alike.
+ */
+export function hasConfiguredDiscount(skillName: string): boolean {
+    const discount = getCurrentConfig()?.skills[skillName]?.discount
+    return discount !== null && discount !== undefined
+}
+
+/**
  * Calculate a skill's cost including the hints the Uma doesn't already cover.
  * Thin adapter over shared/skill-cost: resolves name → ID and reads discounts
  * from the live config.

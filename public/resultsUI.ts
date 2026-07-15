@@ -14,6 +14,7 @@ import {
     getSkillChainCost,
     getSkillCostWithDiscount,
     getSkillOrder,
+    hasConfiguredDiscount,
     isSkillOnUma,
     umaHasUpgradedVersion,
 } from './skillHelpers'
@@ -286,8 +287,8 @@ export function renderResultsTable(): void {
         }
         row.appendChild(skillCell)
 
-        // Cost: blank for owned rows without a known refund (skill absent
-        // from the skills table or set to "-") and for the unique.
+        // Cost: blank for owned rows without a known refund (downgrade rows
+        // whose owned tier has no configured discount) and for the unique.
         const costHidden = result.owned === true && result.hasCost !== true
         const costCell = document.createElement('td')
         costCell.className = 'p-1 text-right'
@@ -575,10 +576,35 @@ export function updateResultsForDiscountChange(
     const hadDiscount = oldDiscount !== null && oldDiscount !== undefined
     const hasDiscount = newDiscount !== null
 
-    // An owned row's discount only affects its refund, which
-    // refreshOwnedRowsForGroup (invoked by setDiscountForVariants after the
-    // per-variant updates) recomputes in place; the simulated stats don't
-    // depend on discounts. The row stays regardless of table membership.
+    // Owned rows are gated on a configured discount just like buy rows: "-"
+    // drops the row, setting a discount brings it back (from cache when the
+    // action still matches). Discount-to-discount changes only move the
+    // refund, which refreshOwnedRowsForGroup (invoked by
+    // setDiscountForVariants after the per-variant updates) recomputes in
+    // place; the simulated stats don't depend on discounts.
+    const ownedAction = isSkillOnUma(skillName)
+        ? ('remove' as const)
+        : umaHasUpgradedVersion(skillName)
+          ? ('downgrade' as const)
+          : null
+    if (ownedAction) {
+        if (hadDiscount && !hasDiscount) {
+            resultsMap.delete(skillName)
+            selectedSkills.delete(skillName)
+            renderResultsTable()
+        } else if (!hadDiscount && hasDiscount && getCalcOwned()) {
+            const cached = getCalculatedResultsCache().get(skillName)
+            if (cached?.owned && cached.ownedAction === ownedAction) {
+                resultsMap.set(skillName, { ...cached, status: 'cached' })
+                renderResultsTable()
+            } else {
+                addPendingOwnedRow(skillName, ownedAction)
+            }
+        }
+        return
+    }
+    // The unique's disable/enable row has no cost columns; it is unaffected
+    // by discount changes.
     const existingRow = resultsMap.get(skillName)
     if (existingRow?.owned) return
 
@@ -670,14 +696,15 @@ export function refreshGroupResults(skillName: string): void {
 
         calculatedResultsCache.delete(siblingName)
 
-        // Purple variants and phantom entries never get rows of any kind.
+        // Purple variants and phantom entries never get rows of any kind;
+        // a skill without a configured discount stays out of the table too.
         const simulatable =
             (siblingMeta.score ?? 1) >= 0 &&
             (!skillDataMap || siblingId in skillDataMap)
         const owned = isSkillOnUma(siblingName)
         const dominated = !owned && umaHasUpgradedVersion(siblingName)
         if (owned || dominated) {
-            if (calcOwned && simulatable) {
+            if (calcOwned && simulatable && hasConfiguredDiscount(siblingName)) {
                 addPendingOwnedRow(siblingName, owned ? 'remove' : 'downgrade')
             } else {
                 resultsMap.delete(siblingName)
@@ -731,11 +758,12 @@ export function refreshOwnedRowsForGroup(skillName: string): void {
         // Unique rows never show cost columns.
         if (action === 'disable-unique' || action === 'enable-unique') continue
 
+        // The discount column reflects the row skill's own configured
+        // discount for both removal and downgrade rows.
+        const discount = getCurrentConfig()?.skills[siblingName]?.discount ?? 0
         let refund: number | null
-        let discount = 0
         if (action === 'remove') {
             refund = getSkillChainCost(siblingName)
-            discount = getCurrentConfig()?.skills[siblingName]?.discount ?? 0
         } else {
             // Downgrade: refund is the chain-cost difference between the
             // owned tier and this one.
@@ -770,10 +798,16 @@ function addPendingOwnedRow(
     skillName: string,
     action: NonNullable<SkillResult['ownedAction']>,
 ): void {
+    // Removal/downgrade rows show the row skill's own configured discount;
+    // unique toggle rows have no cost columns.
+    const discount =
+        action === 'remove' || action === 'downgrade'
+            ? (getCurrentConfig()?.skills[skillName]?.discount ?? 0)
+            : 0
     getResultsMap().set(skillName, {
         skill: skillName,
         cost: 0,
-        discount: 0,
+        discount,
         meanLength: 0,
         medianLength: 0,
         meanLengthPerCost: 0,
@@ -859,7 +893,8 @@ export function undoLastUmaAction(): void {
 /**
  * Enumerate the owned rows the current uma state implies: a removal row per
  * owned skill, a downgrade row per dominated group tier, and the unique's
- * disable/re-enable row. Mirrors the row set a calculation run produces.
+ * disable/re-enable row. Skills without a configured discount get no row.
+ * Mirrors the row set a calculation run produces.
  */
 function forEachOwnedRow(
     callback: (
@@ -881,7 +916,7 @@ function forEachOwnedRow(
             const name = skillnames[skillId]?.[0] ?? umaSkill
             if (!seen.has(name)) {
                 seen.add(name)
-                callback(name, 'remove')
+                if (hasConfiguredDiscount(name)) callback(name, 'remove')
             }
             continue
         }
@@ -895,10 +930,10 @@ function forEachOwnedRow(
             if (!simulatable) continue
             if (isSkillOnUma(name)) {
                 seen.add(name)
-                callback(name, 'remove')
+                if (hasConfiguredDiscount(name)) callback(name, 'remove')
             } else if (umaHasUpgradedVersion(name)) {
                 seen.add(name)
-                callback(name, 'downgrade')
+                if (hasConfiguredDiscount(name)) callback(name, 'downgrade')
             }
         }
     }

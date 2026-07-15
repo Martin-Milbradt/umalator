@@ -122,6 +122,9 @@ describe('discount changes update owned refunds in the group', () => {
         expect(results.get(GOLD)?.hasCost).toBe(true)
         expect(results.get(RARE)?.cost).toBe(-135)
         expect(results.get(NORMAL)?.cost).toBe(-234)
+        // Downgrade rows carry the tier's own configured discount, not 0.
+        expect(results.get(RARE)?.discount).toBe(10)
+        expect(results.get(NORMAL)?.discount).toBe(10)
         expect(results.get(GOLD)?.meanLengthPerCost).toBeCloseTo(-0.5 / -324)
         expect(results.get(OTHER)?.status).toBe('fresh')
         expect(results.get(OTHER)?.cost).toBe(100)
@@ -148,15 +151,36 @@ describe('discount changes update owned refunds in the group', () => {
         expect(results.get(OTHER)?.status).toBe('fresh')
     })
 
-    it('clearing the owned skill discount blanks the refunds', () => {
+    it('clearing the owned skill discount drops its row and blanks sibling refunds', () => {
         setDiscountForVariants(GOLD, null)
         const results = getResultsMap()
-        // Refund unknown: the rows stay but their cost columns blank.
-        expect(results.get(GOLD)?.status).toBe('fresh')
-        expect(results.get(GOLD)?.hasCost).toBe(false)
-        expect(results.get(GOLD)?.cost).toBe(0)
+        // No discount, no row: the removal row leaves the table entirely.
+        expect(results.has(GOLD)).toBe(false)
+        // The configured downgrade tiers stay, but their refunds depend on
+        // the owned tier's chain cost, which is now unknown.
         expect(results.get(RARE)?.hasCost).toBe(false)
         expect(results.get(NORMAL)?.hasCost).toBe(false)
+    })
+
+    it('setting a discount on an owned skill without one restores its row', () => {
+        setDiscountForVariants(GOLD, null)
+        expect(getResultsMap().has(GOLD)).toBe(false)
+
+        setDiscountForVariants(GOLD, 10)
+        const row = getResultsMap().get(GOLD)
+        // No cached value survived, so the row queues for calculation.
+        expect(row?.status).toBe('pending')
+        expect(row?.owned).toBe(true)
+        expect(row?.ownedAction).toBe('remove')
+    })
+
+    it('restores a cached owned row when its discount comes back', () => {
+        getCalculatedResultsCache().set(GOLD, ownedRow(GOLD, 'remove'))
+        setDiscountForVariants(GOLD, null)
+        setDiscountForVariants(GOLD, 10)
+        const row = getResultsMap().get(GOLD)
+        expect(row?.status).toBe('cached')
+        expect(row?.meanLength).toBe(-0.5)
     })
 })
 
@@ -201,6 +225,28 @@ describe('Owned toggle restores cached rows without recalculating', () => {
         const results = getResultsMap()
         expect(results.get(GOLD)?.status).toBe('cached')
         // The dominated tiers have no cache entry and must be calculated.
+        expect(results.get(RARE)?.status).toBe('pending')
+        expect(results.get(NORMAL)?.status).toBe('pending')
+    })
+
+    it('skips owned rows for skills without a configured discount', () => {
+        setCurrentConfig({
+            skills: {
+                [GOLD]: { discount: null },
+                [RARE]: { discount: 10 },
+                [NORMAL]: { discount: 10 },
+            },
+            uma: { skills: [GOLD] },
+            filters: { calcOwned: true },
+        })
+        getCalculatedResultsCache().set(GOLD, ownedRow(GOLD, 'remove'))
+
+        restoreOwnedRows()
+
+        const results = getResultsMap()
+        // The owned gold has no discount configured, so no removal row even
+        // though a cached value exists.
+        expect(results.has(GOLD)).toBe(false)
         expect(results.get(RARE)?.status).toBe('pending')
         expect(results.get(NORMAL)?.status).toBe('pending')
     })
