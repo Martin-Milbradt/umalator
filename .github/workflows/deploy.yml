@@ -3,6 +3,12 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  # The build checks out upstream master for both submodules, so a deploy is
+  # the only thing that refreshes the site's game data. Without a timer the
+  # data sits at whatever the last push shipped. Off-the-hour to dodge the
+  # scheduler's peak-load queueing.
+  schedule:
+    - cron: '17 4 * * *'
   workflow_dispatch:
 
 permissions:

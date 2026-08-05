@@ -20,6 +20,15 @@ describe('update-submodules wiring', () => {
         expect(read(file)).toContain('update-submodules.mjs')
     })
 
+    it('deploy.yml runs on a timer so upstream data refreshes without a push', () => {
+        // The deploy is the only thing that rebuilds static/data from upstream
+        // master. Drop the schedule and the site's game data freezes at
+        // whatever the last push shipped.
+        expect(read('.github/workflows/deploy.yml')).toMatch(
+            /^\s{2}schedule:\n\s{4}- cron:/m,
+        )
+    })
+
     it.each(['docs/cloud-setup.md', 'CLAUDE.md'])(
         '%s documents the script and pins no SHA',
         (file) => {

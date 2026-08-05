@@ -111,6 +111,7 @@ npx tsx race-check.ts --races path/to/races.json --sims 200
 - `static/` is Vite's publicDir (configured in `vite.config.ts`) - files are copied as-is to `dist/`
 - GitHub Pages deploy sets `VITE_BASE=/umalator/` so asset paths resolve correctly
 - CI: `.github/workflows/ci.yml` runs `typecheck` + `build` + `test` on pushes/PRs; `deploy.yml` runs the same gates before publishing to Pages
+- `deploy.yml` also runs nightly (04:17 UTC) and on `workflow_dispatch`. Since the build checks out upstream master, that timer is what keeps the site's game data current between pushes
 
 ### Static vs Runtime Data
 
