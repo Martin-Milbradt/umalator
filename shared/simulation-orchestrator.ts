@@ -20,6 +20,7 @@ import {
     GroundCondition,
     Season,
     STRATEGY_TO_RUNNING_STYLE,
+    orderRangeForStrategy,
     TRACK_NAME_TO_ID,
     Time,
     calculateSkillCost,
@@ -30,6 +31,7 @@ import {
     createWeightedWeatherArray,
     extractSkillRestrictions,
     findMatchingCoursesWithFilters,
+    getEffectCoverage,
     findSkillIdByNameWithPreference,
     findSkillVariantsByName,
     getDistanceType,
@@ -396,6 +398,12 @@ export async function runSimulation(
     const strategyName = parseStrategyName(umaConfig.strategy)
     const conditions = parseRaceConditions(config.track, umaConfig)
 
+    // Order conditions (order<=N, order_rate>=X, ...) gate on the band the
+    // uma typically runs in, which depends on its strategy. The upstream
+    // 9-uma bands are scaled proportionally to the configured field size.
+    const orderRange =
+        orderRangeForStrategy(strategyName, numUmas) ?? undefined
+
     // mood and popularity are per-uma (they ride on baseUma), not per-race.
     const racedef: RaceDef = {
         groundCondition: conditions.groundCondition.value,
@@ -404,7 +412,7 @@ export async function runSimulation(
         time: Time.NoTime,
         grade: Grade.G1,
         skillId: '',
-        orderRange: numUmas ? [1, numUmas] : undefined,
+        orderRange,
         numUmas: numUmas,
     }
 
@@ -469,19 +477,14 @@ export async function runSimulation(
     // `deterministic` flag behaves like seed 0; otherwise each task gets a
     // fresh random seed.
     const seedBase = config.seed ?? (deterministic ? 0 : null)
-    // Base simOptions without seed - seed is generated per worker invocation
+    // Base simOptions without seed - seed is generated per worker invocation.
+    // usePosKeep enables the engine's pace-down/position-keep phase (upstream
+    // umalator's default); without it the uma runs free and HP drain — and
+    // with it every recovery skill — is heavily overvalued. Wisdom activation
+    // rolls (useIntChecks) stay off: skill efficiency compares having vs not
+    // having the skill, so random whiffs would only add variance.
     const baseSimOptions = {
-        useEnhancedSpurt: !deterministic,
-        accuracyMode: !deterministic,
-        pacemakerCount: 1,
-        allowRushedUma1: !deterministic,
-        allowRushedUma2: !deterministic,
-        allowDownhillUma1: !deterministic,
-        allowDownhillUma2: !deterministic,
-        allowSectionModifierUma1: !deterministic,
-        allowSectionModifierUma2: !deterministic,
-        skillCheckChanceUma1: false,
-        skillCheckChanceUma2: false,
+        usePosKeep: true,
     }
     // Counter to ensure unique seeds across all worker invocations
     let seedCounter = 0
@@ -613,6 +616,8 @@ export async function runSimulation(
     // skills table keeps it out entirely).
     interface OwnedRowSpec {
         taskSkillId: string
+        /** The skill the row is displayed as (differs from taskSkillId for downgrade rows). */
+        rowSkillId: string
         baseSkills: string[]
         negate: boolean
         cost: number
@@ -687,6 +692,7 @@ export async function runSimulation(
             if (ownCost !== null) {
                 ownedRowSpecs.set(ownedName, {
                     taskSkillId: ownedId,
+                    rowSkillId: ownedId,
                     baseSkills: stripped,
                     negate: true,
                     cost: -ownCost,
@@ -702,6 +708,7 @@ export async function runSimulation(
                 const diff = ownCost !== null ? ownCost - sibCost : null
                 ownedRowSpecs.set(sibName, {
                     taskSkillId: ownedId,
+                    rowSkillId: sibId,
                     baseSkills: [...stripped, sibId],
                     negate: true,
                     cost: diff !== null ? -diff : 0,
@@ -719,6 +726,7 @@ export async function runSimulation(
         if (uniqueName && (calcOwned || uniqueDisabled)) {
             ownedRowSpecs.set(uniqueName, {
                 taskSkillId: uniqueSkillId,
+                rowSkillId: uniqueSkillId,
                 baseSkills: umaSkillIds.filter((id) => id !== uniqueSkillId),
                 negate: !uniqueDisabled,
                 cost: 0,
@@ -751,7 +759,26 @@ export async function runSimulation(
 
     const confidenceInterval = config.confidenceInterval ?? 95
     const numSims = config.numSimulations ?? DEFAULT_NUM_SIMULATIONS
-    const concurrency = adapter.concurrency(availableSkillNames.length)
+
+    // The public engine maps effect types it doesn't know to Noop, so a skill
+    // whose effects are all unimplemented would simulate as exactly zero.
+    // Skip those simulations and mark the rows instead; partially implemented
+    // skills still run but carry a flag so the UI can warn.
+    const coverageByName = new Map<string, 'partial' | 'none'>()
+    for (const skillName of availableSkillNames) {
+        const skillId =
+            ownedRowSpecs.get(skillName)?.rowSkillId ?? skillNameToId[skillName]!
+        const entry = skillData[skillId]
+        if (!entry) continue
+        const coverage = getEffectCoverage(entry)
+        if (coverage !== 'full') coverageByName.set(skillName, coverage)
+    }
+    const skillNamesToSimulate = availableSkillNames.filter(
+        (name) => coverageByName.get(name) !== 'none',
+    )
+    const concurrency = adapter.concurrency(
+        Math.max(skillNamesToSimulate.length, 1),
+    )
 
     const buildTask = (skillName: string): SimulationTask => {
         const ownedSpec = ownedRowSpecs.get(skillName)
@@ -813,10 +840,34 @@ export async function runSimulation(
 
     onProgress({
         type: 'phase',
-        phase: `Running ${numSims} simulations for ${availableSkillNames.length} skills...`,
+        phase: `Running ${numSims} simulations for ${skillNamesToSimulate.length} skills...`,
     })
 
-    const factories = availableSkillNames.map((skillName) => async () => {
+    // Rows for skills with no implemented effects: no simulation, zeroed
+    // stats, coverage 'none' so the UI renders their columns as "-".
+    for (const skillName of availableSkillNames) {
+        if (coverageByName.get(skillName) !== 'none') continue
+        const rawInfo = skillRawResultsMap.get(skillName)
+        if (!rawInfo) continue
+        const ownedSpec = ownedRowSpecs.get(skillName)
+        const skillResult = calculateStatsFromRawResults(
+            [0],
+            rawInfo.cost,
+            rawInfo.discount,
+            skillName,
+            confidenceInterval,
+        )
+        skillResult.coverage = 'none'
+        if (ownedSpec) {
+            skillResult.owned = true
+            skillResult.ownedAction = ownedSpec.action
+            skillResult.hasCost = ownedSpec.hasCost
+        }
+        computedResults.set(skillName, skillResult)
+        onProgress({ type: 'result', result: skillResult })
+    }
+
+    const factories = skillNamesToSimulate.map((skillName) => async () => {
         const task = buildTask(skillName)
         try {
             return await adapter.runTask(task)
@@ -874,6 +925,8 @@ export async function runSimulation(
                     skillResult.ownedAction = ownedSpec.action
                     skillResult.hasCost = ownedSpec.hasCost
                 }
+                const coverage = coverageByName.get(result.skillName)
+                if (coverage) skillResult.coverage = coverage
                 computedResults.set(result.skillName, skillResult)
                 onProgress({ type: 'result', result: skillResult })
             }

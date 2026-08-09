@@ -13,6 +13,8 @@ import {
     calculateSkillCost,
     calculateStatsFromRawResults,
     canSkillTrigger,
+    getEffectCoverage,
+    orderRangeForStrategy,
     createWeightedConditionArray,
     createWeightedSeasonArray,
     createWeightedWeatherArray,
@@ -2734,5 +2736,81 @@ describe('invertSkillResult', () => {
 
     it('is its own inverse', () => {
         expect(invertSkillResult(invertSkillResult(buy))).toEqual(buy)
+    })
+})
+
+describe('getEffectCoverage', () => {
+    const entry = (types: number[][]) => ({
+        alternatives: types.map((alt) => ({
+            baseDuration: 0,
+            condition: '',
+            effects: alt.map((type) => ({ modifier: 1, target: 1, type })),
+            precondition: '',
+        })),
+        rarity: 1,
+        wisdomCheck: 1,
+    })
+
+    it('returns full when every effect type is implemented', () => {
+        expect(getEffectCoverage(entry([[27], [31, 9]]))).toBe('full')
+    })
+
+    it('returns partial when some effect types are unimplemented', () => {
+        // Nimble Navigator shape: Accel (31) + lane movement (28)
+        expect(getEffectCoverage(entry([[31, 28]]))).toBe('partial')
+    })
+
+    it('returns none when no effect type is implemented', () => {
+        // Go with the Flow shape: lane movement (28) only
+        expect(getEffectCoverage(entry([[28]]))).toBe('none')
+        // Sixth Sense shape: 28 + vision (35)
+        expect(getEffectCoverage(entry([[28, 35]]))).toBe('none')
+    })
+
+    it('returns none for an entry without effects', () => {
+        expect(getEffectCoverage(entry([]))).toBe('none')
+    })
+})
+
+describe('orderRangeForStrategy', () => {
+    it.each([
+        ['Nige', [1, 1]],
+        ['Senkou', [2, 4]],
+        ['Sasi', [5, 9]],
+        ['Oikomi', [5, 9]],
+        ['Oonige', [1, 1]],
+    ])('reproduces the base band for %s at field size 9', (strategy, expected) => {
+        expect(orderRangeForStrategy(strategy, 9)).toEqual(expected)
+    })
+
+    it.each([
+        // 18-uma: bands double
+        ['Nige', 18, [1, 2]],
+        ['Senkou', 18, [3, 8]],
+        ['Sasi', 18, [9, 18]],
+        // 6-uma: bands shrink and may overlap (Senkou [1,3] vs Sasi [3,6])
+        ['Nige', 6, [1, 1]],
+        ['Senkou', 6, [1, 3]],
+        ['Sasi', 6, [3, 6]],
+        // 12-uma
+        ['Senkou', 12, [2, 6]],
+        ['Oikomi', 12, [6, 12]],
+    ])('scales %s to field size %d', (strategy, numUmas, expected) => {
+        expect(orderRangeForStrategy(strategy, numUmas as number)).toEqual(expected)
+    })
+
+    it('always contains at least one position, even in tiny fields', () => {
+        for (const strategy of ['Nige', 'Senkou', 'Sasi', 'Oikomi', 'Oonige']) {
+            for (let numUmas = 1; numUmas <= 18; numUmas++) {
+                const range = orderRangeForStrategy(strategy, numUmas)!
+                expect(range[0]).toBeGreaterThanOrEqual(1)
+                expect(range[1]).toBeGreaterThanOrEqual(range[0])
+                expect(range[1]).toBeLessThanOrEqual(Math.max(numUmas, 1))
+            }
+        }
+    })
+
+    it('returns null for an unknown strategy', () => {
+        expect(orderRangeForStrategy('NotAStrategy', 9)).toBeNull()
     })
 })

@@ -166,4 +166,71 @@ describe('runSimulation orchestration', () => {
         expect(events.some((e) => e.type === 'error')).toBe(true)
         expect(events.some((e) => e.type === 'complete')).toBe(false)
     })
+
+    it('enables position keep on every task', async () => {
+        const { adapter, tasks } = fakeAdapter((t) => t.numSimulations)
+        await collect(baseConfig(), adapter)
+        expect(tasks.length).toBeGreaterThan(0)
+        for (const task of tasks) {
+            expect(task.simOptions.usePosKeep).toBe(true)
+        }
+    })
+
+    it.each([
+        ['Front Runner', [1, 1]],
+        ['Pace Chaser', [2, 4]],
+        ['Late Surger', [5, 9]],
+        ['End Closer', [5, 9]],
+        ['Runaway', [1, 1]],
+    ])(
+        'uses the per-strategy order range for %s in a 9-uma field',
+        async (strategy, expected) => {
+            const { adapter, tasks } = fakeAdapter((t) => t.numSimulations)
+            const config = baseConfig({ uma: { strategy } })
+            config.track.numUmas = 9
+            await collect(config, adapter)
+            expect(tasks.length).toBeGreaterThan(0)
+            for (const task of tasks) {
+                expect(task.racedef.orderRange).toEqual(expected)
+            }
+        },
+    )
+
+    it('skips skills with no implemented effects and tags partial ones', async () => {
+        const { adapter, tasks } = fakeAdapter((t) => t.numSimulations)
+        // Go with the Flow: only a lane-movement effect (type 28) -> 'none'.
+        // Nimble Navigator: Accel + lane movement -> 'partial'.
+        // Concentration: start-delay effect -> fully implemented.
+        const events = await collect(
+            baseConfig({
+                skills: {
+                    Concentration: { discount: 0 },
+                    'Go with the Flow': { discount: 0 },
+                    'Nimble Navigator': { discount: 0 },
+                },
+            }),
+            adapter,
+        )
+        const simulated = tasks.map((t) => t.skillName)
+        expect(simulated).not.toContain('Go with the Flow')
+        expect(simulated).toContain('Nimble Navigator')
+        expect(simulated).toContain('Concentration')
+
+        const results = events.find((e) => e.type === 'complete')!.results!
+        const byName = new Map(results.map((r) => [r.skill, r]))
+        expect(byName.get('Go with the Flow')?.coverage).toBe('none')
+        expect(byName.get('Nimble Navigator')?.coverage).toBe('partial')
+        expect(byName.get('Concentration')?.coverage).toBeUndefined()
+    })
+
+    it('scales the order range with the configured field size', async () => {
+        const { adapter, tasks } = fakeAdapter((t) => t.numSimulations)
+        const config = baseConfig({ uma: { strategy: 'End Closer' } })
+        config.track.numUmas = 18
+        await collect(config, adapter)
+        expect(tasks.length).toBeGreaterThan(0)
+        for (const task of tasks) {
+            expect(task.racedef.orderRange).toEqual([9, 18])
+        }
+    })
 })

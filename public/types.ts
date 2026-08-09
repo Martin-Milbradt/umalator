@@ -89,6 +89,10 @@ export interface SkillResult {
     owned?: boolean
     ownedAction?: 'remove' | 'downgrade' | 'disable-unique' | 'enable-unique'
     hasCost?: boolean
+    // Set when the engine does not implement all of the skill's effects:
+    // 'partial' rows simulated with the missing effects doing nothing,
+    // 'none' rows skipped entirely (every stat column renders as "-").
+    coverage?: 'partial' | 'none'
 }
 
 export interface SkillResultWithStatus extends SkillResult {

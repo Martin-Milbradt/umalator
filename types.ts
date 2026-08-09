@@ -43,21 +43,11 @@ export interface HorseStateData {
 }
 
 /**
- * Simulation options for the race comparison engine.
+ * Simulation options for the race comparison engine. Only options the
+ * vendored runComparison (shared/compare.ts) actually consumes belong here.
  */
 export interface SimulationOptions {
     seed: number | null
-    useEnhancedSpurt?: boolean
-    accuracyMode?: boolean
-    pacemakerCount?: number
-    allowRushedUma1?: boolean
-    allowRushedUma2?: boolean
-    allowDownhillUma1?: boolean
-    allowDownhillUma2?: boolean
-    allowSectionModifierUma1?: boolean
-    allowSectionModifierUma2?: boolean
-    skillCheckChanceUma1?: boolean
-    skillCheckChanceUma2?: boolean
     usePosKeep?: boolean
     useIntChecks?: boolean
 }

@@ -155,6 +155,10 @@ export interface SkillResult {
     owned?: boolean
     ownedAction?: 'remove' | 'downgrade' | 'disable-unique' | 'enable-unique'
     hasCost?: boolean
+    // Set when the engine does not implement all of the skill's effects:
+    // 'partial' rows simulated with the missing effects doing nothing,
+    // 'none' rows skipped entirely (every stat column renders as "-").
+    coverage?: 'partial' | 'none'
 }
 
 export function parseGroundCondition(name: string): GroundCondition {
@@ -999,6 +1003,38 @@ export function normalizeConfigSkillNames(
     return config
 }
 
+// Typical running-order band per strategy in a 9-uma field, matching upstream
+// umalator's ORDER_RANGE_FOR_STRATEGY. Keyed by internal strategy name.
+export const ORDER_RANGE_FOR_STRATEGY: Record<string, [number, number]> = {
+    Nige: [1, 1],
+    Oikomi: [5, 9],
+    Oonige: [1, 1],
+    Sasi: [5, 9],
+    Senkou: [2, 4],
+}
+
+/**
+ * Scales a strategy's 9-uma order band to the actual field size.
+ *
+ * The band [lo, hi] is read as the rate interval ((lo-1)/9, hi/9] of the
+ * field; the scaled range contains every position whose slice of an N-uma
+ * field intersects it. Reproduces the base bands exactly at N=9, always
+ * contains at least one position, and adjacent bands may overlap at other
+ * field sizes. Returns null for strategies without a band.
+ */
+export function orderRangeForStrategy(
+    strategyName: string,
+    numUmas: number,
+): [number, number] | null {
+    const band = ORDER_RANGE_FOR_STRATEGY[strategyName]
+    if (!band) return null
+    const [lo, hi] = band
+    return [
+        Math.floor(((lo - 1) * numUmas) / 9) + 1,
+        Math.max(Math.ceil((hi * numUmas) / 9), 1),
+    ]
+}
+
 // Mapping constants for skill trigger checking
 // Running style values verified from skill_data.json:
 // 1=Front Runner (Nige), 2=Pace Chaser (Senkou), 3=Late Surger (Sasi), 4=End Closer (Oikomi), 5=Runaway (Oonige)
@@ -1526,6 +1562,30 @@ export interface SkillDataEntry {
     alternatives: SkillDataAlternative[]
     rarity: number
     wisdomCheck: number
+}
+
+// Effect types the public uma-skill-tools engine acts on (its SkillType
+// enum); buildSkillEffects maps everything else to Noop. Types that appear in
+// skill_data.json but not here (6 fatigue, 8 speed-with-decel drain, 28 lane
+// movement, 35 vision) silently do nothing in simulation.
+export const IMPLEMENTED_EFFECT_TYPES: ReadonlySet<number> = new Set([
+    1, 2, 3, 4, 5, 9, 10, 13, 14, 21, 22, 27, 29, 31, 37, 42,
+])
+
+/** How much of a skill's effects the simulation engine implements. */
+export type EffectCoverage = 'full' | 'partial' | 'none'
+
+export function getEffectCoverage(entry: SkillDataEntry): EffectCoverage {
+    let implemented = 0
+    let total = 0
+    for (const alt of entry.alternatives) {
+        for (const effect of alt.effects) {
+            total++
+            if (IMPLEMENTED_EFFECT_TYPES.has(effect.type)) implemented++
+        }
+    }
+    if (total === 0 || implemented === 0) return 'none'
+    return implemented === total ? 'full' : 'partial'
 }
 
 /**

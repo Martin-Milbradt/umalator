@@ -342,6 +342,22 @@ export interface ComparisonResult {
     }
 }
 
+/**
+ * splitmix32 finalizer: spreads a low-entropy word across all 32 bits.
+ * Rule30CARng needs this because it starts from the seed verbatim and takes
+ * many steps to mix a mostly-zero state; with a small seed (a sequential
+ * counter, anything below ~2^30) its first draws are 0. The engine's first
+ * draw per run is the start delay, so without mixing, start-delay skills
+ * (Focus, Concentration) silently do nothing for most seeds.
+ */
+function mix32(x: number): number {
+    x = (x >>> 0) ^ ((x >>> 0) >>> 16)
+    x = Math.imul(x, 0x21f0aaad)
+    x = (x >>> 0) ^ ((x >>> 0) >>> 15)
+    x = Math.imul(x, 0x735a2d97)
+    return ((x >>> 0) ^ ((x >>> 0) >>> 15)) >>> 0
+}
+
 // builder.onSkillActivate declares a 2-arg callback but the solver invokes it
 // with (solver, skillId, perspective); widen so our 3-arg handlers type-check.
 type SkillCallback = (s: RaceSolver, id: string, persp?: Perspective) => void
@@ -360,7 +376,7 @@ export function runComparison(
     options: CompareOptions,
 ): ComparisonResult {
     const standard = new RaceSolverBuilder(nsamples)
-        .seed(...seed)
+        .seed(mix32(seed[0]), mix32(seed[1] ^ 0x9e3779b9))
         .course(course)
         .ground(racedef.groundCondition)
         .weather(racedef.weather)

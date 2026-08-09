@@ -41,17 +41,7 @@ describe('random weather consistency', () => {
 
     const baseSimOptions = {
         seed: 42,
-        useEnhancedSpurt: true,
-        accuracyMode: true,
-        pacemakerCount: 1,
-        allowRushedUma1: true,
-        allowRushedUma2: true,
-        allowDownhillUma1: true,
-        allowDownhillUma2: true,
-        allowSectionModifierUma1: true,
-        allowSectionModifierUma2: true,
-        skillCheckChanceUma1: false,
-        skillCheckChanceUma2: false,
+        usePosKeep: true,
     }
 
     const runWorker = (task: SimulationTask): Promise<{ mean: number }> => {

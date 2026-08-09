@@ -170,6 +170,27 @@ describe('runComparison', () => {
     })
 })
 
+describe('seed mixing', () => {
+    // Rule30CARng's early draws collapse to 0 for low-entropy seeds, and the
+    // solver's very first draw is the start delay. Focus (200432) only
+    // multiplies the start delay, so before seeds were mixed it measured
+    // exactly 0 for most small/sequential seeds.
+    it('start-delay skills have an effect under small seeds', () => {
+        for (const seed of [0, 1, 999] as const) {
+            const { results } = runComparison(
+                25,
+                hanshin1600,
+                racedef,
+                makeUma({}),
+                makeUma({ skills: SkillSet(['200432']) }),
+                [seed, 0],
+                {},
+            )
+            expect(results.some((x) => x !== 0)).toBe(true)
+        }
+    })
+})
+
 describe('dynamicModifierFactor', () => {
     it.each([
         [1, 1],

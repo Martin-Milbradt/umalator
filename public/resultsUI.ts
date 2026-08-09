@@ -40,6 +40,7 @@ import {
     setSortColumn,
     setSortDirection,
 } from './state'
+import { describeSkill } from './skillDescription'
 import type { SkillResult, SkillResultWithStatus } from './types'
 
 function getCalcOwned(): boolean {
@@ -267,29 +268,44 @@ export function renderResultsTable(): void {
         addCell.appendChild(addBtn)
         row.appendChild(addCell)
 
-        // Skill name
+        // Skill name (with effect tooltip and, for skills whose effects the
+        // engine only partially implements, a warning triangle).
         const skillCell = document.createElement('td')
         skillCell.className = 'p-1'
         const icon = createSkillIcon(
             result.skill,
             action === 'disable-unique' || action === 'enable-unique',
         )
-        if (icon) {
-            const wrapper = document.createElement('div')
-            wrapper.className = 'flex items-center gap-1'
-            const text = document.createElement('span')
-            text.textContent = result.skill
-            wrapper.appendChild(icon)
-            wrapper.appendChild(text)
-            skillCell.appendChild(wrapper)
-        } else {
-            skillCell.textContent = result.skill
+        const wrapper = document.createElement('div')
+        wrapper.className = 'flex items-center gap-1'
+        if (icon) wrapper.appendChild(icon)
+        const text = document.createElement('span')
+        text.textContent = result.skill
+        const desc = describeSkill(result.skill)
+        if (desc) text.title = desc
+        wrapper.appendChild(text)
+        if (result.coverage) {
+            const warn = document.createElement('span')
+            warn.textContent = '⚠'
+            warn.className = result.owned
+                ? 'text-zinc-500'
+                : 'text-yellow-400'
+            warn.title =
+                result.coverage === 'none'
+                    ? 'None of this skill’s effects are implemented by the simulation engine; it was not simulated.'
+                    : 'Some of this skill’s effects are not implemented by the simulation engine; results underestimate its value.'
+            wrapper.appendChild(warn)
         }
+        skillCell.appendChild(wrapper)
         row.appendChild(skillCell)
 
         // Cost: blank for owned rows without a known refund (downgrade rows
         // whose owned tier has no configured discount) and for the unique.
         const costHidden = result.owned === true && result.hasCost !== true
+        // Unsimulated rows (no implemented effects) blank every stat column.
+        const noStats = result.coverage === 'none'
+        const statText = (value: () => string): string =>
+            result.status === 'pending' ? '...' : noStats ? '-' : value()
         const costCell = document.createElement('td')
         costCell.className = 'p-1 text-right'
         costCell.textContent = costHidden ? '-' : result.cost.toString()
@@ -305,53 +321,46 @@ export function renderResultsTable(): void {
         // Mean
         const meanCell = document.createElement('td')
         meanCell.className = 'p-1 text-right'
-        meanCell.textContent =
-            result.status === 'pending' ? '...' : result.meanLength.toFixed(2)
+        meanCell.textContent = statText(() => result.meanLength.toFixed(2))
         row.appendChild(meanCell)
 
         // Median
         const medianCell = document.createElement('td')
         medianCell.className = 'p-1 text-right'
-        medianCell.textContent =
-            result.status === 'pending' ? '...' : result.medianLength.toFixed(2)
+        medianCell.textContent = statText(() => result.medianLength.toFixed(2))
         row.appendChild(medianCell)
 
         // Mean/Cost
         const effCell = document.createElement('td')
         effCell.className = 'p-1 text-right'
-        effCell.textContent =
-            result.status === 'pending'
-                ? '...'
-                : costHidden
-                  ? '-'
-                  : (result.meanLengthPerCost * 1000).toFixed(2)
+        effCell.textContent = statText(() =>
+            costHidden ? '-' : (result.meanLengthPerCost * 1000).toFixed(2),
+        )
         row.appendChild(effCell)
 
         // Min-Max
         const minMaxCell = document.createElement('td')
         minMaxCell.className = 'p-1 text-right'
-        minMaxCell.textContent =
-            result.status === 'pending'
-                ? '...'
-                : `${result.minLength.toFixed(2)}-${result.maxLength.toFixed(2)}`
+        minMaxCell.textContent = statText(
+            () =>
+                `${result.minLength.toFixed(2)}-${result.maxLength.toFixed(2)}`,
+        )
         row.appendChild(minMaxCell)
 
         // Range: central percentile band of per-race outcomes (spread).
         const rangeCell = document.createElement('td')
         rangeCell.className = 'p-1 text-right'
-        rangeCell.textContent =
-            result.status === 'pending'
-                ? '...'
-                : formatInterval(result.rangeLower, result.rangeUpper)
+        rangeCell.textContent = statText(() =>
+            formatInterval(result.rangeLower, result.rangeUpper),
+        )
         row.appendChild(rangeCell)
 
         // Mean CI: confidence interval of the mean gain (precision of the mean).
         const ciMeanCell = document.createElement('td')
         ciMeanCell.className = 'p-1 text-right'
-        ciMeanCell.textContent =
-            result.status === 'pending'
-                ? '...'
-                : formatInterval(result.ciMeanLower, result.ciMeanUpper)
+        ciMeanCell.textContent = statText(() =>
+            formatInterval(result.ciMeanLower, result.ciMeanUpper),
+        )
         row.appendChild(ciMeanCell)
 
         tbody.appendChild(row)
