@@ -5,7 +5,6 @@
       "Bash(npm run:*)",
       "Bash(npm run build:frontend:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(git checkout:*)",
       "Bash(gh issue create:*)",
       "Bash(npm install:*)",
       "Bash(npm test:*)",
