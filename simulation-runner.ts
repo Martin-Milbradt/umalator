@@ -3,7 +3,7 @@
 // shared/simulation-orchestrator.ts (shared with the browser runner).
 import { cpus } from 'node:os'
 import { Worker } from 'node:worker_threads'
-import type { SimulationTask } from './types'
+import type { SimulationTask, WorkerMessage } from './types'
 import {
     type ProgressCallback,
     type SimulationRunnerConfig,
@@ -44,22 +44,15 @@ function runNodeTask(workerPath: URL, task: SimulationTask): Promise<TaskResult>
             )
         }, WORKER_TIMEOUT_MS)
 
-        worker.on(
-            'message',
-            (message: {
-                success: boolean
-                result?: TaskResult
-                error?: string
-            }) => {
-                clearTimeout(timeoutId)
-                if (message.success && message.result) {
-                    resolve(message.result)
-                } else {
-                    reject(new Error(message.error || 'Unknown error'))
-                }
-                worker.terminate()
-            },
-        )
+        worker.on('message', (message: WorkerMessage) => {
+            clearTimeout(timeoutId)
+            if (message.success && message.result) {
+                resolve(message.result)
+            } else {
+                reject(new Error(message.error || 'Unknown error'))
+            }
+            worker.terminate()
+        })
 
         worker.on('error', (error) => {
             clearTimeout(timeoutId)

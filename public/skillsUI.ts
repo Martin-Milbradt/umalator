@@ -450,12 +450,8 @@ function buildSkillRow(skillName: string): HTMLDivElement | null {
                 currentDiscount === skillDefault) ||
             ((skillDefault === undefined || skillDefault === null) &&
                 (currentDiscount === null || currentDiscount === undefined))
-        if (isCurrentlyDefault) {
-            updateSkillVariantsDefault(skillName, 'remove')
-        } else if (
-            currentDiscount === null ||
-            currentDiscount === undefined
-        ) {
+        // A null discount can't be locked in, so it also removes the default.
+        if (isCurrentlyDefault || currentDiscount == null) {
             updateSkillVariantsDefault(skillName, 'remove')
         } else {
             updateSkillVariantsDefault(skillName, 'set', currentDiscount)
@@ -723,12 +719,9 @@ export function setupSkillsContainerDelegation(): void {
                 ((skillDefault === undefined || skillDefault === null) &&
                     (currentDiscount === null || currentDiscount === undefined))
 
-            if (isCurrentlyDefault) {
-                updateSkillVariantsDefault(skillName, 'remove')
-            } else if (
-                currentDiscount === null ||
-                currentDiscount === undefined
-            ) {
+            // A null discount can't be locked in, so it also removes the
+            // default.
+            if (isCurrentlyDefault || currentDiscount == null) {
                 updateSkillVariantsDefault(skillName, 'remove')
             } else {
                 updateSkillVariantsDefault(skillName, 'set', currentDiscount)

@@ -42,6 +42,7 @@ import type {
     Surface,
     ThresholdStat,
 } from './uma-tools/uma-skill-tools/CourseData'
+import type { RawCourseData } from './types'
 
 // Mapping constants for parsing functions
 const CONDITION_MAP: Record<string, GroundCondition> = {
@@ -432,19 +433,7 @@ export function findSkillVariantsByName(
     return variants
 }
 
-export function processCourseData(rawCourse: {
-    raceTrackId: number
-    distance: number
-    distanceType: DistanceType
-    surface: Surface
-    turn: Orientation
-    courseSetStatus: readonly ThresholdStat[]
-    corners: Array<{ start: number; length: number }>
-    straights: readonly { start: number; end: number; frontType: number }[]
-    slopes: readonly { start: number; length: number; slope: number }[]
-    laneMax: number
-    [key: string]: unknown
-}): CourseData {
+export function processCourseData(rawCourse: RawCourseData): CourseData {
     const courseWidth = 11.25
     const horseLane = courseWidth / 18.0
     const laneChangeAcceleration = 0.02 * 1.5
@@ -825,18 +814,7 @@ export function calculateSkillCost(
 }
 
 export function findMatchingCoursesWithFilters(
-    courseData: Record<
-        string,
-        {
-            raceTrackId: number
-            surface: number
-            distanceType: number
-            distance: number
-            corners: Array<{ start: number; length: number }>
-            laneMax: number
-            [key: string]: unknown
-        }
-    >,
+    courseData: Record<string, RawCourseData>,
     trackNames: Record<string, string[]>,
     trackName: string | undefined,
     distance: number | string | undefined,
@@ -879,30 +857,7 @@ export function findMatchingCoursesWithFilters(
             }
         }
 
-        const processedCourse = processCourseData(
-            rawCourse as {
-                raceTrackId: number
-                distance: number
-                distanceType: DistanceType
-                surface: Surface
-                turn: Orientation
-                courseSetStatus: readonly ThresholdStat[]
-                corners: Array<{ start: number; length: number }>
-                straights: readonly {
-                    start: number
-                    end: number
-                    frontType: number
-                }[]
-                slopes: readonly {
-                    start: number
-                    length: number
-                    slope: number
-                }[]
-                laneMax: number
-                [key: string]: unknown
-            },
-        )
-        matches.push({ courseId, course: processedCourse })
+        matches.push({ courseId, course: processCourseData(rawCourse) })
     }
 
     return matches

@@ -577,13 +577,13 @@ export function removeSkillFromUma(skillName: string): void {
 export function updateResultsForDiscountChange(
     skillName: string,
     oldDiscount: number | null | undefined,
-    newDiscount: number | null,
+    newDiscount: number | null | undefined,
 ): void {
     const resultsMap = getResultsMap()
     const selectedSkills = getSelectedSkills()
 
-    const hadDiscount = oldDiscount !== null && oldDiscount !== undefined
-    const hasDiscount = newDiscount !== null
+    const hadDiscount = oldDiscount != null
+    const hasDiscount = newDiscount != null
 
     // Owned rows are gated on a configured discount just like buy rows: "-"
     // drops the row, setting a discount brings it back (from cache when the

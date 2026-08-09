@@ -595,6 +595,9 @@ describe('processCourseData', () => {
         const rawCourse = {
             raceTrackId: 10001,
             distance: 1000,
+            course: 1,
+            finishTimeMax: 120,
+            finishTimeMin: 60,
             distanceType: DistanceType.Short,
             surface: Surface.Turf,
             turn: Orientation.NoTurns,
@@ -621,6 +624,9 @@ describe('processCourseData', () => {
         const rawCourse = {
             raceTrackId: 10001,
             distance: 1000,
+            course: 1,
+            finishTimeMax: 120,
+            finishTimeMin: 60,
             distanceType: DistanceType.Short,
             surface: Surface.Turf,
             turn: Orientation.Clockwise,
@@ -647,6 +653,9 @@ describe('processCourseData', () => {
         const rawCourse = {
             raceTrackId: 10001,
             distance: 1000,
+            course: 1,
+            finishTimeMax: 120,
+            finishTimeMin: 60,
             distanceType: DistanceType.Short,
             surface: Surface.Turf,
             turn: Orientation.Clockwise,

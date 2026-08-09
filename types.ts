@@ -107,13 +107,16 @@ export interface SkillMeta {
 
 /**
  * Course data entry from course_data.json (raw format before processing).
+ * surface/distanceType/turn are the engine's const enums (plain numbers at
+ * runtime); typing them as such lets processCourseData consume this shape
+ * without casts.
  */
 export interface RawCourseData {
     raceTrackId: number
-    surface: number
-    distanceType: number
+    surface: import('./uma-tools/uma-skill-tools/CourseData').Surface
+    distanceType: import('./uma-tools/uma-skill-tools/CourseData').DistanceType
     distance: number
-    turn: number
+    turn: import('./uma-tools/uma-skill-tools/CourseData').Orientation
     course: number
     finishTimeMax: number
     finishTimeMin: number
@@ -122,5 +125,4 @@ export interface RawCourseData {
     straights: readonly { start: number; end: number; frontType: number }[]
     slopes: readonly { start: number; length: number; slope: number }[]
     laneMax: number
-    [key: string]: unknown
 }

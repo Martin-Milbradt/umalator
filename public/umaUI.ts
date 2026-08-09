@@ -217,7 +217,10 @@ export function renderUma(): void {
             if (!currentConfig.uma) {
                 currentConfig.uma = {}
             }
-            ;(currentConfig.uma as Record<string, unknown>)[field.key] = value
+            // Key stays constrained to keyof Uma; only the value widens (a
+            // dynamic key can't prove the per-key value type).
+            ;(currentConfig.uma as Record<keyof Uma, unknown>)[field.key] =
+                value
 
             // Re-render skills when strategy changes (affects running style filtering)
             if (field.key === 'strategy') {

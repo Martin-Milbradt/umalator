@@ -302,7 +302,10 @@ export function renderTrack(): void {
             if (!currentConfig.track) {
                 currentConfig.track = {}
             }
-            ;(currentConfig.track as Record<string, unknown>)[field.key] = value
+            // Key stays constrained to keyof Track; only the value widens (a
+            // dynamic key can't prove the per-key value type).
+            ;(currentConfig.track as Record<keyof Track, unknown>)[field.key] =
+                value
 
             if (field.key === 'trackName' || field.key === 'surface') {
                 await waitForCourseData()
