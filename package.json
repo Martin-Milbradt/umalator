@@ -8,7 +8,7 @@
     "build:frontend": "vite build",
     "dev": "npm run build && vite",
     "markdownlint": "markdownlint-cli2 \"**/*.md\"",
-    "postinstall": "node scripts/update-submodules.mjs",
+    "postinstall": "node scripts/update-submodules.mjs && node scripts/install-git-hooks.mjs",
     "setup": "git submodule update --init --recursive && node scripts/update-submodules.mjs --strict && npm run build",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",

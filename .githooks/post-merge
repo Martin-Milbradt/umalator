@@ -1,0 +1,5 @@
+#!/bin/sh
+# Keep the floating submodules on upstream master after every pull.
+# The nightly deploy pushes a gitlink bump whenever upstream advances, so
+# pulling that commit lands here and refreshes the local checkout too.
+node scripts/update-submodules.mjs

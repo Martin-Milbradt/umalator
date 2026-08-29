@@ -177,7 +177,8 @@ records. (The nested `uma-skill-tools` sitting ahead of *its* recorded
 gitlink is hidden by `ignore = dirty` in `.gitmodules`.) Committing the
 pointer bump (`git add uma-tools`) is fine and keeps the recorded baseline
 current, but it ships nothing by itself: CI and deploys update to upstream
-master on their own. When committing unrelated changes, stage files
+master on their own, and the nightly deploy pushes the bump automatically
+once its gates pass, so the noise usually clears itself within a day. When committing unrelated changes, stage files
 explicitly (`git add <your files>`) rather than `git add -A`, so the pointer
 bump stays a deliberate act. To return to the recorded state:
 

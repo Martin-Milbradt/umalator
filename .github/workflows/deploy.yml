@@ -12,7 +12,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  # write: the build job pushes a gitlink bump when upstream advanced
+  contents: write
   pages: write
   id-token: write
 
@@ -52,6 +53,23 @@ jobs:
       - run: npm run build
       - name: Test
         run: npm test
+      # Record the just-validated submodule as the committed baseline so a
+      # plain `git pull` (whose post-merge hook runs update-submodules.mjs)
+      # brings clones current without a manual bump. Runs after the gates so
+      # a broken upstream never becomes the baseline. GITHUB_TOKEN pushes do
+      # not trigger workflows, so this cannot loop.
+      - name: Push gitlink bump
+        run: |
+          if git diff --quiet -- uma-tools; then
+            echo "gitlink already current"
+          else
+            sha=$(git -C uma-tools rev-parse --short HEAD)
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add uma-tools
+            git commit -m "chore(data): advance uma-tools to upstream $sha"
+            git push origin HEAD:main
+          fi
       - run: npm run build:frontend
         env:
           VITE_BASE: /umalator/
