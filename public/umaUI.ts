@@ -8,7 +8,7 @@ import {
     getCanonicalSkillName,
     getGroupVariantOnUma,
     getShowIcons,
-    getSkillCostWithDiscount,
+    getSkillChainValue,
     getSkillIconUrl,
     getUniqueSkillIconUrl,
     isValidSkillName,
@@ -316,7 +316,7 @@ export function renderUma(): void {
                 if (newValue && newValue !== skill) {
                     // Renaming skill - treat as remove old + add new
 
-                    adjustSkillPoints(getSkillCostWithDiscount(skill))
+                    adjustSkillPoints(getSkillChainValue(skill))
 
                     // Check if new skill already on Uma
                     if (skills.includes(newValue)) {
@@ -331,7 +331,7 @@ export function renderUma(): void {
                     let newSkills: string[]
                     if (existingVariant && existingVariant !== skill) {
                         adjustSkillPoints(
-                            getSkillCostWithDiscount(existingVariant),
+                            getSkillChainValue(existingVariant),
                         )
                         newSkills = skills.filter(
                             (s, i) => i !== index && s !== existingVariant,
@@ -342,11 +342,11 @@ export function renderUma(): void {
                         newSkills[index] = newValue
                     }
 
-                    adjustSkillPoints(-getSkillCostWithDiscount(newValue))
+                    adjustSkillPoints(-getSkillChainValue(newValue))
 
                     updateSkills(newSkills, [skill, newValue])
                 } else if (!newValue) {
-                    adjustSkillPoints(getSkillCostWithDiscount(skill))
+                    adjustSkillPoints(getSkillChainValue(skill))
                     const newSkills = skills.filter((_, i) => i !== index)
                     updateSkills(newSkills, [skill])
                 } else {
@@ -381,7 +381,7 @@ export function renderUma(): void {
         removeBtn.innerHTML = '&times;'
         removeBtn.addEventListener('click', (e) => {
             e.stopPropagation()
-            adjustSkillPoints(getSkillCostWithDiscount(skill))
+            adjustSkillPoints(getSkillChainValue(skill))
             const newSkills = skills.filter((_, i) => i !== index)
             updateSkills(newSkills, [skill])
         })
@@ -444,7 +444,7 @@ export function renderUma(): void {
                 let newSkills: string[]
                 if (existingVariant) {
                     adjustSkillPoints(
-                        getSkillCostWithDiscount(existingVariant),
+                        getSkillChainValue(existingVariant),
                     )
                     const idx = skills.indexOf(existingVariant)
                     newSkills = [...skills]
@@ -453,7 +453,7 @@ export function renderUma(): void {
                     newSkills = [...skills, newSkill]
                 }
 
-                adjustSkillPoints(-getSkillCostWithDiscount(newSkill))
+                adjustSkillPoints(-getSkillChainValue(newSkill))
 
                 updateSkills(newSkills, [newSkill])
             } else {
@@ -491,7 +491,7 @@ export function renderUma(): void {
         clearAllButton.title = 'Remove all skills'
         clearAllButton.addEventListener('click', () => {
             for (const skill of skills) {
-                adjustSkillPoints(getSkillCostWithDiscount(skill))
+                adjustSkillPoints(getSkillChainValue(skill))
             }
             updateSkills([], [...skills])
         })

@@ -237,7 +237,7 @@ describe('addSkillToUmaFromTable restores the replaced variant (#33)', () => {
     it('adding ○ while ◎ is on Uma brings ◎ back to the results table', () => {
         // Replacing ◎ with ○ from the table must rehydrate ◎ from cache rather
         // than drop it.
-        addSkillToUmaFromTable(MEDIUM_NORMAL, 100)
+        addSkillToUmaFromTable(MEDIUM_NORMAL)
 
         const cfg = getCurrentConfig()
         expect(cfg?.uma?.skills).toEqual([MEDIUM_NORMAL])
@@ -266,7 +266,7 @@ describe('addSkillToUmaFromTable restores the replaced variant (#33)', () => {
         results.set(FLASH_FORWARD, freshWithStatus(FLASH_FORWARD, 0.5))
         results.set(MEDIUM_RARE, freshWithStatus(MEDIUM_RARE, 0.3))
 
-        addSkillToUmaFromTable(MEDIUM_RARE, 110)
+        addSkillToUmaFromTable(MEDIUM_RARE)
 
         expect(getCurrentConfig()?.uma?.skills).toEqual([MEDIUM_RARE])
         // ○ is now dominated by ◎ on Uma; shouldn't reappear.

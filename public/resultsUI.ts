@@ -12,6 +12,7 @@ import {
     findSkillId,
     getGroupVariantOnUma,
     getSkillChainCost,
+    getSkillChainValue,
     getSkillCostWithDiscount,
     getSkillOrder,
     hasConfiguredDiscount,
@@ -245,10 +246,7 @@ export function renderResultsTable(): void {
             )
             addBtn.addEventListener('click', () => {
                 if (action === 'downgrade') {
-                    addSkillToUmaFromTable(
-                        result.skill,
-                        getSkillCostWithDiscount(result.skill),
-                    )
+                    addSkillToUmaFromTable(result.skill)
                 } else {
                     setUniqueDisabled(false)
                 }
@@ -262,7 +260,7 @@ export function renderResultsTable(): void {
                 `Add ${result.skill} to uma skills`,
             )
             addBtn.addEventListener('click', () => {
-                addSkillToUmaFromTable(result.skill, result.cost)
+                addSkillToUmaFromTable(result.skill)
             })
         }
         addCell.appendChild(addBtn)
@@ -450,7 +448,7 @@ export function updateSelectAllCheckbox(): void {
         selectedCount > 0 && selectedCount < allSkills.length
 }
 
-export function addSkillToUmaFromTable(skillName: string, cost: number): void {
+export function addSkillToUmaFromTable(skillName: string): void {
     const currentConfig = getCurrentConfig()
     const resultsMap = getResultsMap()
     const selectedSkills = getSelectedSkills()
@@ -479,8 +477,12 @@ export function addSkillToUmaFromTable(skillName: string, cost: number): void {
         : 0
     const newSkillOrder = getSkillOrder(skillName)
 
+    // Ledger math uses chain values (see getSkillChainValue), not the row's
+    // purchase price: refunding the old variant's chain and charging the new
+    // one's nets to the incremental price on upgrades and keeps SP identical
+    // however the same build was reached.
     if (existingVariant) {
-        adjustSkillPoints(getSkillCostWithDiscount(existingVariant))
+        adjustSkillPoints(getSkillChainValue(existingVariant))
         const idx = currentConfig.uma.skills.indexOf(existingVariant)
         if (idx !== -1) {
             currentConfig.uma.skills[idx] = skillName
@@ -489,7 +491,7 @@ export function addSkillToUmaFromTable(skillName: string, cost: number): void {
         currentConfig.uma.skills.push(skillName)
     }
 
-    adjustSkillPoints(-cost)
+    adjustSkillPoints(-getSkillChainValue(skillName))
 
     refreshGroupResults(skillName)
 
@@ -537,7 +539,7 @@ export function removeSkillFromUma(skillName: string): void {
 
     recordUmaUndoSnapshot()
 
-    const skillCost = getSkillCostWithDiscount(skillName)
+    const skillCost = getSkillChainValue(skillName)
     currentConfig.uma.skills.splice(skillIndex, 1)
     adjustSkillPoints(skillCost)
 

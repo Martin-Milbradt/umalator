@@ -532,17 +532,19 @@ export function getSkillCostWithDiscount(skillName: string): number {
 }
 
 /**
- * Full chain cost of `skillName` as if the uma owned nothing of its group,
- * mirroring the orchestrator's owned-row refund: the skill plus every
- * positive lower tier, each at its configured discount. Null when the
- * skill's own discount isn't configured (absent or "-" in the skills table).
+ * Full chain cost of `skillName` as if the uma owned nothing of its group:
+ * the skill plus every positive lower tier, each at its configured discount.
+ * This is the SP ledger value of an equipped skill — what was paid to acquire
+ * it — unlike getSkillCostWithDiscount, whose group-coverage logic prices the
+ * *next purchase* and therefore omits tiers covered by the equipped variant
+ * itself. All skillPoints refunds and charges must use this, never the
+ * purchase price, or ○/◎ swaps drift the budget.
  */
-export function getSkillChainCost(skillName: string): number | null {
+export function getSkillChainValue(skillName: string): number {
     const currentConfig = getCurrentConfig()
     const skillmeta = getSkillmeta()
     const skillnames = getSkillnames()
-    const discount = currentConfig?.skills[skillName]?.discount
-    if (discount === null || discount === undefined) return null
+    const discount = currentConfig?.skills[skillName]?.discount ?? 0
 
     if (!skillmeta || !skillnames) {
         return applyDiscount(getSkillBaseCost(skillName), discount)
@@ -561,6 +563,17 @@ export function getSkillChainCost(skillName: string): number | null {
         getPrereqDiscount: (_prereqId, prereqName) =>
             currentConfig?.skills[prereqName]?.discount ?? 0,
     })
+}
+
+/**
+ * Like getSkillChainValue, but null when the skill's own discount isn't
+ * configured (absent or "-" in the skills table), mirroring the
+ * orchestrator's owned-row refund.
+ */
+export function getSkillChainCost(skillName: string): number | null {
+    const discount = getCurrentConfig()?.skills[skillName]?.discount
+    if (discount === null || discount === undefined) return null
+    return getSkillChainValue(skillName)
 }
 
 export function deleteSkill(skillName: string): void {

@@ -77,7 +77,7 @@ describe('taking/removing a skill derives the mirrored row by inversion', () => 
     })
 
     it('take: the removal row is the negated buy row, no recalculation', () => {
-        addSkillToUmaFromTable(INHERITED, 160)
+        addSkillToUmaFromTable(INHERITED)
 
         const row = getResultsMap().get(INHERITED)
         expect(row?.status).toBe('cached')
@@ -102,7 +102,7 @@ describe('taking/removing a skill derives the mirrored row by inversion', () => 
     })
 
     it('remove: the buy row round-trips back, no recalculation', () => {
-        addSkillToUmaFromTable(INHERITED, 160)
+        addSkillToUmaFromTable(INHERITED)
         removeSkillFromUma(INHERITED)
 
         const row = getResultsMap().get(INHERITED)
@@ -125,7 +125,7 @@ describe('taking/removing a skill derives the mirrored row by inversion', () => 
             status: 'pending',
         })
 
-        addSkillToUmaFromTable(INHERITED, 160)
+        addSkillToUmaFromTable(INHERITED)
 
         expect(getResultsMap().get(INHERITED)?.status).toBe('pending')
         expect(getResultsMap().get(INHERITED)?.owned).toBe(true)
@@ -138,7 +138,7 @@ describe('taking/removing a skill derives the mirrored row by inversion', () => 
         config!.uma!.skills = [NORMAL]
         getResultsMap().delete(NORMAL)
 
-        addSkillToUmaFromTable(RARE, 99)
+        addSkillToUmaFromTable(RARE)
 
         const row = getResultsMap().get(RARE)
         expect(row?.status).toBe('pending')

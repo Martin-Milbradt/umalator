@@ -18,7 +18,6 @@ import {
     getGenericSkillIconUrl,
     getOtherVariant,
     getShowIcons,
-    getSkillCostWithDiscount,
     getVariantsForBaseName,
     isPlaceholderSkillName,
     isSimulatableSkill,
@@ -499,8 +498,7 @@ function buildSkillRow(skillName: string): HTMLDivElement | null {
             removeSkillFromUma(skillName)
         } else {
             // Adding skill
-            const cost = getSkillCostWithDiscount(skillName)
-            addSkillToUmaFromTable(skillName, cost)
+            addSkillToUmaFromTable(skillName)
         }
         callRenderUma()
         renderSkills()
